@@ -1,0 +1,458 @@
+@import url('https://fonts.googleapis.com/css2?family=Kumbh+Sans:wght@400;700&display=swap');
+body{
+  margin: 0;
+  padding: 0;
+}
+
+@font-face {
+  font-family: 'Cabinet Regular';
+  src: url('../fonts/CabinetGrotesk-Regular.woff');
+}
+
+@font-face {
+  font-family: 'Cabinet Bold';
+  src: url('../fonts/CabinetGrotesk-Bold.woff');
+}
+
+@font-face {
+  font-family: 'Cabinet Black';
+  src: url('../fonts/CabinetGrotesk-Black.woff');
+}
+
+nav{
+  display: flex;
+  justify-content: space-between;
+  padding: 0 9rem;
+  font-family: 'Kumbh Sans', sans-serif;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 80%;
+  background-color: transparent;
+  border-bottom: 1px solid #EBFFF0;
+}
+
+nav ul{
+  display: flex;
+  list-style:none;
+}
+
+nav ul li{
+  margin-left: 1rem;
+}
+
+nav ul li a{
+  color: white;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.header{
+  background-image: url('../images/fondo-header.jpg');
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20vw;
+}
+
+
+.header .carta{
+  background-color: #EBFFF0;
+  margin-top: 7em;
+  height: 10em;
+  width: 40em;
+  padding: 1em;
+}
+
+.header .carta .titulo-carta{
+  font-family: 'Cabinet Black';
+  font-size: 2em;
+  margin: 0;
+  color: #294931;
+  padding: 0;
+}
+
+.header .carta .descripcion-carta{
+  font-family: 'Cabinet Regular';
+  font-size: 15px;
+  width: 31em;
+  margin: 0;
+  color: rgba(5, 51, 16, 0.87);
+}
+
+.header .carta .botones{
+  display: flex;
+  margin-top: 1em;
+}
+
+.header .carta .botones .btn{
+  height: 2.4em;
+  width: 9em;
+  margin-right: 1em;
+  color: white;
+  font-family: 'Kumbh Sans';
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+  transition: box-shadow .3s;
+  padding-top: 12px;
+}
+
+.btn-solid{
+  all: unset;
+  background: #439059;
+  border: 1px solid #2A7B41;
+  box-shadow: 4px 4px 0px #2A7B41;
+}
+
+.btn-solid:hover{
+  box-shadow: 1px 1px 0px #2A7B41;
+}
+
+.btn-unsolid{
+  all: unset;
+  background: #EBFFF0;
+  border: 1px solid #2A7B41;
+  box-shadow: 4px 4px 0px #2A7B41;
+  color: #439059 !important;
+}
+
+.btn-unsolid:hover{
+  box-shadow: 1px 1px 0px #2A7B41;
+}
+
+.header img{
+  height: 10em;
+  margin-left: -5em;
+  margin-top: 6.5em;
+}
+
+.informacion{
+  display: flex;
+  background-color: red;
+  height: 100vh;
+}
+
+.informacion .sobre-mi{
+  width: 50%;
+  background-color: #BD9C6A;
+
+}
+
+.informacion .sobre-mi .titulo{
+  font-family: 'Cabinet Black';
+  font-size: 3em;
+  margin-top: 0.5em;
+  margin-left: 0.5em;
+  margin-bottom: 0;
+  color: #393227;
+}
+
+.informacion .sobre-mi .descripcion{
+  color: #393227;
+  font-family: 'Cabinet Regular';
+  margin-left: 1em;
+  margin-right: 4em;
+  text-align: justify;
+  font-size: 20px;
+}
+
+.informacion .sobre-mi .links{
+  display: flex;
+  flex-direction: column;
+  margin-top: 3em;
+}
+
+.informacion .sobre-mi .link{
+  display: flex;
+  background: #393227;
+  color: #EBC893;
+  padding: 1em;
+  margin-left: 1em;
+  margin-right: 1em;
+  margin-bottom: 1em;
+  font-family: 'Cabinet Regular';
+  border-radius: 5px;
+  justify-content: space-between;
+  text-decoration: none;
+}
+
+
+.informacion .proyectos{
+  width: 50%;
+  background-color: #32808A;
+
+}
+
+.informacion .proyectos .titulo{
+  font-family: 'Cabinet Black';
+  font-size: 3em;
+  margin-top: 0.5em;
+  margin-left: 0.5em;
+  margin-bottom: 0;
+  color: #D6F7FC;
+}
+
+.informacion .proyectos .descripcion{
+  color: #D6F7FC;
+  font-family: 'Cabinet Regular';
+  margin-left: 1em;
+  margin-right: 4em;
+  text-align: justify;
+  font-size: 20px;
+}
+
+.informacion .proyectos .links{
+  display: flex;
+  flex-direction: column;
+  margin-top: 3em;
+}
+
+.informacion .proyectos .link{
+  display: flex;
+  background: #D6F7FC;
+  color: #327F8A;
+  padding: 1em;
+  margin-left: 1em;
+  margin-right: 1em;
+  margin-bottom: 1em;
+  font-family: 'Cabinet Regular';
+  border-radius: 5px;
+  justify-content: space-between;
+  text-decoration: none;
+}
+
+.contactandcv{
+  display: flex;
+  justify-content: space-between;
+}
+
+.contactandcv .damkan{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+@keyframes spin {
+  0%{rotate: 0deg;}
+  100%{rotate: 360deg;}
+
+}
+
+.contactandcv{
+  height: 100vh;
+  background-color: #DCFFE6;
+}
+
+.contactandcv .damkan{
+  margin-top: -10vh;
+  margin-left: 20vw;
+
+}
+
+.contactandcv .damkan .bg{
+  animation: spin 8s linear infinite;
+}
+
+
+.contactandcv .damkan .computer{
+  margin-left: -12em;
+  z-index: 3;
+}
+.contactandcv .window{
+  border: 4px solid #266237;
+  width: 40em;
+  height: 13em;
+  background-color: #EBFFF0;
+  margin-top: 30vh;
+  margin-right: 10vw;
+}
+
+.contactandcv .window .nav-window{
+  background-color: #266237;
+  margin-top: 0;
+  height: 2em;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+}
+
+.contactandcv .window .nav-window .title-nw{
+  margin: 0;
+  padding-top: 4px;
+  padding-left: 8px;
+  font-family: 'Cabinet Regular';
+}
+
+.contactandcv .window .nav-window .circulos{
+  margin-top: 5px;
+  margin-right: 10px;
+}
+
+.contactandcv .window .nav-window span{
+  background-color: #60A975;
+  display: inline-block;
+  height: 12px;
+  width: 12px;
+  border-radius: 50%;
+  margin-left: 5px;
+}
+
+.contactandcv .window .title{
+  font-family: 'Cabinet Black', sans-serif;
+  font-size: 20px;
+  color: #266237;
+  margin-left: 12px;
+}
+
+.contactandcv .window .description{
+  font-family: 'Cabinet Regular';
+  color: #266237;
+  margin-left: 12px;
+}
+
+.contactandcv .window .description a{
+  font-family: 'Cabinet Bold';
+  text-decoration: underline;
+  color: #266237;
+}
+
+/* Extra small devices (phones, 600px and down) */
+@media only screen and (max-width: 600px) {
+  nav{
+    align-items: center;
+    justify-content: center;
+    padding-top: 2em;
+    padding-bottom: 2em;
+    text-align: center;
+    display: flex;
+    padding-left: 0;
+  }
+  nav ul{
+    display: none;
+  }
+
+  .header{
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+  }
+
+  .header .carta{
+    width: 60vw;
+    padding-bottom: 8em;
+    margin: 0;
+    margin-top: 10em;
+    margin-bottom: 3em;
+  }
+
+
+  .header .carta .descripcion-carta{
+    width: 14em;
+    word-wrap: break-word;
+    padding-bottom: 1em;
+
+  }
+
+  .header .carta .botones{
+    padding: 0;
+    margin: 0;
+  }
+  .header .damkan{
+    margin: 0;
+  }
+
+  .informacion{
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  .informacion .sobre-mi{
+    width: 100vw;
+  }
+
+  .informacion .sobre-mi .descripcion{
+    width: 16em;
+  }
+
+  .informacion .proyectos{
+    width: 100vw;
+  }
+
+  .informacion .proyectos .descripcion{
+    width: 16em;
+  }
+
+  .contactandcv{
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    padding-top: 30em;
+    align-items: center;
+  }
+
+  .contactandcv .damkan{
+    margin:0;
+    padding:0;
+    display: none;
+  }
+
+  .contactandcv .window{
+    margin: 0;
+    padding: 0;
+    width: 20em;
+    height: 16em;
+  }
+
+  .contactandcv .window .description{
+    width: 17em;
+  }
+}
+
+/* Medium devices (landscape tablets, 768px and up) */
+@media only screen and (min-width: 768px) {
+  .informacion .sobre-mi .descripcion{
+    width: 17em;
+  }
+
+  .informacion .proyectos .descripcion{
+    width: 17em;
+  }
+
+  .contactandcv{
+  }
+
+  .contactandcv .window{
+    height: 14em;
+    width: 25em;
+  }
+
+  .contactandcv .damkan{
+    margin-top: -2em;
+    margin-left: 3em;
+  }
+}
+
+/* Large devices (laptops/desktops, 992px and up) */
+@media only screen and (min-width: 992px) {
+  .contactandcv{
+  }
+
+  .informacion .sobre-mi .descripcion{
+    width: 31.2em;
+  }
+  
+  .contactandcv{
+    padding: 0 12em;
+  }
+}
+/* Extra large devices (large laptops and desktops, 1200px and up) */
+@media only screen and (min-width: 1400px) {
+  html {
+    padding: 0 20vw;
+  }
+  
+}

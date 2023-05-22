@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Damkan</title>
+  <link rel="stylesheet" href="./css/main.css">
+  <script src="https://cdn.jsdelivr.net/gh/studio-freight/lenis@1/bundled/lenis.min.js"></script>
+</head>
+<body>
+  <script>
+    const lenis = new Lenis()
+    lenis.on('scroll', (e) => {
+      console.log(e)
+    })
+    function raf(time) {
+      lenis.raf(time)
+      requestAnimationFrame(raf)
+    }
+    requestAnimationFrame(raf)
+  </script>
+  <div class="nav-container">
+    <nav>
+      <img src="./images/logo.svg" alt="" class="logo">
+      <ul>
+        <li><a href="#">Sobre Mí</a></li>
+        <li><a href="#">Habilidades</a></li>
+        <li><a href="#">Proyectos</a></li>
+        <li><a href="#">CV</a></li>
+      </ul>
+    </nav>
+  </div>
+  <section class="header">
+    <div class="carta">
+      <p class="titulo-carta">Querido Visitante</p>
+      <p class="descripcion-carta">Muchas gracias por visitar mi portafolio, acá encontraras lo que hago en mi dia a dia y las habilidades en las que me especializo, también todos mis proyectos y trabajos a lo largo de mi vida.</p>
+      <div class="botones">
+        <a href="#sobre-mi" class="btn btn-solid">Ver Más</a>
+        <a href="#proyectos" class="btn btn-unsolid">Proyectos</a>
+      </div>
+    </div>
+    
+    <img src="./images/damkan1.svg" alt="" class="damkan">
+  </section>
+
+  <section class="informacion">
+    <div class="sobre-mi" id="sobre-mi">
+      <p class="titulo">Partes de mí</p>
+      <p class="descripcion">Desde los once años me he dedicado a la informatica, como creo era normal fui descubriendo la programación y centrándome en ella de forma muy apasionada, llevándola a los diferentes lugares en los que se puede ver involucrada por ejemplo creando un taller de informatica, dando clases de programación en Chile y Perú, desarrollando plataformas útiles para instituciones y realizando auditoria de seguridad a institutos.</p>
+      <div class="links">
+        <a href="#" class="link">Un taller de informatica a mis 17 años <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 19L19 6m0 0v12.48M19 6H6.52"/></svg></a>
+        <a href="#" class="link">Una charla de ciberseguridad en institutos <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 19L19 6m0 0v12.48M19 6H6.52"/></svg></a>
+        <a href="#" class="link">Dando clases en la Universidad de Trujillo  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 19L19 6m0 0v12.48M19 6H6.52"/></svg></a>
+      </div>
+      
+    </div>
+    <div class="proyectos" id="proyectos">
+      <p class="titulo">Proyectos</p>
+      <p class="descripcion">A continuación tendrás un listado de los proyectos en los que he estado trabajando o trabajo actualmente, al dar clic te redirigirá a un blog en el cual se detalla más de las tecnologías usadas en cada proyecto.</p>
+      <div class="links">
+        <a href="#" class="link">FrogLabs <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 19L19 6m0 0v12.48M19 6H6.52"/></svg></a>
+        <a href="#" class="link">NMO<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 19L19 6m0 0v12.48M19 6H6.52"/></svg></a>
+        <a href="#" class="link">RAT en Discord con JS <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 19L19 6m0 0v12.48M19 6H6.52"/></svg>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="contactandcv">
+    <div class="damkan">
+      <img class="bg" src="./images/bgdamkan.png" alt="">
+      <img class="computer" src="./images/damkancomputer.png" alt="">
+    </div>
+    <div class="window">
+      <div class="nav-window"><p class="title-nw">Unirme a tu grupo</p><div class="circulos"><span></span><span></span><span></span></div></div>
+      <p class="title">¿Quieres incluirme en tu equipo?</p>
+      <p class="description">Si gustas que yo sea parte de tu equipo puedes <a href="mailto:damkancontacto@gmail.com"> contactarte conmigo dando clic aquí</a> y ver mi <a  href="cv.pdf">curriculum dando clic por acá</a>.<br/><br/>Mi Instagram: <a href="https://www.instagram.com/damkan.dev/" target="_blank">@damkan.dev</a><br/>Mi Github: <a href="https://github.com/damkandev" target="_blank">damkandev</a></p>
+    </div>
+  </section>
+
+  <!-- AAAAAAAAAAAAAA -->
+
+</body>    
+</html>
