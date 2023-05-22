@@ -444,6 +444,10 @@ nav ul li a{
   .informacion .sobre-mi .descripcion{
     width: 31.2em;
   }
+
+  .informacion .proyectos .descripcion{
+    width: 31.2em;
+  }
   
   .contactandcv{
     padding: 0 12em;
@@ -454,5 +458,8 @@ nav ul li a{
   html {
     padding: 0 20vw;
   }
-  
+
+  nav{
+    padding: 0 30vw;
+  }
 }
