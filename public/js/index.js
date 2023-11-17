@@ -1,3 +1,15 @@
+const lenis = new Lenis()
+
+lenis.on('scroll', (e) => {
+})
+
+function raf(time) {
+  lenis.raf(time)
+  requestAnimationFrame(raf)
+}
+
+requestAnimationFrame(raf)
+
 const monitor_head_one = document.getElementById('mh1')
 
 gsap.to(monitor_head_one, {
