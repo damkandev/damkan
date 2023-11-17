@@ -1,85 +1,89 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Damkan</title>
-  <link rel="stylesheet" href="./css/main.css">
-  <script src="https://cdn.jsdelivr.net/gh/studio-freight/lenis@1/bundled/lenis.min.js"></script>
-</head>
-<body>
-  <script>
-    const lenis = new Lenis()
-    lenis.on('scroll', (e) => {
-      console.log(e)
-    })
-    function raf(time) {
-      lenis.raf(time)
-      requestAnimationFrame(raf)
-    }
-    requestAnimationFrame(raf)
-  </script>
-  <div class="nav-container">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="./src/images/damkan_logo_svg.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Damkan</title>
+    <link rel="stylesheet" href="./src/css/main.css">
+    <link rel="stylesheet" href="./src/css/index.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/studio-freight/lenis@1.0.27/bundled/lenis.min.js"></script>
+  </head>
+  <body>
     <nav>
-      <img src="./images/logo.svg" alt="" class="logo">
-      <ul>
-        <li><a href="#">Sobre Mí</a></li>
-        <li><a href="#">Habilidades</a></li>
-        <li><a href="#">Proyectos</a></li>
-        <li><a href="#">CV</a></li>
+      <img src="./src/images/damkan_logo_navbar.png" alt="Logotipo de Damkan" class="logo-damkan">
+      <ul class="links">
+        <li><a href="#header" class="link">Sobre Mí</a></li>
+        <li><a href="#proyectos" class="link">Proyectos</a></li>
+        <li><a href="https://medium.com/@damkancontacto" class="link">Blog</a></li>
+        <li><a href="#contacto" class="link">Contacto</a></li>
       </ul>
     </nav>
-  </div>
-  <section class="header">
-    <div class="carta">
-      <p class="titulo-carta">Querido Visitante</p>
-      <p class="descripcion-carta">Muchas gracias por visitar mi portafolio, acá encontraras lo que hago en mi dia a dia y las habilidades en las que me especializo, también todos mis proyectos y trabajos a lo largo de mi vida.</p>
-      <div class="botones">
-        <a href="#sobre-mi" class="btn btn-solid">Ver Más</a>
-        <a href="#proyectos" class="btn btn-unsolid">Proyectos</a>
-      </div>
-    </div>
-    
-    <img src="./images/damkan1.svg" alt="" class="damkan">
-  </section>
 
-  <section class="informacion">
-    <div class="sobre-mi" id="sobre-mi">
-      <p class="titulo">Partes de mí</p>
-      <p class="descripcion">Desde los once años me he dedicado a la informatica, como creo era normal fui descubriendo la programación y centrándome en ella de forma muy apasionada, llevándola a los diferentes lugares en los que se puede ver involucrada por ejemplo creando un taller de informatica, dando clases de programación en Chile y Perú, desarrollando plataformas útiles para instituciones y realizando auditoria de seguridad a institutos.</p>
-      <div class="links">
-        <a href="#" class="link">Un taller de informatica a mis 17 años <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 19L19 6m0 0v12.48M19 6H6.52"/></svg></a>
-        <a href="#" class="link">Una charla de ciberseguridad en institutos <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 19L19 6m0 0v12.48M19 6H6.52"/></svg></a>
-        <a href="#" class="link">Dando clases en la Universidad de Trujillo  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 19L19 6m0 0v12.48M19 6H6.52"/></svg></a>
+    <div class="header" id="header">
+      <div class="left">
+        <img src="./src/images/monitor-head-one.png" alt="Cabeza de Monitor sonriendo" id="mh1">
       </div>
-      
+      <div class="right">
+        <h1>La única barrera es la <span class="green-text">programación</span>.</h1>
+        <p>Mi nombre es Damkan y me apasiona programar ideas increíbles y divertidas. Te doy la bienvenida a mi portafolio, donde podrás descubrir algunos de mis proyectos.</p>
+        <div class="skills">
+          <img src="./src/images/skills/html.png" alt="" class="skill">
+          <img src="./src/images/skills/css.png" alt="" class="skill">
+          <img src="./src/images/skills/javascript.png" alt="" class="skill">
+          <img src="./src/images/skills/react.png" alt="" class="skill">
+          <img src="./src/images/skills/csharp.png" alt="" class="skill">
+          <img src="./src/images/skills/figma.png" alt="" class="skill">
+        </div>
+        <a href="#proyectos" class="btn btn-green">Ver Proyectos</a>
+      </div>
     </div>
+
     <div class="proyectos" id="proyectos">
-      <p class="titulo">Proyectos</p>
-      <p class="descripcion">A continuación tendrás un listado de los proyectos en los que he estado trabajando o trabajo actualmente, al dar clic te redirigirá a un blog en el cual se detalla más de las tecnologías usadas en cada proyecto.</p>
-      <div class="links">
-        <a href="#" class="link">FrogLabs <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 19L19 6m0 0v12.48M19 6H6.52"/></svg></a>
-        <a href="#" class="link">NMO<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 19L19 6m0 0v12.48M19 6H6.52"/></svg></a>
-        <a href="#" class="link">RAT en Discord con JS <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 19L19 6m0 0v12.48M19 6H6.52"/></svg>
-        </a>
+      <p class="title">Proyect<span class="green-text">o</span>s</p>
+      <p class="text">Te invito a echar un vistazo a algunas de las creaciones más destacadas.</p>
+      <div class="cards">
+        <div class="card">
+          <img src="./src/images/banners/froglabs.jpg" alt="" class="cover-card">
+          <p class="title-card">FrogLabs</p>
+          <p class="desc-card">Una plataforma de clases de programación en donde compartí mis conocimientos en HTML, CSS y JavaScript.</p>
+          <a href="https://medium.com/@damkancontacto/froglabs-un-taller-de-programaci%C3%B3n-y-ciberseguridad-en-chile-6c6c62a1f44f" class="btn-gray">Ver más</a>
+        </div>
+
+        <div class="card">
+          <img src="./src/images/banners/ccg.jpg" alt="" class="cover-card">
+          <p class="title-card">Class Card Gen</p>
+          <p class="desc-card">Una solución creada con React para crear las tarjetas HTML que luego se subirían a la web de FrogLabs.</p>
+          <a href="https://classcardgen.vercel.app/" class="btn-gray">Ver más</a>
+        </div>
+        <div class="card">
+          <img src="./src/images/banners/befast.jpg" alt="" class="cover-card">
+          <p class="title-card">Befast</p>
+          <p class="desc-card">Una plataforma de gestión de estudiantes creada para manejar los atrasos por cada alumno en el instituto.</p>
+          <a href="https://github.com/damkandev/befast-api" class="btn-gray">Ver más</a>
+        </div>
+      </div>
+
+      <div class="info-container">
+        <div class="info">¿Quieres ver más? puedes seguir viendo mis <a href="https://github.com/damkandev/">repositorios acá</a>.</div>
       </div>
     </div>
-  </section>
 
-  <section class="contactandcv">
-    <div class="damkan">
-      <img class="bg" src="./images/bgdamkan.png" alt="">
-      <img class="computer" src="./images/damkancomputer.png" alt="">
+    <div class="contacto" id="contacto">
+      <div class="left">
+        <h3>C<span class="green-text">o</span>ntacto</h3>
+        <p>Si gustas contactarme puedes hacerlo por correo dando <a class="e-contacto" href="mailto:damkancontacto@gmail.com">click aquí</a>, o por todas mis otras redes sociales.</p>
+        <div class="rrss">
+          <a class="e-contacto" href="https://www.instagram.com/damkan.dev/"><img src="./src/images/rrss/skill-icons_instagram.png" alt=""></a>
+          <a class="e-contacto" href="https://twitter.com/damk___"><img src="./src/images/rrss/devicon_twitter.png" alt=""></a>
+          <a class="e-contacto" href="https://github.com/damkandev/"><img src="./src/images/rrss/mdi_github.png" alt=""></a>
+        </div>
+      </div>
+      <div class="right">
+        <img src="./src/images/monitor-head-two.png" id="mh2" alt="Cabeza de monitor con un simbolo de correo">
+      </div>
     </div>
-    <div class="window">
-      <div class="nav-window"><p class="title-nw">Unirme a tu grupo</p><div class="circulos"><span></span><span></span><span></span></div></div>
-      <p class="title">¿Quieres incluirme en tu equipo?</p>
-      <p class="description">Si gustas que yo sea parte de tu equipo puedes <a href="mailto:damkancontacto@gmail.com"> contactarte conmigo dando clic aquí</a> y ver mi <a  href="cv.pdf">curriculum dando clic por acá</a>.<br/><br/>Mi Instagram: <a href="https://www.instagram.com/damkan.dev/" target="_blank">@damkan.dev</a><br/>Mi Github: <a href="https://github.com/damkandev" target="_blank">damkandev</a></p>
-    </div>
-  </section>
-
-  <!-- AAAAAAAAAAAAAA -->
-
-</body>    
+  </body>
+  <script src="./js/index.js"></script>
 </html>
