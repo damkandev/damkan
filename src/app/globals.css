@@ -7,6 +7,10 @@
   src: url('../../public/fonts/kumbh.ttf');
 }
 
+@font-face {
+  font-family: 'Nohemi';
+  src: url('../../public/fonts/nohemi.ttf');
+}
 
 :root {
   background-color: black;
