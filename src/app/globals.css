@@ -2,21 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'Kumbh';
+  src: url('../../public/fonts/kumbh.ttf');
+}
+
+
 :root {
   background-color: black;
-  
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-  }
-}
-
-body {
   background-image: url("../../public/bggrid.png");
   background-size: 25vh;
   background-repeat: repeat;
 }
+
+@media (prefers-color-scheme: dark) {
+  :root{
+    background-color: black;
+  }
+}
+
 
 @layer utilities {
   .text-balance {

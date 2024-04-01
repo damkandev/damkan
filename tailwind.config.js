@@ -8,6 +8,22 @@ module.exports = {
   theme: {
     extend: {
     },
+    colors: {
+      'title-gradient':{
+        100: '#00FFA3',
+        200: '#00C2FF'
+      },
+      "white":"#FFFFFF",
+      "black":"#000000",
+      "transparent":"rgba(0, 0, 0, 0)"
+    },
+    fontFamily: {
+      "Nohemi":"Nohemi",
+      "Kumbh": "Kumbh"
+    },
+    borderColor:{
+      "white":"#FFFFFF"
+    }
   },
   plugins: [],
 };
