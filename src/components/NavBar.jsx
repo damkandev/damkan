@@ -5,9 +5,19 @@ import Cookies from "js-cookie";
 import { useEffect, useState } from "react";
 
 function NavBar() {
-  const [language, setLanguage] = useState(Cookies.get("locale") || "en");
+  const [language, setLanguage] = useState("en");
+
   useEffect(() => {
-    Cookies.set("locale", language, { expires: 365 });
+    // Actualiza el estado basado en la cookie solo después del montaje del componente
+    const cookieLang = Cookies.get("locale") || "en";
+    setLanguage(cookieLang);
+
+    // Esto se ejecutará solo una vez, cuando el componente se monte
+  }, []);
+
+  useEffect(() => {
+    // Solo actualiza la cookie cuando el idioma cambie después del montaje inicial
+    if (language) Cookies.set("locale", language, { expires: 365 });
   }, [language]);
 
   const toggleLanguage = () => {

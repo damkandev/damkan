@@ -1,4 +1,5 @@
 "use client";
+import dynamic from "next/dynamic";
 import Title from "@/components/Title";
 import Skills from "@/components/Skills";
 import Paragraph from "@/components/Paragraph";
@@ -9,7 +10,6 @@ import TextArea from "@/components/TextArea";
 import useTranslations from "@/hooks/useTranslations";
 export default function Home() {
   const { t } = useTranslations();
-  console.log(t("introduction").title);
   return (
     <main className="">
       <section className="flex flex-col md:flex-row justify-between px-4 py-8 md:px-32 md:py-32">
@@ -31,7 +31,7 @@ export default function Home() {
               "figma",
             ]}
           />
-          <Paragraph text={t("introduction").description} />
+          <Paragraph text={t("introduction").description || "a"} />
           <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
             <Button
               text={t("introduction").seeMore}
