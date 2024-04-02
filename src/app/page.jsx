@@ -77,21 +77,21 @@ export default function Home() {
           <Card
             thumbnail="kerokero"
             skills={["Next", "Node", "Supabase", "Figma"]}
-            title="Founder"
-            description="I am the founder of KeroKero, a digital agency that takes a fresh look at your brand and improves your online presence."
+            title={t("myWork").cards.kerokero.title}
+            description={t("myWork").cards.kerokero.description}
             href="https://keroke.ro"
             button={t("myWork").cards.cryptodepto.seeMore}
           />
         </div>
       </section>
       <section className="px-4 py-8 md:px-32 md:py-32">
-        <Title texto="My Projects." accent="projects" />
+        <Title texto={t("myProjects").title} accent={t("myProjects").accent} />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-4">
           <Card
             thumbnail="froglabs"
             skills={["HTML", "CSS", "JavaScript", "Supabase"]}
-            title="FrogLabs"
-            description="A programming class platform where I shared my knowledge in HTML, CSS and JavaScript."
+            title={t("myProjects").cards.froglabs.title}
+            description={t("myProjects").cards.froglabs.description}
             href="https://froglabs.me"
             button={t("myWork").cards.cryptodepto.seeMore}
           />
@@ -99,8 +99,8 @@ export default function Home() {
           <Card
             thumbnail="ccg"
             skills={["React", "CSS"]}
-            title="CCG"
-            description="A solution created with React to create the HTML cards that would then be uploaded to the FrogLabs website."
+            title={t("myProjects").cards.ccg.title}
+            description={t("myProjects").cards.ccg.description}
             href="https://classcardgen.vercel.app/"
             button={t("myWork").cards.cryptodepto.seeMore}
           />
@@ -108,15 +108,15 @@ export default function Home() {
           <Card
             thumbnail="befast"
             skills={["FastAPI", "Python", "HTML", "CSS", "JavaScript"]}
-            title="Befast"
-            description="I am the founder of KeroKero, a digital agency that takes a fresh look at your brand and improves your online presence."
+            title={t("myProjects").cards.befast.title}
+            description={t("myProjects").cards.befast.description}
             href="https://github.com/damkandev/befast-api"
             button={t("myWork").cards.cryptodepto.seeMore}
           />
         </div>
       </section>
       <section className="px-8 py-32 md:p-32">
-        <Title texto="We need to talk... 💔" accent="need" />
+        <Title texto={t("contact").title} accent={t("contact").accent} />
         <div className="flex flex-col md:flex-row justify-between space-y-4 md:space-y-0 items-center mt-12">
           <img
             src="/faces/contact_face.png"
@@ -127,14 +127,14 @@ export default function Home() {
             action="submit"
             className="flex flex-col space-y-4 w-full md:w-1/2"
           >
-            <Input placeholder="Email" type="text" />
-            <Input placeholder="Subject" type="text" />
-            <TextArea placeholder="Message" />
+            <Input placeholder={t("contact").phEmail} type="text" />
+            <Input placeholder={t("contact").phSubject} type="text" />
+            <TextArea placeholder={t("contact").phMessage} />
             <button
               type="submit"
               className="px-4 py-4 bg-white rounded-lg text-black"
             >
-              Send
+              {t("contact").send}
             </button>
           </form>
         </div>

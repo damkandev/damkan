@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Cookies from "js-cookie";
 import { useEffect, useState } from "react";
+import useTranslations from "@/hooks/useTranslations";
 
 function NavBar() {
   const [language, setLanguage] = useState(Cookies.get("locale") || "en");
@@ -13,6 +14,8 @@ function NavBar() {
   const toggleLanguage = () => {
     setLanguage((prevLanguage) => (prevLanguage === "en" ? "es" : "en"));
   };
+
+  const { t } = useTranslations();
   return (
     <>
       <nav className="flex justify-between p-10">
@@ -20,22 +23,22 @@ function NavBar() {
         <ul className="flex text-white">
           <li className="mx-2 opacity-70 hover:opacity-100">
             <Link href="/" target="_blank">
-              About Me
+              {t("navbar").aboutMe}
             </Link>
           </li>
           <li className="mx-2 opacity-70 hover:opacity-100">
             <Link href="/" target="_blank">
-              Projects
+              {t("navbar").projects}
             </Link>
           </li>
           <li className="mx-2 opacity-70 hover:opacity-100">
             <Link href="/" target="_blank">
-              Blog
+              {t("navbar").blog}
             </Link>
           </li>
           <li className="mx-2 opacity-70 hover:opacity-100">
             <Link href="/" target="_blank">
-              Contact
+              {t("navbar").contact}
             </Link>
           </li>
           <li className="mx-2 opacity-70 hover:opacity-100">
