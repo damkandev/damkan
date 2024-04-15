@@ -1,4 +1,5 @@
 "use client";
+import dynamic from "next/dynamic";
 import Title from "@/components/Title";
 import Skills from "@/components/Skills";
 import Paragraph from "@/components/Paragraph";
