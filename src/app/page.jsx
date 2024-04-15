@@ -15,7 +15,10 @@ export default function Home() {
     <SmoothScroll>
       <main className="">
         <NavBar />
-        <section className="hero flex flex-col md:flex-row justify-between px-4 py-8 md:px-32 md:py-32">
+        <section
+          className="hero flex flex-col md:flex-row justify-between px-4 py-8 md:px-32 md:py-32"
+          id="hero"
+        >
           <div className="my-auto">
             <Title
               texto={"The only barrier is imagination."}
@@ -60,7 +63,7 @@ export default function Home() {
             className="hidden md:inline-block h-[30vh] md:h-[60vh] rotate-6"
           />
         </section>
-        <section className="px-4 py-8 md:px-32 md:py-32">
+        <section className="px-4 py-8 md:px-32 md:py-32" id="work">
           <Title texto={"My Work."} accent={"work"} />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-4">
             <Card
@@ -97,7 +100,7 @@ export default function Home() {
             />
           </div>
         </section>
-        <section className="px-4 py-8 md:px-32 md:py-32">
+        <section className="px-4 py-8 md:px-32 md:py-32" id="projects">
           <Title texto={"My Projects."} accent={"projects"} />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-4">
             <Card
@@ -134,7 +137,7 @@ export default function Home() {
             />
           </div>
         </section>
-        <section className="px-8 py-32 md:p-32">
+        <section className="px-8 py-32 md:p-32" id="contact">
           <Title texto={"We need to talk."} accent={"talk"} />
           <div className="flex flex-col md:flex-row justify-between space-y-4 md:space-y-0 items-center mt-12">
             <img
