@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@studio-freight/lenis": "^1.0.42",
+    "@studio-freight/react-lenis": "^0.0.46",
     "gsap": "^3.12.5",
     "i18next": "^23.10.1",
     "js-cookie": "^3.0.5",

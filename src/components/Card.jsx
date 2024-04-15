@@ -4,7 +4,7 @@ import Tag from "./Tag";
 
 function Card({ thumbnail, skills, title, description, href, button }) {
   return (
-    <div className="flex flex-col h-full justify-between border border-white/20 rounded-xl overflow-hidden bg-black/60">
+    <div className="flex flex-col h-full justify-between border border-white/20 rounded-xl overflow-hidden bg-black/60 backdrop-blur-sm">
       <img src={`/thumbnail/${thumbnail}.jpg`} alt={title} className="w-full" />
       <div className="flex flex-wrap mb-2 pt-4 ml-4">
         {skills.map((skill, index) => (
