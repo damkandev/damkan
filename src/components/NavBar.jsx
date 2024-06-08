@@ -21,7 +21,7 @@ function NavBar() {
             <Link href="#projects">{"Projects"}</Link>
           </li>
           <li className="mx-2 opacity-70 hover:opacity-100">
-            <Link href="/blog" target="_blank">
+            <Link href="/posts" target="_blank">
               {"Blog"}
             </Link>
           </li>
