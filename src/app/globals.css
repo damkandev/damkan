@@ -8,6 +8,12 @@
   src: url('../../public/fonts/kumbh.ttf');
 }
 
+@font-face {
+  font-family: 'Nohemi';
+  src: url('../../public/fonts/Nohemi-ExtraBold.ttf');
+}
+
+
 /* Exo thin font from Google for additional styles */
 @import url(https://fonts.googleapis.com/css?family=Exo:100);
 
