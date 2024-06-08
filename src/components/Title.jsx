@@ -7,7 +7,7 @@ function Title({ accent, texto }) {
         part.toLowerCase() === accent.toLowerCase() ? (
           <span
             key={index}
-            className="bg-gradient-to-r font-extrabold from-title-gradient-100 to-title-gradient-200 text-transparent bg-clip-text font-bold"
+            className="bg-gradient-to-r font-extrabold from-title-gradient-100 to-title-gradient-200 text-transparent bg-clip-text "
           >
             {part}
           </span>
