@@ -13,17 +13,17 @@
   src: url('../../public/fonts/Nohemi-ExtraBold.ttf');
 }
 
+@font-face {
+  font-family: 'ComicNeue';
+  src: url('../../public/fonts/ComicNeue-Bold.ttf');
+}
+
 
 /* Exo thin font from Google for additional styles */
 @import url(https://fonts.googleapis.com/css?family=Exo:100);
 
 /* Setting root styles including the background from your customizations */
-:root {
-  --main-bg-color: black; /* Define a CSS variable for background color */
-  background-color: var(--main-bg-color);
-  background-size: 25vh;
-  background-repeat: repeat;
-}
+
 
 /* Media query for dark mode preferences */
 @media (prefers-color-scheme: dark) {

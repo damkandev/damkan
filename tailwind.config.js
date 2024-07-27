@@ -19,7 +19,8 @@ module.exports = {
     },
     fontFamily: {
       "Nohemi":"Nohemi",
-      "Kumbh": "Kumbh"
+      "Kumbh": "Kumbh",
+      "ComicNeue": "ComicNeue"
     },
     borderColor:{
       "white":"#FFFFFF"
