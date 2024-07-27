@@ -13,6 +13,14 @@ const nameList = [
   "diego mardones",
   "mauricio alarcon",
   "martin ramirez",
+  "jean suazo",
+  "samu",
+  "eso tilin",
+  "tilin panes",
+  "bill gates",
+  "elon musk",
+  "jeff bezos",
+  "mark zuckerberg",
 ]; // Lista de nombres en minúsculas y sin tildes
 
 function Page() {
