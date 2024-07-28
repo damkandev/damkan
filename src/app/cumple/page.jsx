@@ -21,6 +21,7 @@ const nameList = [
   "elon musk",
   "jeff bezos",
   "mark zuckerberg",
+  "cristobal orellana",
 ]; // Lista de nombres en minúsculas y sin tildes
 
 function Page() {
