@@ -1,19 +1,28 @@
-import { Inter } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
-
 export const metadata = {
-  title: "Damkan - The only barrier is imagination",
-  description: "My name is Damkan and I am passionate about programming amazing and fun ideas.",
+  title: "Damkan",
+  description: "My Portfolio",
+  icons: {
+    icon: [
+      {
+        media: '(prefers-color-scheme: light)',
+        url: '/images/icon-light.png',
+        href: '/images/icon-light.png',
+      },
+      {
+        media: '(prefers-color-scheme: dark)',
+        url: '/images/icon.png',
+        href: '/images/icon-dark.png'
+      }
+    ]
+  }
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="es">
-      <body className={inter.className}>
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
