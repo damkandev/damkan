@@ -2,65 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom font face for your project */
 @font-face {
-  font-family: 'Kumbh';
-  src: url('../../public/fonts/kumbh.ttf');
-}
-
-@font-face {
-  font-family: 'Nohemi';
-  src: url('../../public/fonts/Nohemi-ExtraBold.ttf');
+  font-family: 'Jetbrains Regular';
+  src: url("/fonts/JetbrainsMono-Regular.ttf");
 }
 
 @font-face {
-  font-family: 'ComicNeue';
-  src: url('../../public/fonts/ComicNeue-Bold.ttf');
+  font-family: 'Jetbrains Bold';
+  src: url("/fonts/JetbrainsMono-Bold.ttf");
 }
 
-
-/* Exo thin font from Google for additional styles */
-@import url(https://fonts.googleapis.com/css?family=Exo:100);
-
-/* Setting root styles including the background from your customizations */
-
-
-/* Media query for dark mode preferences */
-@media (prefers-color-scheme: dark) {
-  :root {
-    background-color: var(--main-bg-color);
-  }
-}
-
-/* Custom utilities using Tailwind's layering system */
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-}
-
-/* Infinite background scrolling animation styles */
-main {
-  background: url("../../public/bggrid.png") repeat 0 0;
-  -webkit-animation: bg-scrolling-reverse .92s infinite linear;
-  -moz-animation: bg-scrolling-reverse .92s infinite linear;
-  -o-animation: bg-scrolling-reverse .92s infinite linear;
-  animation: bg-scrolling-reverse .92s infinite linear;
-}
-
-@-webkit-keyframes bg-scrolling-reverse {
-  100% { background-position: 50px 50px; }
-}
-
-@-moz-keyframes bg-scrolling-reverse {
-  100% { background-position: 50px 50px; }
-}
-
-@-o-keyframes bg-scrolling-reverse {
-  100% { background-position: 50px 50px; }
-}
-
-@keyframes bg-scrolling-reverse {
-  100% { background-position: 50px 50px; }
+html {
+  background-color: #2D2A2E;
 }
 

@@ -7,24 +7,22 @@ module.exports = {
   ],
   theme: {
     extend: {
-    },
-    colors: {
-      'title-gradient':{
-        100: '#00FFA3',
-        200: '#00C2FF'
+      colors:{
+        "borde-gris":"#817F82",
+        "rosa":"#FFC0CB",
+        "naranja":"#FC9867",
+        "amarillo":"#FFD866",
+        "verde":"#A9DC76",
+        "morado":"#AB9DF2",
+        "celeste":"#78DCE8",
+        "naranja-gradient-inicial":"#FC9867",
+        "naranja-gradient-final":"#FB8966",
       },
-      "white":"#FFFFFF",
-      "black":"#000000",
-      "transparent":"rgba(0, 0, 0, 0)"
+      fontFamily:{
+        "JetBrains-Bold":"JetBrains Bold",
+        "JetBrains-Regular":"JetBrains Regular",
+      }
     },
-    fontFamily: {
-      "Nohemi":"Nohemi",
-      "Kumbh": "Kumbh",
-      "ComicNeue": "ComicNeue"
-    },
-    borderColor:{
-      "white":"#FFFFFF"
-    }
   },
   plugins: [],
 };
