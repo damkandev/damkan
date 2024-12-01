@@ -4,12 +4,12 @@
 
 @font-face {
   font-family: 'Jetbrains Regular';
-  src: url("/fonts/JetBrainsMono-Regular.ttf");
+  src: url("/fonts/JetBrainsMono-Regular.woff2");
 }
 
 @font-face {
   font-family: 'Jetbrains Bold';
-  src: url("/fonts/JetbrainsMono-Bold.ttf");
+  src: url("/fonts/JetbrainsMono-Bold.woff2");
 }
 
 html {
