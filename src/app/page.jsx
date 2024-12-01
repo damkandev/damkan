@@ -1,13 +1,12 @@
 import Ventana from "@/components/Ventana";
 import Toast from "@/components/Toast";
 import CardVentana from "@/components/CardVentana";
-
 export default function Home() {
   return (
-    <main className="p-8 flex justify-center items-center min-h-screen">
-      <div className="">
-        <Ventana />
-        <Toast />
+    <main className="p-8 flex flex-col items-center">
+      <Ventana />
+      <Toast />
+      <div className="grid md:grid-cols-2 gap-4 md:gap-2 md:w-[50rem]">
         <CardVentana>
           <p className="text-verde font-JetBrains-Bold text-2xl mb-2">
             README.MD
