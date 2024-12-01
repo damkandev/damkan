@@ -19,8 +19,8 @@ module.exports = {
         "naranja-gradient-final":"#FB8966",
       },
       fontFamily:{
-        "JetBrains-Bold":"JetBrains Bold",
-        "JetBrains-Regular":"JetBrains Regular",
+        "JetBrains-Bold":"Jetbrains Bold",
+        "JetBrains-Regular":"Jetbrains Regular",
       }
     },
   },
