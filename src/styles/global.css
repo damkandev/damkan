@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+@font-face {
+    font-family: "Lora";
+    src: url("/fonts/Lora-SemiBold.ttf") format("truetype");
+    font-weight: 600;
+}
+
+@font-face {
+    font-family: "Inter";
+    src: url("/fonts/Inter-Medium.ttf") format("truetype");
+    font-weight: 500;
+}
+
+@font-face {
+    font-family: "Inter";
+    src: url("/fonts/Inter-Regular.ttf") format("truetype");
+    font-weight: 400;
+}
+
+/* Clases de utilidad personalizadas */
+.font-lora {
+    font-family: 'Lora', serif;
+}
+
+.font-inter {
+    font-family: 'Inter', sans-serif;
+}

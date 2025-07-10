@@ -1,0 +1,68 @@
+---
+import Image from "astro/components/Image.astro"
+---
+
+<div id="" class="flex flex-col justify-center min-h-screen items-center p-8 md:max-w-[60dvw] lg:max-w-[40dvw] gap-2 mx-auto">
+    <h1 class="font-lora text-[#1F7148] text-4xl w-full">Damián Panes</h1>
+    <h2 class="font-inter font-medium text-[#6E8379] text-md w-full">Cofundador de Rodar, programador fullstack y emprendedor</h2>
+    <p class="font-inter font-normal text-[#0A2F1C]/80 text-lg text-justify">Desde que tengo uso de razón, me he dedicado a resolver problemas. La programación y el emprendimiento son mis principales herramientas, con las que he construido soluciones innovadoras y eficientes. He impartido charlas en universidades sobre programación y diseño, dictado clases de desarrollo de software, y cuento con una sólida y amplia trayectoria como programador.</p>
+    <div class="w-full">
+        <p class="font-lora text-2xl text-[#1F7148]">Mi Stack</p>
+        <div class="flex flex-wrap gap-3">
+            <div class="border border-[#1F7148]/20 rounded-lg py-2 px-6 text-center flex items-center justify-center gap-2">
+                <Image src="/logos/javascript.svg" height={16} width={16} alt={"javascript"} loading="eager" />
+                <p class="font-inter text-[#6E8379]">Javascript</p>
+            </div>
+            <div class="border border-[#1F7148]/20 rounded-lg py-2 px-6 text-center flex items-center justify-center gap-2">
+                <Image src="/logos/python.svg" height={16} width={16} alt={"python"} loading="eager" />
+                <p class="font-inter text-[#6E8379]">Python</p>
+            </div>
+            <div class="border border-[#1F7148]/20 rounded-lg py-2 px-6 text-center flex items-center justify-center gap-2">
+                <Image src="/logos/react.svg" height={16} width={16} alt={"react"} loading="eager" />
+                <p class="font-inter text-[#6E8379]">React</p>
+            </div>
+            <div class="border border-[#1F7148]/20 rounded-lg py-2 px-6 text-center flex items-center justify-center gap-2">
+                <Image src="/logos/next.svg" height={16} width={16} alt={"next"} loading="eager" />
+                <p class="font-inter text-[#6E8379]">Next</p>
+            </div>
+            <div class="border border-[#1F7148]/20 rounded-lg py-2 px-6 text-center flex items-center justify-center gap-2">
+                <Image src="/logos/postgre.svg" height={16} width={16} alt={"postgre"} loading="eager" />
+                <p class="font-inter text-[#6E8379]">PostgreSQL</p>
+            </div>
+            <div class="border border-[#1F7148]/20 rounded-lg py-2 px-6 text-center flex items-center justify-center gap-2">
+                <Image src="/logos/rust.svg" height={16} width={16} alt={"rust"} loading="eager" />
+                <p class="font-inter text-[#6E8379]">Rust</p>
+            </div>
+            <div class="border border-[#1F7148]/20 rounded-lg py-2 px-6 text-center flex items-center justify-center gap-2">
+                <Image src="/logos/fastapi.svg" height={16} width={16} alt={"fastapi"} loading="eager" />
+                <p class="font-inter text-[#6E8379]">FastAPI</p>
+            </div>
+            <div class="border border-[#1F7148]/20 rounded-lg py-2 px-6 text-center flex items-center justify-center gap-2">
+                <Image src="/logos/aws.svg" height={16} width={16} alt={"aws"} loading="eager" />
+                <p class="font-inter text-[#6E8379]">AWS</p>
+            </div>
+        </div>
+    </div>
+    <div class="w-full grid grid-cols-1 md:grid-cols-2 gap-2">
+        <div class="w-full border border-[#1F7148]/20 p-4 rounded-lg">
+            <p class="font-lora text-[#1F7148] text-2xl">Mis empresas</p>
+            <ul class="list-disc ml-5">
+                <li><a href="https://keroke.ro" class="font-inter text-[#0A2F1C]/80 cursor-pointer no-underline hover:text-[#0A2F1C]">KeroKero</a></li>
+                <li><a href="https://rodar.org" class="font-inter text-[#0A2F1C]/80 cursor-pointer no-underline hover:text-[#0A2F1C]">Rodar</a></li>
+                <li class="font-inter italic text-[#0A2F1C]/30">Gran Menú</li>
+                <li class="font-inter italic text-[#0A2F1C]/30">Froglabs</li>
+            </ul>
+        </div>
+        <div class="w-full border border-[#1F7148]/20 p-4 rounded-lg">
+            <p class="font-lora text-[#1F7148] text-2xl">Mis redes</p>
+            <ul class="list-disc ml-5">
+                <li><a href="https://instagram.com/damian.panes" class="font-inter text-[#0A2F1C]/80 cursor-pointer no-underline hover:text-[#0A2F1C]">Instagram</a></li>
+                <li><a href="https://www.linkedin.com/in/damianpanes/" class="font-inter text-[#0A2F1C]/80 cursor-pointer no-underline hover:text-[#0A2F1C]">Linkedin</a></li>
+                <li><a href="https://github.com/damkandev" class="font-inter text-[#0A2F1C]/80 cursor-pointer no-underline hover:text-[#0A2F1C]">Github</a></li>
+                <li><a href="https://www.youtube.com/@damianpanes" class="font-inter text-[#0A2F1C]/80 cursor-pointer no-underline hover:text-[#0A2F1C]">Youtube</a></li>
+            </ul>
+
+        </div>
+    </div>
+    <a href="mailto:damian@rodar.org" class="bg-[#1F7148] text-[#E6FFF3] p-4 rounded-lg w-full text-center no-underline">Contactame</a>
+</div> 
