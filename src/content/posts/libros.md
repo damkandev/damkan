@@ -53,11 +53,11 @@ Bueno, la cosa es que el libro que me recomendo **es muy bueno**, no obstante si
 
 Le pregunte a una amiga que tal este libro, por que honestamente yo aun no lo he leido pero se escucha muy bueno, me dijo que era un excelente libro que tiene una ideologia en donde se referencia a que la creatividad y pensamientos humanos son lo que genera el progreso.
 
-## Eduardo Della Maggiora (Betterfly) - Meditations de Marco Aurelio, The Obstacle is the Way de Ryan Holiday y Grit de Angela Duckworth!
+## 3. Eduardo Della Maggiora (Betterfly) - Meditations de Marco Aurelio, The Obstacle is the Way de Ryan Holiday y Grit de Angela Duckworth!
 
 Eduardo me recomendo 3 libros y uno se repite con Pedro Pineda, pero me encanta el libro de "THe Obstacle is the Way" de Ryan Holiday, asi que si estas buscando que leer te lo recomiendo.
 
-## Paula Enei (Platanus y El Vaso medio lleno) - Why Greatness Cannot be planned. 
+## 4. Paula Enei (Platanus y El Vaso medio lleno) - Why Greatness Cannot be planned. 
 
 Creo que es un libro grandioso, se choca bastante con mi forma de vivir el dia a dia.
 
@@ -67,13 +67,13 @@ Menciona que los objetivos fijos pueden ser enemigos del progreso y que realment
 
 **PD:** Paula Enei menciono que este libro fue la biblia de los founders de Runway.
 
-## Tomas Charles (Fraccional) - The Cold Start Problem
+## 5. Tomas Charles (Fraccional) - The Cold Start Problem
 
 Tomas menciona que recomienda este libro dado que cuando el construia Urvana y Fraccional (ambos marketplaces) bueno el menciona que este libro es bueno por que habla sobre el huevo y la gallina de marketplaces que son B2B2C.
 
 ![Foto del libro](https://m.media-amazon.com/images/I/81Ama8RVF9L._AC_UF894,1000_QL80_.jpg)
 
-## Leo Soto (Shinkansen) - Surely you are joking Mr Feynman de Richard Feynman
+## 6. Leo Soto (Shinkansen) - Surely you are joking Mr Feynman de Richard Feynman
 ![Foto del libro](https://images.cdn2.buscalibre.com/fit-in/360x360/cd/b3/cdb33fa837acda250de84353d4cb5f99.jpg)
 
 Al inicio le pregunte por linkedin la recomendacion del libro, por que cuando le enviaba los correos no le llegaban.
