@@ -45,7 +45,7 @@ export default async function Post({ params }) {
                         <div className="font-bold text-xl md:text-2xl mb-2">
                             <DecryptedText text={postData.title} animateOn="view" revealDirection="start" speed={50} />
                         </div>
-                        <div className="text-sm text-foreground/60">{postData.date}</div>
+                        <div className="text-sm text-foreground/60">{postData.date} · {postData.readingTime} min de lectura</div>
                     </div>
                     <div className="markdown-content">
                         <MDXRemote source={postData.content} components={components} />

@@ -4,6 +4,14 @@ import matter from 'gray-matter';
 
 const postsDirectory = path.join(process.cwd(), 'src/content/posts');
 
+// Calculate reading time based on word count (average 200 words per minute)
+function calculateReadingTime(content) {
+    const wordsPerMinute = 200;
+    const words = content.trim().split(/\s+/).length;
+    const minutes = Math.ceil(words / wordsPerMinute);
+    return minutes;
+}
+
 export function getSortedPostsData() {
     // Create directory if it doesn't exist
     if (!fs.existsSync(postsDirectory)) {
@@ -23,9 +31,13 @@ export function getSortedPostsData() {
         // Use gray-matter to parse the post metadata section
         const matterResult = matter(fileContents);
 
+        // Calculate reading time
+        const readingTime = calculateReadingTime(matterResult.content);
+
         // Combine the data with the id
         return {
             id,
+            readingTime,
             ...matterResult.data,
         };
     });
@@ -61,9 +73,13 @@ export async function getPostData(id) {
     // Use gray-matter to parse the post metadata section
     const matterResult = matter(fileContents);
 
+    // Calculate reading time
+    const readingTime = calculateReadingTime(matterResult.content);
+
     return {
         id,
         content: matterResult.content,
+        readingTime,
         ...matterResult.data,
     };
 }

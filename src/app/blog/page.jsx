@@ -12,11 +12,11 @@ export default function Blog() {
                     <DecryptedText text="Blog" animateOn="both" revealDirection="start" speed={50} />
                 </div>
                 <div className="space-y-6">
-                    {allPostsData.map(({ id, date, title, description }) => (
+                    {allPostsData.map(({ id, date, title, description, readingTime }) => (
                         <div key={id} className="border-b border-foreground/20 pb-4 last:border-0">
                             <Link href={`/blog/${id}`} className="block group">
                                 <h2 className="text-lg font-bold group-hover:underline decoration-[#E6BE3C] decoration-2 underline-offset-4">{title}</h2>
-                                <small className="text-foreground/60 block my-1">{date}</small>
+                                <small className="text-foreground/60 block my-1">{date} · {readingTime} min de lectura</small>
                                 <p className="text-sm">{description}</p>
                             </Link>
                         </div>
