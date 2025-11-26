@@ -17,7 +17,7 @@ export default function Home() {
       </div>
       <div className="flex gap-2">
         <Link href="/blog" className="cursor-none font-google-sans-code hover:underline decoration-[#E6BE3C] decoration-2 underline-offset-4">[Blog]</Link>
-        <Link href="https://linkedin  .com/in/damianpanes" className="cursor-none font-google-sans-code hover:underline decoration-[#E6BE3C] decoration-2 underline-offset-4">[Linkedin]</Link>
+        <Link href="https://linkedin.com/in/damianpanes" className="cursor-none font-google-sans-code hover:underline decoration-[#E6BE3C] decoration-2 underline-offset-4">[Linkedin]</Link>
         <Link href="https://github.com/damkandev" className="cursor-none font-google-sans-code hover:underline decoration-[#E6BE3C] decoration-2 underline-offset-4">[Github]</Link>
       </div>
     </div>
