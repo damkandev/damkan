@@ -62,7 +62,7 @@ Creo que es un libro grandioso. Se choca bastante con mi forma de vivir el día 
 
 Menciona que los objetivos fijos pueden ser enemigos del progreso y que el progreso real ocurre mediante “objetivos intermedios” impredecibles.
 
-![Foto del libro](https://images.cdn2.buscalibre.com/fit-in/360x360/4f/73/4f739fa791480c3c7dbdb53ecaabeca1.jpg)
+![Foto del libro](https://m.media-amazon.com/images/I/41cIrt+-4EL._SY445_SX342_FMwebp_.jpg)
 
 **PD:** Paula Enei mencionó que este libro fue la biblia de los founders de Runway.
 
