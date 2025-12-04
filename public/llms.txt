@@ -1,0 +1,14 @@
+# Damián Panes
+
+Sitio personal de Damián Panes.
+
+## Secciones Principales
+
+- [Inicio](https://damianpanes.com/)
+- [Blog](https://damianpanes.com/blog)
+- [Historia](https://damianpanes.com/blog/historia)
+- [Libros](https://damianpanes.com/blog/libros)
+
+## Sobre Mí
+Me gusta la parte de producto de las empresas, no me gusta usar traje solo crocs.
+Programo y creo empresas para solucionar problemas.

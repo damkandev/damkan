@@ -10,6 +10,23 @@ export async function generateStaticParams() {
     }));
 }
 
+export async function generateMetadata({ params }) {
+    const { slug } = await params;
+    const postData = await getPostData(slug);
+
+    return {
+        title: postData.title,
+        description: postData.description,
+        openGraph: {
+            title: postData.title,
+            description: postData.description,
+            type: 'article',
+            publishedTime: postData.date,
+            authors: ['Damián Panes'],
+        },
+    };
+}
+
 const components = {
     img: (props) => (
         <figure className="flex flex-col items-center justify-center my-8">

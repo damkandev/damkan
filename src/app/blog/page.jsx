@@ -2,6 +2,17 @@ import Link from 'next/link';
 import { getSortedPostsData } from '@/lib/posts';
 import DecryptedText from '@/components/DecryptedText';
 
+export const metadata = {
+    title: "Blog | Damián Panes",
+    description: "Artículos sobre mi historia, pensamientos y libros que recomiendo.",
+    openGraph: {
+        title: "Blog | Damián Panes",
+        description: "Artículos sobre mi historia, pensamientos y libros que recomiendo.",
+        url: 'https://damianpanes.com/blog',
+        type: 'website',
+    },
+};
+
 export default function Blog() {
     const allPostsData = getSortedPostsData();
 

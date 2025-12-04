@@ -11,9 +11,6 @@ importers:
       '@fontsource/google-sans-code':
         specifier: ^5.2.3
         version: 5.2.3
-      '@gsap/react':
-        specifier: ^2.1.2
-        version: 2.1.2(gsap@3.13.0)(react@19.2.0)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -23,15 +20,9 @@ importers:
       date-fns:
         specifier: ^4.1.0
         version: 4.1.0
-      framer-motion:
-        specifier: ^12.23.24
-        version: 12.23.24(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       gray-matter:
         specifier: ^4.0.3
         version: 4.0.3
-      gsap:
-        specifier: ^3.13.0
-        version: 3.13.0
       lucide-react:
         specifier: ^0.554.0
         version: 0.554.0(react@19.2.0)
@@ -201,12 +192,6 @@ packages:
 
   '@fontsource/google-sans-code@5.2.3':
     resolution: {integrity: sha512-bCbCXFWtGIVNEe8O/mE7YpIuVjc3E4CV6pToJ0IZc9XcXKfa74yntZa3UgyzBRgabnx5bm6ciQVQvWGnwi4Rqw==}
-
-  '@gsap/react@2.1.2':
-    resolution: {integrity: sha512-JqliybO1837UcgH2hVOM4VO+38APk3ECNrsuSM4MuXp+rbf+/2IG2K1YJiqfTcXQHH7XlA0m3ykniFYstfq0Iw==}
-    peerDependencies:
-      gsap: ^3.12.5
-      react: '>=17'
 
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
@@ -1344,9 +1329,6 @@ packages:
   gray-matter@4.0.3:
     resolution: {integrity: sha512-5v6yZd4JK3eMI3FqqCouswVqwugaA9r4dNZB1wwcmrD02QkV5H0y7XBQW8QwQqEaZY1pM9aqORSORhJRdNK44Q==}
     engines: {node: '>=6.0'}
-
-  gsap@3.13.0:
-    resolution: {integrity: sha512-QL7MJ2WMjm1PHWsoFrAQH/J8wUeqZvMtHO58qdekHpCfhvhSL4gSiz6vJf5EeMP0LOn3ZCprL2ki/gjED8ghVw==}
 
   has-bigints@1.1.0:
     resolution: {integrity: sha512-R3pbpkcIqv2Pm3dUwgjclDRVmWpTJW2DcMzcIhEXEx1oh/CEMObMm3KLmRJOdvhM7o4uQBnwr8pzRK2sJWIqfg==}
@@ -2585,11 +2567,6 @@ snapshots:
       levn: 0.4.1
 
   '@fontsource/google-sans-code@5.2.3': {}
-
-  '@gsap/react@2.1.2(gsap@3.13.0)(react@19.2.0)':
-    dependencies:
-      gsap: 3.13.0
-      react: 19.2.0
 
   '@humanfs/core@0.19.1': {}
 
@@ -3849,8 +3826,6 @@ snapshots:
       kind-of: 6.0.3
       section-matter: 1.0.0
       strip-bom-string: 1.0.0
-
-  gsap@3.13.0: {}
 
   has-bigints@1.1.0: {}
 
