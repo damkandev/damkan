@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getSortedPostsData } from '@/lib/posts';
 import DecryptedText from '@/components/DecryptedText';
+import BlogMetrics from '@/components/BlogMetrics';
 
 export const metadata = {
     title: "Blog | Damián Panes",
@@ -18,6 +19,7 @@ export default function Blog() {
 
     return (
         <div className="min-h-screen flex items-center justify-center p-4">
+            <BlogMetrics page="blog-index" />
             <div className="font-google-sans-code w-full max-w-2xl border border-foreground p-4 md:p-8">
                 <div className="my-4 font-bold text-xl md:text-2xl">
                     <DecryptedText text="Blog" animateOn="both" revealDirection="start" speed={50} />

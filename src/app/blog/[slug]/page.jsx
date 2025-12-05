@@ -2,6 +2,7 @@ import { getPostData, getAllPostIds } from '@/lib/posts';
 import { MDXRemote } from 'next-mdx-remote/rsc';
 import Link from 'next/link';
 import DecryptedText from '@/components/DecryptedText';
+import BlogMetrics from '@/components/BlogMetrics';
 
 export async function generateStaticParams() {
     const paths = getAllPostIds();
@@ -53,6 +54,7 @@ export default async function Post({ params }) {
 
     return (
         <div className="min-h-screen flex items-center justify-center p-4">
+            <BlogMetrics page={`blog/${slug}`} />
             <div className="font-google-sans-code w-full max-w-2xl border border-foreground p-4 md:p-8">
                 <div className="mb-8">
                     <Link href="/blog" className="text-sm hover:underline decoration-[#E6BE3C] decoration-2 underline-offset-4">← Volver al blog</Link>
