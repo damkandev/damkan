@@ -1,8 +1,6 @@
 import { ImageResponse } from 'next/og'
-import { readFile } from 'fs/promises'
-import { join } from 'path'
 
-export const runtime = 'nodejs'
+export const runtime = 'edge'
 
 export const alt = 'Damián Panes'
 export const size = {
@@ -12,14 +10,16 @@ export const size = {
 
 export const contentType = 'image/png'
 
+// Using JetBrains Mono as a similar monospace font (Google Sans Code is not available on Google Fonts)
+const fontUrl = 'https://fonts.gstatic.com/s/jetbrainsmono/v18/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjPVmUsaaDhw.ttf'
+const fontBoldUrl = 'https://fonts.gstatic.com/s/jetbrainsmono/v18/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8-aFjPVmUsaaDhw.ttf'
+
 export default async function Image() {
-    // Load Google Sans Code fonts
-    const googleSansCodeBold = await readFile(
-        join(process.cwd(), 'node_modules/@fontsource/google-sans-code/files/google-sans-code-latin-700-normal.woff2')
-    )
-    const googleSansCodeRegular = await readFile(
-        join(process.cwd(), 'node_modules/@fontsource/google-sans-code/files/google-sans-code-latin-400-normal.woff2')
-    )
+    // Fetch fonts from Google Fonts
+    const [fontData, fontBoldData] = await Promise.all([
+        fetch(fontUrl).then(res => res.arrayBuffer()),
+        fetch(fontBoldUrl).then(res => res.arrayBuffer()),
+    ])
 
     return new ImageResponse(
         (
@@ -51,7 +51,7 @@ export default async function Image() {
                             fontSize: 60,
                             fontWeight: 700,
                             marginBottom: '20px',
-                            fontFamily: 'Google Sans Code',
+                            fontFamily: 'JetBrains Mono',
                             color: '#39211C',
                         }}
                     >
@@ -60,7 +60,7 @@ export default async function Image() {
                     <div
                         style={{
                             fontSize: 30,
-                            fontFamily: 'Google Sans Code',
+                            fontFamily: 'JetBrains Mono',
                             fontWeight: 400,
                             lineHeight: 1.5,
                             color: '#39211C',
@@ -71,7 +71,7 @@ export default async function Image() {
                     <div
                         style={{
                             fontSize: 24,
-                            fontFamily: 'Google Sans Code',
+                            fontFamily: 'JetBrains Mono',
                             fontWeight: 400,
                             marginTop: '40px',
                             color: '#39211C',
@@ -87,14 +87,14 @@ export default async function Image() {
             ...size,
             fonts: [
                 {
-                    name: 'Google Sans Code',
-                    data: googleSansCodeBold,
+                    name: 'JetBrains Mono',
+                    data: fontBoldData,
                     weight: 700,
                     style: 'normal',
                 },
                 {
-                    name: 'Google Sans Code',
-                    data: googleSansCodeRegular,
+                    name: 'JetBrains Mono',
+                    data: fontData,
                     weight: 400,
                     style: 'normal',
                 },
