@@ -1,6 +1,8 @@
 import { ImageResponse } from 'next/og'
+import { readFile } from 'fs/promises'
+import { join } from 'path'
 
-export const runtime = 'edge'
+export const runtime = 'nodejs'
 
 export const alt = 'Damián Panes'
 export const size = {
@@ -11,8 +13,13 @@ export const size = {
 export const contentType = 'image/png'
 
 export default async function Image() {
-    // Font loading (optional, using system fonts for simplicity and speed in this example, 
-    // but could load Google Sans Code if available as a buffer)
+    // Load Google Sans Code fonts
+    const googleSansCodeBold = await readFile(
+        join(process.cwd(), 'node_modules/@fontsource/google-sans-code/files/google-sans-code-latin-700-normal.woff2')
+    )
+    const googleSansCodeRegular = await readFile(
+        join(process.cwd(), 'node_modules/@fontsource/google-sans-code/files/google-sans-code-latin-400-normal.woff2')
+    )
 
     return new ImageResponse(
         (
@@ -24,7 +31,7 @@ export default async function Image() {
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: 'white',
+                    backgroundColor: '#EBE4E1',
                     padding: '40px',
                 }}
             >
@@ -34,7 +41,7 @@ export default async function Image() {
                         flexDirection: 'column',
                         alignItems: 'flex-start',
                         justifyContent: 'center',
-                        border: '2px solid black',
+                        border: '2px solid #39211C',
                         padding: '40px',
                         maxWidth: '900px',
                     }}
@@ -42,9 +49,10 @@ export default async function Image() {
                     <div
                         style={{
                             fontSize: 60,
-                            fontWeight: 'bold',
+                            fontWeight: 700,
                             marginBottom: '20px',
-                            fontFamily: 'monospace',
+                            fontFamily: 'Google Sans Code',
+                            color: '#39211C',
                         }}
                     >
                         Damian Panes
@@ -52,8 +60,10 @@ export default async function Image() {
                     <div
                         style={{
                             fontSize: 30,
-                            fontFamily: 'monospace',
+                            fontFamily: 'Google Sans Code',
+                            fontWeight: 400,
                             lineHeight: 1.5,
+                            color: '#39211C',
                         }}
                     >
                         Me gusta el helado de pasas al ron, tengo 5 veces repetidas el mismo par de zapatillas pero aparte de eso me gusta mucho programar y crear empresas, principalmente solucionar problemas.
@@ -61,18 +71,34 @@ export default async function Image() {
                     <div
                         style={{
                             fontSize: 24,
-                            fontFamily: 'monospace',
+                            fontFamily: 'Google Sans Code',
+                            fontWeight: 400,
                             marginTop: '40px',
-                            color: '#666',
+                            color: '#39211C',
+                            opacity: 0.6,
                         }}
                     >
-                        damianpanes.com
+                        dapan.es
                     </div>
                 </div>
             </div>
         ),
         {
             ...size,
+            fonts: [
+                {
+                    name: 'Google Sans Code',
+                    data: googleSansCodeBold,
+                    weight: 700,
+                    style: 'normal',
+                },
+                {
+                    name: 'Google Sans Code',
+                    data: googleSansCodeRegular,
+                    weight: 400,
+                    style: 'normal',
+                },
+            ],
         }
     )
 }
