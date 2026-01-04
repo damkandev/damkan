@@ -2,6 +2,8 @@ import "./globals.css";
 import "@fontsource/google-sans-code/400.css";
 import "@fontsource/google-sans-code/700.css";
 import { SmoothCursor } from "@/components/ui/smooth-cursor"
+import { CursorProvider } from "@/context/cursor-context"
+import { CursorToggle } from "@/components/ui/cursor-toggle"
 
 export const metadata = {
   metadataBase: new URL('https://dapan.es'),
@@ -55,10 +57,13 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body
-        className="antialiased cursor-none"
+        className="antialiased"
       >
-        <SmoothCursor color="#574946" />
-        {children}
+        <CursorProvider>
+          <SmoothCursor color="#574946" />
+          <CursorToggle />
+          {children}
+        </CursorProvider>
       </body>
     </html>
   );

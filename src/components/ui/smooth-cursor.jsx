@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useCursor } from "@/context/cursor-context";
 import { motion, useSpring } from "motion/react"
 
 const DefaultCursorSVG = ({ color = "#000000" }) => {
@@ -64,6 +65,7 @@ export function SmoothCursor({
     restDelta: 0.001,
   }
 }) {
+  const { isEnabled } = useCursor() // We'll need to update imports
   const [isMoving, setIsMoving] = useState(false)
   const lastMousePos = useRef({ x: 0, y: 0 })
   const velocity = useRef({ x: 0, y: 0 })
@@ -85,6 +87,12 @@ export function SmoothCursor({
   })
 
   useEffect(() => {
+    // Si no está habilitado, aseguramos que el cursor por defecto se muestre y salimos
+    if (!isEnabled) {
+      document.body.style.cursor = "auto"
+      return
+    }
+
     const updateVelocity = (currentPos) => {
       const currentTime = Date.now()
       const deltaTime = currentTime - lastUpdateTime.current
@@ -143,6 +151,7 @@ export function SmoothCursor({
       })
     }
 
+    // Ocultamos el cursor nativo cuando nuestra custom cursor está activo
     document.body.style.cursor = "none"
     window.addEventListener("mousemove", throttledMouseMove)
 
@@ -151,7 +160,10 @@ export function SmoothCursor({
       document.body.style.cursor = "auto"
       if (rafId) cancelAnimationFrame(rafId)
     };
-  }, [cursorX, cursorY, rotation, scale])
+  }, [cursorX, cursorY, rotation, scale, isEnabled])
+
+  // Si no está habilitado, no renderizamos nada
+  if (!isEnabled) return null
 
   return (
     <motion.div
@@ -169,6 +181,7 @@ export function SmoothCursor({
       }}
       initial={{ scale: 0 }}
       animate={{ scale: 1 }}
+      exit={{ scale: 0 }}
       transition={{
         type: "spring",
         stiffness: 400,
