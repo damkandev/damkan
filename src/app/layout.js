@@ -44,11 +44,6 @@ export const metadata = {
     description: "Portfolio personal interactivo estilo terminal.",
     images: ["/icon.png"],
   },
-  icons: {
-    icon: "/icon.png",
-    shortcut: "/icon.png",
-    apple: "/icon.png",
-  },
   viewport: {
     width: "device-width",
     initialScale: 1,
