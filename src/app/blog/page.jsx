@@ -47,7 +47,7 @@ export default function BlogPage() {
                 accentColor="#CFFF33"
                 onProgramChange={handleProgramChange}
                 initialProgram="blog"
-                className="fixed inset-0 m-auto w-[95vw] h-[90vh] sm:w-[90vw] sm:h-[90vh] z-50 bg-black/90 backdrop-blur-md shadow-2xl"
+                className="fixed inset-0 m-auto w-[95vw] h-[90vh] sm:w-2/4 sm:h-[90vh] z-50 bg-black/90 backdrop-blur-md shadow-2xl"
                 contentClassName="flex-1"
             />
         </div>
