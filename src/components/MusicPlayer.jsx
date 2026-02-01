@@ -124,7 +124,7 @@ export default function MusicPlayer() {
 
   const progressBar = () => {
     const width = 20;
-    const pos = Math.floor((currentTime / 180) * width);
+    const pos = Math.min(width, Math.max(0, Math.floor((currentTime / 180) * width)));
     const bar = "▓".repeat(pos) + "░".repeat(width - pos);
     return `[${bar}]`;
   };
