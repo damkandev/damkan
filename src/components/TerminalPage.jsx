@@ -179,12 +179,11 @@ export default function TerminalPage({ initialProgram = null, initialArgs = [] }
                 initialProgram={initialProgram}
                 initialArgs={initialArgs}
                 className={isBlogOpen
-                    ? "fixed inset-0 m-auto w-[95vw] h-[90vh] sm:w-[90vw] sm:h-[90vh] z-50 bg-black/90 backdrop-blur-md shadow-2xl"
+                    ? "fixed inset-0 m-auto w-[95vw] h-[90vh] sm:w-2/4 sm:h-[90vh] z-50 bg-black/90 backdrop-blur-md shadow-2xl"
                     : "w-full max-w-2xl sm:max-w-3xl shadow-lg relative"
                 }
                 contentClassName={isBlogOpen ? "flex-1" : "h-[60vh] sm:h-120"}
             />
         </div>
     );
-
 }
