@@ -19,30 +19,30 @@ const richTextPatterns = [
         )
     },
     {
-        regex: /\{\{LINK:(.+?)\|(.+?)\}\}/g, render: (p1, key, accentColor, p2) => (
+        regex: /\{\{LINK:(.+?)\|(.+?)\}\}/g, render: (text, url, key, accentColor) => (
             <a
                 key={key}
-                href={p2}
+                href={url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline hover:opacity-80"
                 style={{ color: accentColor }}
             >
-                {p1}
+                {text}
             </a>
         )
     },
     {
-        regex: /\{\{IMG:(.+?)\|(.+?)\}\}/g, render: (p1, key, accentColor, p2) => (
+        regex: /\{\{IMG:(.+?)\|(.+?)\}\}/g, render: (text, url, key, accentColor) => (
             <a
                 key={key}
-                href={p2}
+                href={url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline hover:opacity-80 cursor-pointer"
                 style={{ color: accentColor }}
             >
-                [IMG: {p1}]
+                [IMG: {text}]
             </a>
         )
     },

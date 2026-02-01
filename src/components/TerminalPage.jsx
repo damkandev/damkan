@@ -68,8 +68,8 @@ export default function TerminalPage({ initialProgram = null, initialArgs = [] }
         about: {
             description: "Sobre mí",
             execute: () => [
-                { type: "text", content: "Soy Damian, desarrollador y emprendedor.", duration: 500 },
-                { type: "text", content: "Me especializo en crear soluciones digitales.", duration: 500 },
+                { type: "text", content: "soy Damian, desarrollador y emprendedor.", duration: 500 },
+                { type: "text", content: "hola, es un gusto!! entra a este link {{LINK:click aqui|https://www.youtube.com/watch?v=dQw4w9WgXcQ}} porfa.", duration: 500 },
             ]
         },
         empresas: {
