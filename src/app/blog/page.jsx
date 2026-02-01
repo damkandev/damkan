@@ -1,44 +1,55 @@
-import Link from 'next/link';
-import { getSortedPostsData } from '@/lib/posts';
-import DecryptedText from '@/components/DecryptedText';
-import BlogMetrics from '@/components/BlogMetrics';
+"use client";
+import { useState, useRef } from "react";
+import Terminal from "@/components/Terminal";
+import { BlogProgram } from "@/components/terminal/BlogProgram";
+import gsap from "gsap";
+import { Flip } from "gsap/Flip";
+import { useGSAP } from "@gsap/react";
 
-export const metadata = {
-    title: "Blog | Damián Panes",
-    description: "Artículos sobre mi historia, pensamientos y libros que recomiendo.",
-    openGraph: {
-        title: "Blog | Damián Panes",
-        description: "Artículos sobre mi historia, pensamientos y libros que recomiendo.",
-        url: 'https://damianpanes.com/blog',
-        type: 'website',
-    },
-};
+gsap.registerPlugin(Flip, useGSAP);
 
-export default function Blog() {
-    const allPostsData = getSortedPostsData();
+export default function BlogPage() {
+    const [isBlogOpen, setIsBlogOpen] = useState(true);
+    const terminalRef = useRef(null);
+    const containerRef = useRef(null);
+    const stateRef = useRef(null);
+
+    const programs = {
+        [BlogProgram.name]: BlogProgram,
+    };
+
+    const handleProgramChange = (program) => {
+        if (terminalRef.current) {
+            stateRef.current = Flip.getState(terminalRef.current);
+        }
+        setIsBlogOpen(program === "blog");
+    };
+
+    useGSAP(() => {
+        if (!stateRef.current || !terminalRef.current) return;
+
+        Flip.from(stateRef.current, {
+            duration: 0.8,
+            ease: "power3.inOut",
+            absolute: true,
+            zIndex: 50,
+        });
+    }, { dependencies: [isBlogOpen], scope: containerRef });
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4">
-            <BlogMetrics page="blog-index" />
-            <div className="font-google-sans-code w-full max-w-2xl border border-foreground p-4 md:p-8">
-                <div className="my-4 font-bold text-xl md:text-2xl">
-                    <DecryptedText text="Blog" animateOn="both" revealDirection="start" speed={50} />
-                </div>
-                <div className="space-y-6">
-                    {allPostsData.map(({ id, date, title, description, readingTime }) => (
-                        <div key={id} className="border-b border-foreground/20 pb-4 last:border-0">
-                            <Link href={`/blog/${id}`} className="block group">
-                                <h2 className="text-lg font-bold group-hover:underline decoration-[#E6BE3C] decoration-2 underline-offset-4">{title}</h2>
-                                <small className="text-foreground/60 block my-1">{date} · {readingTime} min de lectura</small>
-                                <p className="text-sm">{description}</p>
-                            </Link>
-                        </div>
-                    ))}
-                </div>
-                <div className="mt-8">
-                    <Link href="/" className="text-sm hover:underline decoration-[#E6BE3C] decoration-2 underline-offset-4">← Volver al inicio</Link>
-                </div>
-            </div>
+        <div ref={containerRef} className="flex min-h-screen items-center justify-center p-3 sm:p-4">
+            <Terminal
+                ref={terminalRef}
+                title="~/blog"
+                initialContent={[]}
+                commands={{}}
+                programs={programs}
+                accentColor="#CFFF33"
+                onProgramChange={handleProgramChange}
+                initialProgram="blog"
+                className="fixed inset-0 m-auto w-[95vw] h-[90vh] sm:w-[90vw] sm:h-[90vh] z-50 bg-black/90 backdrop-blur-md shadow-2xl"
+                contentClassName="flex-1"
+            />
         </div>
     );
 }

@@ -1,69 +1,39 @@
+import { Geist, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import "@fontsource/google-sans-code/400.css";
-import "@fontsource/google-sans-code/700.css";
-import { SmoothCursor } from "@/components/ui/smooth-cursor"
-import { CursorProvider } from "@/context/cursor-context"
-import { CursorToggle } from "@/components/ui/cursor-toggle"
+import MusicPlayer from "@/components/MusicPlayer";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
+  subsets: ["latin"],
+});
 
 export const metadata = {
-  metadataBase: new URL('https://dapan.es'),
-  title: {
-    default: "Damián Panes",
-    template: "%s | Damián Panes"
-  },
-  description: "Me gusta la parte de producto de las empresas, no me gusta usar traje solo crocs.",
-  keywords: ["Damián Panes", "Producto", "Emprendimiento", "Programación", "Startups"],
-  authors: [{ name: "Damián Panes", url: "https://dapan.es" }],
-  creator: "Damián Panes",
-  openGraph: {
-    title: "Damián Panes",
-    description: "Me gusta la parte de producto de las empresas, no me gusta usar traje solo crocs.",
-    url: 'https://dapan.es',
-    siteName: 'Damián Panes',
-    locale: 'es_CL',
-    type: 'website',
-
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: "Damián Panes",
-    description: "Me gusta la parte de producto de las empresas, no me gusta usar traje solo crocs.",
-    creator: "@damianPanes", // Assuming handle, can be updated
-  },
-  icons: {
-    icon: '/favicon.svg',
-    shortcut: '/favicon.svg',
-    apple: '/favicon.svg',
-  },
-  manifest: '/manifest.json',
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-    },
-  },
-};
-
-export const viewport = {
-  themeColor: '#ffffff',
+  title: "dapan.es",
+  description: "Portfolio personal estilo terminal",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body
-        className="antialiased"
+        className={`${geistSans.variable} ${jetbrainsMono.variable} antialiased`}
       >
-        <CursorProvider>
-          <SmoothCursor color="#574946" />
-          <CursorToggle />
-          {children}
-        </CursorProvider>
+        <div className="crt-overlay fixed inset-0" />
+        <div className="fixed top-4 left-4 right-4 z-[100] block lg:hidden">
+          <div
+            className="bg-black/80 border border-[#CFFF33] p-3 text-[#CFFF33] font-mono text-xs"
+            style={{ textShadow: "0 0 5px #CFFF33" }}
+          >
+            <span className="animate-pulse">▸</span> para una mejor experiencia, visualízalo desde tu celular
+          </div>
+        </div>
+        {children}
+        <MusicPlayer />
       </body>
     </html>
   );
