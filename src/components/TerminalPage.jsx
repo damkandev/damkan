@@ -85,8 +85,10 @@ export default function TerminalPage({ initialProgram = null, initialArgs = [] }
         contact: {
             description: "Información de contacto",
             execute: () => [
-                { type: "text", content: "📧 Puedes contactarme en:", duration: 300 },
-                { type: "text", content: "  Email: hello@dapan.es", duration: 300 },
+                { type: "text", content: "puedes contactarme en:", duration: 300 },
+                { type: "text", content: "  email: {{LINK:damkancontacto@gmail.com|mailto:damkancontacto@gmail.com}}", duration: 300 },
+                { type: "text", content: "  ig: {{LINK:@damian.panes|https://www.instagram.com/damian.panes}}", duration: 300 },
+                { type: "text", content: "  linkedin: {{LINK:damián|https://www.linkedin.com/in/damianpanes/}}", duration: 300 },
             ]
         },
         ls: {
