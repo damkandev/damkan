@@ -58,13 +58,16 @@ export const metadata = {
     index: true,
     follow: true,
   },
+  other: {
+    google: "notranslate",
+  },
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="es">
       <body
-        className={`${geistSans.variable} ${jetbrainsMono.variable} antialiased`}
+        className={`${geistSans.variable} ${jetbrainsMono.variable} antialiased notranslate`}
       >
         <div className="crt-overlay fixed inset-0" />
         <div className="fixed top-4 left-4 right-4 z-100 block lg:hidden">
