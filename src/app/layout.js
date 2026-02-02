@@ -17,14 +17,14 @@ export const metadata = {
     default: "dapan.es",
     template: "%s | dapan.es",
   },
-  description: "página web del emprendedor damián panes",
+  description: "me gustan las crocs y las pasas al ron, tengo 20 duh.",
   keywords: ["portfolio", "startups", "rodar", "kerokero", "damian", "dapan"],
   authors: [{ name: "Damian" }],
   creator: "Damian",
   metadataBase: new URL("https://dapan.es"),
   openGraph: {
-    title: "dapan.es | Terminal Portfolio",
-    description: "página web del emprendedor damián panes",
+    title: "dapan.es",
+    description: "me gustan las crocs y las pasas al ron, tengo 20 duh.",
     url: "https://dapan.es",
     siteName: "dapan.es",
     locale: "es_ES",
@@ -40,8 +40,8 @@ export const metadata = {
   },
   twitter: {
     card: "summary",
-    title: "dapan.es | Terminal Portfolio",
-    description: "Portfolio personal interactivo estilo terminal.",
+    title: "dapan.es",
+    description: "me gustan las crocs y las pasas al ron, tengo 20 duh.",
     images: ["/icon.png"],
   },
   viewport: {
