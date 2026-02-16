@@ -165,6 +165,11 @@ function markdownToTerminal(content) {
                 result.push({ type: "tableRow", cells: cells.map(c => parseInlineFormatting(c)) });
             }
         }
+        // Standalone images (on their own line)
+        else if (line.match(/^!\[(.+?)\]\((.+?)\)$/)) {
+            const match = line.match(/^!\[(.+?)\]\((.+?)\)$/);
+            result.push({ type: "asciiImage", alt: match[1], url: match[2] });
+        }
         // Empty line
         else if (line.trim() === "") {
             result.push({ type: "empty" });

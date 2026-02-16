@@ -114,6 +114,15 @@ function formatArticleContent(article) {
                 // After separator, next row is likely data, but first row logic handled above
                 break;
 
+            case "asciiImage":
+                content.push({
+                    type: "styled",
+                    content: line.url,
+                    duration: 50,
+                    style: { isAsciiImage: true, alt: line.alt, url: line.url }
+                });
+                break;
+
             case "hr":
                 content.push({
                     type: "styled",

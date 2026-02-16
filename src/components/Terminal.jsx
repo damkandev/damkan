@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useRef, forwardRef } from "react";
+import React, { useEffect, useState, useRef, forwardRef, useCallback } from "react";
 
 // Parse and render inline formatting markers
 // Parse and render inline formatting markers
@@ -87,6 +87,72 @@ const RichText = ({ text, accentColor }) => {
                 }
             })}
         </>
+    );
+};
+
+// ASCII Art Image component - fetches and displays ASCII art
+const AsciiImage = ({ url, alt, accentColor }) => {
+    const [ascii, setAscii] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const fetchAscii = async () => {
+            try {
+                setLoading(true);
+                const res = await fetch(
+                    `/api/ascii-art?url=${encodeURIComponent(url)}&height=300`
+                );
+                const data = await res.json();
+
+                if (cancelled) return;
+
+                if (data.error) {
+                    setError(data.error);
+                } else {
+                    setAscii(data.ascii);
+                }
+            } catch (err) {
+                if (!cancelled) setError("Failed to load image");
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        };
+
+        fetchAscii();
+        return () => { cancelled = true; };
+    }, [url]);
+
+    if (loading) {
+        return (
+            <div className="my-2 pl-2 text-sm animate-pulse" style={{ color: accentColor, opacity: 0.6 }}>
+                [Cargando imagen: {alt}...]
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="my-2 pl-2 text-sm" style={{ opacity: 0.5 }}>
+                [Error cargando imagen: {alt}]
+            </div>
+        );
+    }
+
+    return (
+        <div className="my-3 overflow-x-auto" style={{ flexShrink: 0 }}>
+            <pre
+                className="text-[4px] sm:text-[5px] leading-[4px] sm:leading-[5px] font-mono m-0 select-none"
+                style={{ color: accentColor, opacity: 0.85 }}
+            >
+                {ascii}
+            </pre>
+            <p className="text-xs mt-1" style={{ opacity: 0.4 }}>
+                {alt}
+            </p>
+        </div>
     );
 };
 
@@ -179,6 +245,11 @@ const TerminalLine = ({ content, type = "text", color, style = {}, accentColor =
                 </pre>
             </div>
         );
+    }
+
+    // ASCII Image
+    if (style.isAsciiImage) {
+        return <AsciiImage url={style.url} alt={style.alt} accentColor={accentColor} />;
     }
 
     // Header styling with font sizes
@@ -455,10 +526,11 @@ const Terminal = forwardRef(({
             const isTableRow = item.style?.isTableRow === true;
             const isTableSep = item.style?.isTableSeparator === true;
             const isHr = item.style?.isHr === true;
+            const isAsciiImg = item.style?.isAsciiImage === true;
             const isPre = item.type === "pre";
             const isArrayContent = Array.isArray(item.content);
 
-            const skipTyping = isCodeBlock || isTableRow || isTableSep || isHr || isPre || isArrayContent;
+            const skipTyping = isCodeBlock || isTableRow || isTableSep || isHr || isPre || isArrayContent || isAsciiImg;
 
             if (skipTyping) {
                 setHistory((prev) => [...prev, item]);
