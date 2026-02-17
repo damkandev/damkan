@@ -10,7 +10,7 @@ export async function GET(request) {
     try {
         const { searchParams } = new URL(request.url);
         const imageUrl = searchParams.get("url");
-        const targetHeight = parseInt(searchParams.get("height") || "150", 10);
+        const targetWidth = parseInt(searchParams.get("width") || "100", 10);
 
         if (!imageUrl) {
             return NextResponse.json(
@@ -62,11 +62,12 @@ export async function GET(request) {
             );
         }
 
-        // Calculate dimensions
-        // Characters are ~2x taller than wide, so we halve the width
+        // Width-based sizing: fit to terminal width, derive height from aspect ratio
+        // Character aspect correction: monospace chars are ~2.2x taller than wide,
+        // so we multiply height by 0.45 to compensate
         const aspectRatio = metadata.width / metadata.height;
-        const charHeight = targetHeight;
-        const charWidth = Math.round(charHeight * aspectRatio * 0.5);
+        const charWidth = targetWidth;
+        const charHeight = Math.round((charWidth / aspectRatio) * 0.45);
 
         // Resize and convert to grayscale raw pixels
         const { data, info } = await image

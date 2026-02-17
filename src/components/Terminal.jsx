@@ -103,7 +103,7 @@ const AsciiImage = ({ url, alt, accentColor }) => {
             try {
                 setLoading(true);
                 const res = await fetch(
-                    `/api/ascii-art?url=${encodeURIComponent(url)}&height=300`
+                    `/api/ascii-art?url=${encodeURIComponent(url)}&width=100`
                 );
                 const data = await res.json();
 
@@ -144,7 +144,7 @@ const AsciiImage = ({ url, alt, accentColor }) => {
     return (
         <div className="my-3 overflow-x-auto" style={{ flexShrink: 0 }}>
             <pre
-                className="text-[4px] sm:text-[5px] leading-[4px] sm:leading-[5px] font-mono m-0 select-none"
+                className="text-[5px] sm:text-[6px] leading-[5px] sm:leading-[6px] font-mono m-0 select-none"
                 style={{ color: accentColor, opacity: 0.85 }}
             >
                 {ascii}

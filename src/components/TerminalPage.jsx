@@ -171,7 +171,7 @@ export default function TerminalPage({ initialProgram = null, initialArgs = [] }
             <Terminal
                 ref={terminalRef}
                 title="~/dpanes.sh"
-                initialContent={initialContent}
+                initialContent={initialProgram ? [] : initialContent}
                 commands={customCommands}
                 programs={programs}
                 accentColor="#CFFF33"
