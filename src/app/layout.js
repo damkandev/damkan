@@ -70,7 +70,7 @@ export default function RootLayout({ children }) {
             className="bg-black/80 border border-[#CFFF33] p-3 text-[#CFFF33] font-mono text-xs"
             style={{ textShadow: "0 0 5px #CFFF33" }}
           >
-            <span className="animate-pulse">▸</span> para una mejor experiencia, visualízalo desde tu celular
+            <span className="animate-pulse">▸</span> para una mejor experiencia, visualízalo desde tu computadora.
           </div>
         </div>
         {children}
