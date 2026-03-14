@@ -1,10 +1,12 @@
 ----
 
-title: Descanza en paz (por ahora)
+title: Descansa en paz (por ahora)
 description: Sobre startups, trabajos normales y lo bonito de construir algo propio
 category: historia
 
-----
+---
+
+-
 
 nadie murio, no se asusten.
 
@@ -38,7 +40,7 @@ los programadores resolvemos problemas que solo los programadores conocen (en su
 
 es genial que haya gente resolviendo estos problemas, pero mientras los desarrolladores se encargaban de optimizar LLM's y hacer notaciones cientificas para determinar si 1 > 2 yo estaba en una micro o tomando once con mi familia.
 
-escuchando problemas del dia a dia, o problemas de las famosas *empresas fomes*.
+escuchando problemas del dia a dia, o problemas de las famosas _empresas fomes_.
 
 en ver como el código que yo hacia, llegaba a personas comunes.
 
