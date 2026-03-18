@@ -89,6 +89,7 @@ export default function TerminalPage({ initialProgram = null, initialArgs = [] }
                 { type: "text", content: "  email: {{LINK:damkancontacto@gmail.com|mailto:damkancontacto@gmail.com}}", duration: 300 },
                 { type: "text", content: "  ig: {{LINK:@damian.panes|https://www.instagram.com/damian.panes}}", duration: 300 },
                 { type: "text", content: "  linkedin: {{LINK:damián|https://www.linkedin.com/in/damianpanes/}}", duration: 300 },
+                { type: "text", content: "  goodreads: {{LINK:@damianpanes|https://twitter.com/damianpanes}}", duration: 300 },
             ]
         },
         ls: {
