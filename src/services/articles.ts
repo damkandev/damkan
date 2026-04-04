@@ -14,6 +14,7 @@ export type Article = {
   excerpt: string;
   content: string;
   publishedAt: string | null;
+  updatedAt: string | null;
   readingTimeMinutes: number;
   headings: MarkdownHeading[];
   seoTitle: string;
@@ -26,6 +27,7 @@ type ArticleFrontmatter = {
   slug?: string;
   excerpt?: string;
   publishedAt?: string | null;
+  updatedAt?: string | null;
   seoTitle?: string;
   seoDescription?: string;
   ogImage?: string | null;
@@ -101,6 +103,10 @@ const toArticle = async (fileName: string): Promise<Article | null> => {
     typeof frontmatter.publishedAt === "string" && frontmatter.publishedAt.trim()
       ? frontmatter.publishedAt.trim()
       : null;
+  const updatedAt =
+    typeof frontmatter.updatedAt === "string" && frontmatter.updatedAt.trim()
+      ? frontmatter.updatedAt.trim()
+      : null;
   const seoTitle = frontmatter.seoTitle?.trim() || title;
   const seoDescription = frontmatter.seoDescription?.trim() || excerpt;
   const ogImage =
@@ -119,6 +125,7 @@ const toArticle = async (fileName: string): Promise<Article | null> => {
     excerpt,
     content,
     publishedAt,
+    updatedAt,
     readingTimeMinutes: estimateReadingTimeMinutes(content),
     headings: extractMarkdownHeadings(content),
     seoTitle,

@@ -1,13 +1,10 @@
 import { defineConfig } from 'astro/config';
-import node from '@astrojs/node';
 import tailwindcss from '@tailwindcss/vite';
 
 // https://astro.build/config
 export default defineConfig({
-  adapter: node({
-    mode: 'standalone',
-  }),
-  output: 'server',
+  site: 'https://dapan.es',
+  output: 'static',
   vite: {
     plugins: [tailwindcss()],
   },

@@ -1,0 +1,42 @@
+---
+import type { Article } from "../../services/articles";
+
+interface Props {
+    relatedArticles: Article[];
+}
+
+const { relatedArticles } = Astro.props;
+
+if (relatedArticles.length === 0) {
+    return null;
+}
+---
+
+<aside class="space-y-4 border-t border-black/10 pt-5 sm:pt-6 dark:border-white/10">
+    <div class="space-y-1">
+        <h2 class="text-xl font-semibold sm:text-2xl">Artículos relacionados</h2>
+        <p class="text-sm text-black/60 dark:text-white/60">
+            Una selección de lecturas recientes para seguir explorando.
+        </p>
+    </div>
+
+    <div class="grid gap-3">
+        {
+            relatedArticles.map((relatedArticle) => (
+                <a
+                    class="block border border-black/10 p-4 transition-colors hover:border-black/30 dark:border-white/10 dark:hover:border-white/30"
+                    href={`/articles/${relatedArticle.slug}`}
+                >
+                    <div class="space-y-2">
+                        <h3 class="text-lg font-semibold">
+                            {relatedArticle.title}
+                        </h3>
+                        <p class="text-sm text-black/70 dark:text-white/70">
+                            {relatedArticle.excerpt || "Sin descripción"}
+                        </p>
+                    </div>
+                </a>
+            ))
+        }
+    </div>
+</aside>

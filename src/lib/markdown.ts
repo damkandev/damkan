@@ -14,11 +14,20 @@ import { visit } from "unist-util-visit";
 const WORDS_PER_MINUTE = 220;
 const markdownSchema = {
   ...defaultSchema,
+  tagNames: [...(defaultSchema.tagNames || []), "figure", "figcaption"],
   attributes: {
     ...defaultSchema.attributes,
     code: [
       ...(defaultSchema.attributes.code || []),
       ["className", /^language-.*$/, "hljs"],
+    ],
+    figure: [
+      ...(defaultSchema.attributes.figure || []),
+      ["className", "article-image"],
+    ],
+    figcaption: [
+      ...(defaultSchema.attributes.figcaption || []),
+      ["className", "article-image-caption"],
     ],
   },
 };
@@ -71,6 +80,90 @@ const rehypeExternalLinks = () => (tree: unknown) => {
 
     node.properties.target = "_blank";
     node.properties.rel = "noopener noreferrer";
+  });
+};
+
+const getStandaloneImageNode = (node: unknown) => {
+  if (
+    !node ||
+    typeof node !== "object" ||
+    !("type" in node) ||
+    node.type !== "element" ||
+    !("tagName" in node)
+  ) {
+    return null;
+  }
+
+  if (node.tagName === "img") {
+    return node;
+  }
+
+  if (
+    node.tagName === "a" &&
+    "children" in node &&
+    Array.isArray(node.children) &&
+    node.children.length === 1
+  ) {
+    const child = node.children[0];
+    if (
+      child &&
+      typeof child === "object" &&
+      "type" in child &&
+      child.type === "element" &&
+      "tagName" in child &&
+      child.tagName === "img"
+    ) {
+      return child;
+    }
+  }
+
+  return null;
+};
+
+const rehypeArticleImages = () => (tree: unknown) => {
+  visit(tree, "element", (node) => {
+    if (
+      !node ||
+      typeof node !== "object" ||
+      !("tagName" in node) ||
+      node.tagName !== "p" ||
+      !("children" in node) ||
+      !Array.isArray(node.children) ||
+      node.children.length !== 1
+    ) {
+      return;
+    }
+
+    const imageNode = getStandaloneImageNode(node.children[0]);
+    if (!imageNode || !("properties" in imageNode) || !imageNode.properties) {
+      return;
+    }
+
+    const alt =
+      typeof imageNode.properties.alt === "string" ? imageNode.properties.alt.trim() : "";
+
+    Object.assign(node, {
+      type: "element",
+      tagName: "figure",
+      properties: {
+        className: ["article-image"],
+      },
+      children: [
+        node.children[0],
+        ...(alt
+          ? [
+              {
+                type: "element",
+                tagName: "figcaption",
+                properties: {
+                  className: ["article-image-caption"],
+                },
+                children: [{ type: "text", value: alt }],
+              },
+            ]
+          : []),
+      ],
+    });
   });
 };
 
@@ -302,6 +395,7 @@ export const renderMarkdownToHtml = async (source: string): Promise<string> => {
     .use(rehypeCodeCopyButton)
     .use(rehypeSlug)
     .use(rehypeExternalLinks)
+    .use(rehypeArticleImages)
     .use(rehypeStringify)
     .process(source ?? "");
 

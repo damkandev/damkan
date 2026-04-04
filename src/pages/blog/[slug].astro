@@ -1,5 +1,14 @@
 ---
+import { listArticles } from "../../services/articles";
 import { getLegacyBlogSlugRedirect } from "../../services/blogRedirects";
+
+export async function getStaticPaths() {
+    const articles = await listArticles();
+
+    return articles.map((article) => ({
+        params: { slug: article.slug },
+    }));
+}
 
 const { slug } = Astro.params;
 

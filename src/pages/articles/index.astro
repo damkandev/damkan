@@ -4,8 +4,6 @@ import Lenis from "../../components/Lenis.astro";
 import ThemeToggle from "../../components/ThemeToggle.astro";
 import { listArticles } from "../../services/articles";
 
-export const prerender = false;
-
 const articles = await listArticles();
 ---
 
@@ -17,7 +15,9 @@ const articles = await listArticles();
         <script is:inline>
             (function () {
                 var s = localStorage.getItem("theme");
-                var p = window.matchMedia("(prefers-color-scheme: dark)").matches;
+                var p = window.matchMedia(
+                    "(prefers-color-scheme: dark)",
+                ).matches;
                 if (s === "dark" || (!s && p)) {
                     document.documentElement.classList.add("dark");
                 }
@@ -34,13 +34,8 @@ const articles = await listArticles();
                 <h1 class="text-4xl font-semibold">
                     Ideas, notas y aprendizajes
                 </h1>
-                <p class="text-lg text-black/70 dark:text-white/70">
-                    Estos artículos se cargan desde archivos Markdown dentro de
-                    la carpeta
-                    <code class="font-mono text-base">articles/</code>.
-                </p>
                 <a
-                    class="inline-flex items-center gap-2 text-base font-semibold hover:text-black/40 dark:hover:text-white/40"
+                    class="inline-flex items-center gap-4 mt-4 text-base font-semibold hover:text-black/40 dark:hover:text-white/40"
                     href="/"
                 >
                     ← Volver al inicio

@@ -3,14 +3,16 @@ import type { Article } from "../../services/articles";
 import Lenis from "../Lenis.astro";
 import ThemeToggle from "../ThemeToggle.astro";
 import ArticleEnhancements from "./ArticleEnhancements.astro";
+import ArticleRelated from "./ArticleRelated.astro";
 import ArticleTableOfContents from "./ArticleTableOfContents.astro";
 
 interface Props {
     article: Article;
     contentHtml: string;
+    relatedArticles: Article[];
 }
 
-const { article, contentHtml } = Astro.props;
+const { article, contentHtml, relatedArticles } = Astro.props;
 
 const publishedDate = article.publishedAt
     ? new Date(article.publishedAt).toLocaleDateString("es-CL", {
@@ -69,6 +71,7 @@ const publishedDate = article.publishedAt
                     class="article-body min-w-0 border-t border-black/10 pt-5 text-base leading-relaxed sm:pt-6 sm:text-[1.05rem] dark:border-white/10"
                     set:html={contentHtml}
                 />
+                <ArticleRelated relatedArticles={relatedArticles} />
             </article>
 
             {

@@ -520,10 +520,37 @@
         cursor: grabbing;
     }
 
-    .article-body :is(img, video, iframe) {
+    .article-body :is(video, iframe) {
         display: block;
         max-width: 100%;
         height: auto;
+    }
+
+    .article-body .article-image {
+        width: min(100%, 42rem);
+        margin: 1.9rem auto;
+    }
+
+    .article-body .article-image img {
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        max-height: min(32rem, 70vh);
+        height: auto;
+        margin: 0 auto;
+        object-fit: contain;
+    }
+
+    .article-body .article-image a {
+        display: block;
+    }
+
+    .article-body .article-image-caption {
+        margin-top: 0.75rem;
+        text-align: center;
+        font-size: 0.92rem;
+        line-height: 1.5;
+        color: var(--ab-blockquote-text);
     }
 
     /* Gruvbox dark syntax theme */

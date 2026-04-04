@@ -1,4 +1,4 @@
-const ARTICLES_INDEX_PATH = "/articles";
+const ARTICLES_INDEX_PATH = "/articles/";
 
 export const getLegacyBlogIndexRedirect = (): string => ARTICLES_INDEX_PATH;
 
@@ -7,5 +7,5 @@ export const getLegacyBlogSlugRedirect = (slug?: string): string => {
     return ARTICLES_INDEX_PATH;
   }
 
-  return `${ARTICLES_INDEX_PATH}/${slug}`;
+  return `${ARTICLES_INDEX_PATH}${slug}/`;
 };
