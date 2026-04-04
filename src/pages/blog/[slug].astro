@@ -1,0 +1,7 @@
+---
+import { getLegacyBlogSlugRedirect } from "../../services/blogRedirects";
+
+const { slug } = Astro.params;
+
+return Astro.redirect(getLegacyBlogSlugRedirect(slug), 301);
+---
