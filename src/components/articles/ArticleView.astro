@@ -1,0 +1,82 @@
+---
+import type { Article } from "../../services/articles";
+import Lenis from "../Lenis.astro";
+import ThemeToggle from "../ThemeToggle.astro";
+import ArticleEnhancements from "./ArticleEnhancements.astro";
+import ArticleTableOfContents from "./ArticleTableOfContents.astro";
+
+interface Props {
+    article: Article;
+    contentHtml: string;
+}
+
+const { article, contentHtml } = Astro.props;
+
+const publishedDate = article.publishedAt
+    ? new Date(article.publishedAt).toLocaleDateString("es-CL", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+      })
+    : null;
+---
+
+<body
+    class="min-h-screen bg-[#FFFCFC] px-4 py-5 text-[#24221D] transition-colors sm:px-6 sm:py-8 lg:px-8 dark:bg-[#1c1a16] dark:text-[#f0ede6]"
+>
+    <Lenis />
+    <ThemeToggle />
+    <main class="mx-auto flex w-full max-w-6xl flex-col gap-5 text-left sm:gap-6">
+        <a
+            class="inline-flex items-center gap-2 text-sm font-semibold hover:text-black/40 sm:text-base dark:hover:text-white/40"
+            href="/articles"
+        >
+            ← Volver al listado
+        </a>
+
+        <div
+            class="grid gap-8 lg:grid-cols-[minmax(0,44rem)_16rem] lg:items-start lg:gap-10"
+        >
+            <article class="min-w-0 space-y-5 sm:space-y-6">
+                <header class="space-y-3">
+                    <div class="flex flex-wrap gap-x-4 gap-y-2 text-sm text-black/40 dark:text-white/40">
+                        {publishedDate && <p>{publishedDate}</p>}
+                        <p>{article.readingTimeMinutes} min de lectura</p>
+                    </div>
+
+                    <h1 class="text-3xl font-semibold leading-tight sm:text-4xl md:text-5xl">
+                        {article.title}
+                    </h1>
+                    {
+                        article.excerpt && (
+                            <p class="text-base leading-relaxed text-black/70 sm:text-lg dark:text-white/70">
+                                {article.excerpt}
+                            </p>
+                        )
+                    }
+                </header>
+
+                {
+                    article.headings.length > 0 && (
+                        <ArticleTableOfContents
+                            headings={article.headings}
+                            variant="mobile"
+                        />
+                    )
+                }
+
+                <section
+                    class="article-body min-w-0 border-t border-black/10 pt-5 text-base leading-relaxed sm:pt-6 sm:text-[1.05rem] dark:border-white/10"
+                    set:html={contentHtml}
+                />
+            </article>
+
+            {
+                article.headings.length > 0 && (
+                    <ArticleTableOfContents headings={article.headings} />
+                )
+            }
+        </div>
+    </main>
+    <ArticleEnhancements />
+</body>

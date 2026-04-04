@@ -1,0 +1,551 @@
+<script>
+    import mermaid from "mermaid";
+    import svgPanZoom from "svg-pan-zoom";
+
+    const articleBody = document.querySelector(".article-body");
+    const tocLinks = Array.from(document.querySelectorAll("[data-toc-link]"));
+    const internalLinks = Array.from(
+        document.querySelectorAll(
+            '.article-body a[href^="#"], [data-toc-link][href^="#"]',
+        ),
+    );
+    const pendingDiagrams = Array.from(
+        document.querySelectorAll<HTMLElement>(".article-body pre.mermaid"),
+    );
+    const copyButtons = Array.from(
+        document.querySelectorAll(".article-body [data-copy-code]"),
+    );
+    const headings = tocLinks
+        .map((link) => {
+            const id = link.getAttribute("data-heading-id");
+            if (!id) return null;
+
+            const heading = document.getElementById(id);
+            if (!heading) return null;
+
+            return { id, link, heading };
+        })
+        .filter(Boolean);
+
+    const scrollToHash = (hash, updateUrl = true) => {
+        if (!hash || hash === "#") return;
+
+        const target = document.getElementById(hash.slice(1));
+        if (!target) return;
+
+        const lenis = window.__lenis;
+
+        if (updateUrl) {
+            window.history.pushState(null, "", hash);
+        }
+
+        if (lenis) {
+            lenis.scrollTo(target, { offset: -24 });
+            return;
+        }
+
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+
+    for (const link of internalLinks) {
+        link.addEventListener("click", (event) => {
+            const href = link.getAttribute("href");
+            if (!href?.startsWith("#")) return;
+
+            event.preventDefault();
+            scrollToHash(href);
+        });
+    }
+
+    for (const button of copyButtons) {
+        button.addEventListener("click", async () => {
+            const block = button.closest(".code-block");
+            const code = block?.querySelector("pre code");
+            if (!block || !code) return;
+
+            try {
+                await navigator.clipboard.writeText(code.textContent ?? "");
+                button.classList.add("is-copied");
+
+                window.setTimeout(() => {
+                    button.classList.remove("is-copied");
+                }, 1600);
+            } catch {
+                button.classList.add("copy-failed");
+
+                window.setTimeout(() => {
+                    button.classList.remove("copy-failed");
+                }, 1600);
+            }
+        });
+    }
+
+    if (headings.length > 0) {
+        const setActive = (activeId) => {
+            for (const item of headings) {
+                item.link.classList.toggle("is-active", item.id === activeId);
+            }
+        };
+
+        const updateActiveHeading = () => {
+            let currentId = headings[0].id;
+            const offset = window.innerHeight * 0.2;
+
+            for (const item of headings) {
+                if (item.heading.getBoundingClientRect().top - offset <= 0) {
+                    currentId = item.id;
+                } else {
+                    break;
+                }
+            }
+
+            setActive(currentId);
+        };
+
+        updateActiveHeading();
+        window.addEventListener("scroll", updateActiveHeading, {
+            passive: true,
+        });
+        window.addEventListener("resize", updateActiveHeading);
+    }
+
+    if (articleBody && window.location.hash) {
+        window.requestAnimationFrame(() => {
+            scrollToHash(window.location.hash, false);
+        });
+    }
+
+    // ── Mermaid client-side renderer ────────────────────────────────────────
+    if (pendingDiagrams.length > 0) {
+        type DiagramItem = {
+            source: string;
+            frame: HTMLDivElement | null;
+        };
+
+        const diagrams: DiagramItem[] = pendingDiagrams.map((el) => ({
+            source: el.textContent ?? "",
+            frame: null,
+        }));
+
+        let panZoomInstances: ReturnType<typeof svgPanZoom>[] = [];
+        let renderGeneration = 0;
+
+        const getMermaidConfig = (isDark: boolean) => ({
+            startOnLoad: false,
+            theme: "base" as const,
+            themeVariables: isDark
+                ? {
+                      background: "#1a1814",
+                      mainBkg: "#2c2820",
+                      primaryColor: "#2c2820",
+                      primaryTextColor: "#f0ede6",
+                      primaryBorderColor: "rgba(240, 237, 230, 0.2)",
+                      lineColor: "rgba(240, 237, 230, 0.4)",
+                      secondaryColor: "#252118",
+                      tertiaryColor: "#302b22",
+                      edgeLabelBackground: "#1a1814",
+                      nodeBorder: "#504840",
+                      clusterBkg: "#252118",
+                      clusterBorder: "rgba(240, 237, 230, 0.15)",
+                      titleColor: "#f0ede6",
+                      attributeBackgroundColorEven: "#252118",
+                      attributeBackgroundColorOdd: "#2c2820",
+                  }
+                : {
+                      background: "#fffaf2",
+                      mainBkg: "#f6efe5",
+                      primaryColor: "#f6efe5",
+                      primaryTextColor: "#24221d",
+                      primaryBorderColor: "rgba(36, 34, 29, 0.18)",
+                      lineColor: "rgba(36, 34, 29, 0.4)",
+                      secondaryColor: "#eee6d9",
+                      tertiaryColor: "#e8dfd1",
+                      edgeLabelBackground: "#fffaf2",
+                      nodeBorder: "#c8bfb0",
+                      clusterBkg: "#f6efe5",
+                      clusterBorder: "rgba(36, 34, 29, 0.15)",
+                      titleColor: "#24221d",
+                      attributeBackgroundColorEven: "#f6efe5",
+                      attributeBackgroundColorOdd: "#fffaf2",
+                  },
+            fontFamily: '"Times New Roman", Georgia, serif',
+            fontSize: "14px",
+            securityLevel: "strict" as const,
+        });
+
+        const renderDiagrams = async (isDark: boolean) => {
+            renderGeneration++;
+            const gen = renderGeneration;
+
+            for (const inst of panZoomInstances) {
+                try {
+                    inst.destroy();
+                } catch {}
+            }
+            panZoomInstances = [];
+
+            mermaid.initialize(getMermaidConfig(isDark));
+
+            for (let i = 0; i < diagrams.length; i++) {
+                if (gen !== renderGeneration) return;
+
+                const item = diagrams[i];
+                if (!item.source.trim()) continue;
+
+                try {
+                    const { svg } = await mermaid.render(
+                        `mermaid-${gen}-${i}`,
+                        item.source,
+                    );
+
+                    if (gen !== renderGeneration) return;
+
+                    if (!item.frame) {
+                        const frame = document.createElement("div");
+                        frame.className = "mermaid-frame";
+                        frame.setAttribute("data-lenis-prevent-wheel", "");
+                        frame.addEventListener(
+                            "wheel",
+                            (e) => e.stopPropagation(),
+                            { passive: false },
+                        );
+                        pendingDiagrams[i].replaceWith(frame);
+                        item.frame = frame;
+                    }
+
+                    item.frame.innerHTML = svg;
+
+                    const svgEl = item.frame.querySelector("svg");
+                    if (!svgEl) continue;
+
+                    const pzInstance = svgPanZoom(svgEl, {
+                        center: true,
+                        controlIconsEnabled: false,
+                        dblClickZoomEnabled: true,
+                        fit: true,
+                        maxZoom: 12,
+                        minZoom: 0.5,
+                        mouseWheelZoomEnabled: true,
+                        panEnabled: true,
+                        pinchZoomEnabled: true,
+                        preventMouseEventsDefault: true,
+                        zoomEnabled: true,
+                        zoomScaleSensitivity: 0.3,
+                    });
+                    panZoomInstances.push(pzInstance);
+                } catch (err) {
+                    console.error(`Mermaid render error (diagram ${i}):`, err);
+                }
+            }
+        };
+
+        const isDark = document.documentElement.classList.contains("dark");
+        await renderDiagrams(isDark);
+
+        const themeObserver = new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+                if (
+                    mutation.type === "attributes" &&
+                    mutation.attributeName === "class"
+                ) {
+                    const newIsDark =
+                        document.documentElement.classList.contains("dark");
+                    renderDiagrams(newIsDark);
+                    break;
+                }
+            }
+        });
+
+        themeObserver.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ["class"],
+        });
+    }
+</script>
+
+<style is:global>
+    .article-body > :first-child {
+        margin-top: 0;
+    }
+
+    .article-body > :last-child {
+        margin-bottom: 0;
+    }
+
+    .article-body :is(h1, h2, h3, h4) {
+        margin-top: 2.8rem;
+        margin-bottom: 1rem;
+        font-weight: 600;
+        line-height: 1.15;
+        letter-spacing: -0.03em;
+        text-wrap: balance;
+    }
+
+    .article-body h1 {
+        font-size: clamp(2rem, 1.6rem + 1.6vw, 2.8rem);
+    }
+
+    .article-body h2 {
+        font-size: clamp(1.75rem, 1.35rem + 1.4vw, 2.35rem);
+    }
+
+    .article-body h3 {
+        font-size: clamp(1.4rem, 1.2rem + 0.8vw, 1.8rem);
+    }
+
+    .article-body :is(p, ul, ol, blockquote, table, hr) {
+        margin: 1.4rem 0;
+    }
+
+    .article-body p {
+        color: var(--ab-text);
+        overflow-wrap: anywhere;
+    }
+
+    .article-body a {
+        color: var(--ab-link);
+        text-decoration: underline;
+        text-decoration-thickness: 1.5px;
+        text-underline-offset: 0.18em;
+    }
+
+    .article-body strong {
+        font-weight: 600;
+        color: var(--ab-strong);
+    }
+
+    .article-body :is(ul, ol) {
+        padding-left: 1.4rem;
+    }
+
+    .article-body li + li {
+        margin-top: 0.65rem;
+    }
+
+    .article-body blockquote {
+        border-left: 4px solid var(--ab-blockquote-border);
+        padding-left: 1rem;
+        color: var(--ab-blockquote-text);
+    }
+
+    .article-body :not(pre) > code {
+        border: 1px solid var(--ab-code-border);
+        background: var(--ab-code-bg);
+        border-radius: 0.5rem;
+        padding: 0.12rem 0.35rem;
+        font-size: 0.9em;
+    }
+
+    .article-body .code-block {
+        position: relative;
+        margin: 1.4rem 0;
+    }
+
+    .article-body .code-copy-button {
+        position: absolute;
+        top: 0.85rem;
+        right: 0.85rem;
+        z-index: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.25rem;
+        height: 2.25rem;
+        border: 1px solid rgba(248, 244, 236, 0.18);
+        background: rgba(255, 252, 252, 0.08);
+        color: rgba(248, 244, 236, 0.9);
+        backdrop-filter: blur(10px);
+        transition:
+            background-color 160ms ease,
+            border-color 160ms ease,
+            color 160ms ease,
+            transform 160ms ease;
+        cursor: pointer;
+    }
+
+    .article-body .code-copy-button:hover {
+        background: rgba(255, 252, 252, 0.14);
+        border-color: rgba(248, 244, 236, 0.3);
+        transform: translateY(-1px);
+    }
+
+    .article-body .code-copy-button.is-copied {
+        color: #a6da95;
+        border-color: rgba(166, 218, 149, 0.45);
+    }
+
+    .article-body .code-copy-button.copy-failed {
+        color: #f5a97f;
+        border-color: rgba(245, 169, 127, 0.45);
+    }
+
+    .article-body .code-copy-icon {
+        width: 1rem;
+        height: 1rem;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .article-body .code-copy-icon-success {
+        display: none;
+    }
+
+    .article-body .code-copy-button.is-copied .code-copy-icon-copy {
+        display: none;
+    }
+
+    .article-body .code-copy-button.is-copied .code-copy-icon-success {
+        display: block;
+    }
+
+    .article-body .code-block pre {
+        overflow-x: auto;
+        max-width: 100%;
+        border: 1px solid var(--ab-border);
+        background: var(--ab-pre-bg);
+        color: var(--ab-pre-text);
+        border-radius: 0;
+        padding: 1.1rem 1.2rem 1.2rem;
+        padding-right: 4rem;
+        line-height: 1.7;
+    }
+
+    .article-body .code-block pre code {
+        background: transparent;
+        border: 0;
+        padding: 0;
+        color: inherit;
+        word-break: normal;
+        overflow-wrap: normal;
+    }
+
+    .article-body .mermaid-frame {
+        margin: 1.8rem 0;
+        overflow: hidden;
+        overscroll-behavior: contain;
+        border: 1px solid var(--ab-border);
+        background: var(--ab-mermaid-bg);
+        padding: 1rem;
+    }
+
+    .article-body .mermaid-frame svg {
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        height: min(42rem, 75vh);
+        touch-action: none;
+        cursor: grab;
+    }
+
+    .article-body .mermaid-frame svg.svg-pan-zoom_dragging {
+        cursor: grabbing;
+    }
+
+    .article-body :is(img, video, iframe) {
+        display: block;
+        max-width: 100%;
+        height: auto;
+    }
+
+    .article-body .hljs-keyword,
+    .article-body .hljs-selector-tag,
+    .article-body .hljs-literal,
+    .article-body .hljs-title.function_ {
+        color: #f6c177;
+    }
+
+    .article-body .hljs-string,
+    .article-body .hljs-title,
+    .article-body .hljs-section,
+    .article-body .hljs-attribute {
+        color: #a6da95;
+    }
+
+    .article-body .hljs-comment,
+    .article-body .hljs-quote {
+        color: #8f928b;
+    }
+
+    .article-body .hljs-number,
+    .article-body .hljs-symbol,
+    .article-body .hljs-variable,
+    .article-body .hljs-template-variable {
+        color: #f5a97f;
+    }
+
+    .article-body .hljs-built_in,
+    .article-body .hljs-type,
+    .article-body .hljs-link {
+        color: #8aadf4;
+    }
+
+    .article-body table {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        border-collapse: collapse;
+    }
+
+    .article-body :is(th, td) {
+        border-bottom: 1px solid var(--ab-border-mid);
+        padding: 0.8rem 0.9rem;
+        text-align: left;
+        vertical-align: top;
+    }
+
+    .article-body th {
+        font-weight: 600;
+        color: var(--ab-th-text);
+        background: var(--ab-th-bg);
+    }
+
+    .article-body hr {
+        border: 0;
+        border-top: 1px solid var(--ab-border-mid);
+    }
+
+    .toc-link.is-active {
+        color: var(--ab-toc-active);
+        transform: translateX(2px);
+    }
+
+    @media (max-width: 48rem) {
+        .article-body {
+            font-size: 1rem;
+            line-height: 1.9;
+        }
+
+        .article-body :is(h1, h2, h3, h4) {
+            margin-top: 2.25rem;
+            margin-bottom: 0.85rem;
+        }
+
+        .article-body :is(ul, ol) {
+            padding-left: 1.15rem;
+        }
+
+        .article-body .code-copy-button {
+            top: 0.7rem;
+            right: 0.7rem;
+            width: 2rem;
+            height: 2rem;
+        }
+
+        .article-body .code-block pre {
+            font-size: 0.92rem;
+            padding: 1rem 1rem 1.05rem;
+            padding-right: 3.5rem;
+        }
+
+        .article-body .mermaid-frame {
+            padding: 0.75rem;
+        }
+
+        .article-body .mermaid-frame svg {
+            height: min(30rem, 65vh);
+        }
+    }
+</style>

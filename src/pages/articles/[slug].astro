@@ -1,0 +1,62 @@
+---
+import "../../styles/global.css";
+import ArticleHead from "../../components/articles/ArticleHead.astro";
+import ArticleView from "../../components/articles/ArticleView.astro";
+import { renderMarkdownToHtml } from "../../lib/markdown";
+import { fetchArticleBySlug } from "../../services/articles";
+
+export const prerender = false;
+
+const { slug } = Astro.params;
+
+if (!slug) {
+    return Astro.redirect("/articles");
+}
+
+const article = await fetchArticleBySlug(slug);
+
+if (!article) {
+    return Astro.redirect("/articles");
+}
+
+const contentHtml = await renderMarkdownToHtml(article.content);
+const canonicalUrl = Astro.url.href;
+const pageTitle = `${article.seoTitle} | Artículos de Damián Panes`;
+const pageDescription = article.seoDescription;
+const ogImageUrl = article.ogImage
+    ? new URL(article.ogImage, Astro.url).href
+    : null;
+const articleSchema = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: article.seoTitle,
+    description: pageDescription,
+    url: canonicalUrl,
+    datePublished: article.publishedAt ?? undefined,
+    dateModified: article.publishedAt ?? undefined,
+    author: {
+        "@type": "Person",
+        name: "Damián Panes",
+    },
+    publisher: {
+        "@type": "Person",
+        name: "Damián Panes",
+    },
+    image: ogImageUrl ?? undefined,
+    timeRequired: `PT${article.readingTimeMinutes}M`,
+};
+---
+
+<html lang="es">
+    <head>
+        <ArticleHead
+            articleSchema={articleSchema}
+            canonicalUrl={canonicalUrl}
+            ogImageUrl={ogImageUrl}
+            pageDescription={pageDescription}
+            pageTitle={pageTitle}
+            publishedAt={article.publishedAt}
+        />
+    </head>
+    <ArticleView article={article} contentHtml={contentHtml} />
+</html>

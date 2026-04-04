@@ -1,0 +1,66 @@
+---
+import type { MarkdownHeading } from "../../lib/markdown";
+
+interface Props {
+    headings: MarkdownHeading[];
+    variant?: "desktop" | "mobile";
+}
+
+const { headings, variant = "desktop" } = Astro.props;
+const isMobile = variant === "mobile";
+
+const linkClasses = (depth: MarkdownHeading["depth"]) => [
+    "toc-link block text-sm leading-relaxed text-black/60 hover:text-black dark:text-white/60 dark:hover:text-white",
+    depth === 1 && "font-semibold text-black/80 dark:text-white/80",
+    depth === 2 && "pl-3",
+    depth === 3 && "pl-6 text-black/50 dark:text-white/50",
+];
+---
+
+{
+    isMobile ? (
+        <details class="overflow-hidden rounded-2xl border border-black/10 bg-white/70 lg:hidden dark:border-white/10 dark:bg-[#1c1a16]/70">
+            <summary class="cursor-pointer list-none px-4 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-black/55 dark:text-white/55">
+                Índice del artículo
+            </summary>
+            <nav class="border-t border-black/10 px-4 py-3 dark:border-white/10">
+                <ol class="space-y-2">
+                    {headings.map((heading) => (
+                        <li>
+                            <a
+                                class:list={linkClasses(heading.depth)}
+                                data-toc-link
+                                data-heading-id={heading.id}
+                                href={`#${heading.id}`}
+                            >
+                                {heading.text}
+                            </a>
+                        </li>
+                    ))}
+                </ol>
+            </nav>
+        </details>
+    ) : (
+        <aside class="hidden lg:block lg:sticky lg:top-8">
+            <nav class="border-l border-black/10 pl-5 dark:border-white/10">
+                <p class="mb-4 text-sm font-semibold tracking-[0.2em] text-black/40 dark:text-white/40">
+                    Índice
+                </p>
+                <ol class="space-y-2">
+                    {headings.map((heading) => (
+                        <li>
+                            <a
+                                class:list={linkClasses(heading.depth)}
+                                data-toc-link
+                                data-heading-id={heading.id}
+                                href={`#${heading.id}`}
+                            >
+                                {heading.text}
+                            </a>
+                        </li>
+                    ))}
+                </ol>
+            </nav>
+        </aside>
+    )
+}
