@@ -1,0 +1,69 @@
+@import "tailwindcss";
+@variant dark (&:where(.dark, .dark *));
+
+@font-face {
+  font-family: "Lora";
+  src: url("/fonts/lora-latin.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Lora";
+  src: url("/fonts/lora-latin.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --font-lora: "Lora", "Times New Roman", serif;
+  font-family: var(--font-lora);
+  font-weight: 400;
+  font-style: normal;
+
+  /* Article body — light theme */
+  --ab-text: rgba(36, 34, 29, 0.9);
+  --ab-link: #7c3f00;
+  --ab-strong: #161511;
+  --ab-blockquote-border: rgba(124, 63, 0, 0.3);
+  --ab-blockquote-text: rgba(36, 34, 29, 0.78);
+  --ab-code-border: rgba(36, 34, 29, 0.08);
+  --ab-code-bg: #f6efe5;
+  --ab-pre-bg: #282828;
+  --ab-pre-text: #ebdbb2;
+  --ab-mermaid-bg: #fffaf2;
+  --ab-border: rgba(36, 34, 29, 0.08);
+  --ab-border-mid: rgba(36, 34, 29, 0.12);
+  --ab-th-bg: rgba(36, 34, 29, 0.03);
+  --ab-th-text: #161511;
+  --ab-toc-active: rgba(36, 34, 29, 1);
+}
+
+.dark {
+  /* Article body — dark theme */
+  --ab-text: rgba(240, 237, 230, 0.88);
+  --ab-link: #e09265;
+  --ab-strong: #f5f0e8;
+  --ab-blockquote-border: rgba(224, 146, 101, 0.35);
+  --ab-blockquote-text: rgba(240, 237, 230, 0.75);
+  --ab-code-border: rgba(240, 237, 230, 0.1);
+  --ab-code-bg: #2c2820;
+  --ab-pre-bg: #282828;
+  --ab-pre-text: #ebdbb2;
+  --ab-mermaid-bg: #1a1814;
+  --ab-border: rgba(240, 237, 230, 0.08);
+  --ab-border-mid: rgba(240, 237, 230, 0.1);
+  --ab-th-bg: rgba(240, 237, 230, 0.05);
+  --ab-th-text: #f5f0e8;
+  --ab-toc-active: rgba(240, 237, 230, 1);
+}
+
+body {
+  font-family: var(--font-lora);
+}
+
+html {
+  scroll-behavior: auto;
+}

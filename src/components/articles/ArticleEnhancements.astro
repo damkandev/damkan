@@ -80,6 +80,41 @@
         });
     }
 
+    // ── Collapsible code blocks (> 15 lines) ────────────────────────────────
+    const COLLAPSE_LINE_LIMIT = 15;
+
+    for (const block of document.querySelectorAll<HTMLElement>(
+        ".article-body .code-block",
+    )) {
+        const code = block.querySelector("pre code");
+        if (!code) continue;
+
+        const lineCount = (code.textContent ?? "").trimEnd().split("\n").length;
+        if (lineCount <= COLLAPSE_LINE_LIMIT) continue;
+
+        block.setAttribute("data-collapsible", "");
+        block.setAttribute("data-collapsed", "");
+
+        const extraLines = lineCount - COLLAPSE_LINE_LIMIT;
+        const expandBtn = document.createElement("button");
+        expandBtn.type = "button";
+        expandBtn.className = "code-expand-button";
+        expandBtn.textContent = `Mostrar ${extraLines} líneas más ↓`;
+
+        expandBtn.addEventListener("click", () => {
+            const isCollapsed = block.hasAttribute("data-collapsed");
+            if (isCollapsed) {
+                block.removeAttribute("data-collapsed");
+                expandBtn.textContent = "Mostrar menos ↑";
+            } else {
+                block.setAttribute("data-collapsed", "");
+                expandBtn.textContent = `Mostrar ${extraLines} líneas más ↓`;
+            }
+        });
+
+        block.appendChild(expandBtn);
+    }
+
     if (headings.length > 0) {
         const setActive = (activeId) => {
             for (const item of headings) {
@@ -402,7 +437,7 @@
     }
 
     .article-body .code-block pre {
-        overflow-x: auto;
+        overflow-x: hidden;
         max-width: 100%;
         border: 1px solid var(--ab-border);
         background: var(--ab-pre-bg);
@@ -411,6 +446,47 @@
         padding: 1.1rem 1.2rem 1.2rem;
         padding-right: 4rem;
         line-height: 1.7;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    .article-body .code-block[data-collapsible][data-collapsed] pre {
+        max-height: calc(15 * 1.7em + 2.3rem);
+        overflow-y: hidden;
+        -webkit-mask-image: none;
+        mask-image: none;
+        position: relative;
+    }
+
+    .article-body .code-block[data-collapsible][data-collapsed]::after {
+        content: "";
+        position: absolute;
+        bottom: 2.6rem;
+        left: 0;
+        right: 0;
+        height: 5rem;
+        background: linear-gradient(to bottom, transparent, #282828);
+        pointer-events: none;
+    }
+
+    .article-body .code-expand-button {
+        display: block;
+        width: 100%;
+        padding: 0.55rem 1.2rem;
+        background: #32302f;
+        color: rgba(235, 219, 178, 0.45);
+        border: 1px solid var(--ab-border);
+        border-top: 1px solid rgba(235, 219, 178, 0.07);
+        font-size: 0.8rem;
+        letter-spacing: 0.04em;
+        text-align: center;
+        cursor: pointer;
+        transition: color 160ms ease, background 160ms ease;
+    }
+
+    .article-body .code-expand-button:hover {
+        background: #3c3836;
+        color: #ebdbb2;
     }
 
     .article-body .code-block pre code {
@@ -450,36 +526,44 @@
         height: auto;
     }
 
+    /* Gruvbox dark syntax theme */
     .article-body .hljs-keyword,
     .article-body .hljs-selector-tag,
-    .article-body .hljs-literal,
+    .article-body .hljs-literal {
+        color: #fabd2f;
+    }
+
     .article-body .hljs-title.function_ {
-        color: #f6c177;
+        color: #8ec07c;
     }
 
     .article-body .hljs-string,
     .article-body .hljs-title,
     .article-body .hljs-section,
     .article-body .hljs-attribute {
-        color: #a6da95;
+        color: #b8bb26;
     }
 
     .article-body .hljs-comment,
     .article-body .hljs-quote {
-        color: #8f928b;
+        color: #928374;
+        font-style: italic;
     }
 
     .article-body .hljs-number,
-    .article-body .hljs-symbol,
+    .article-body .hljs-symbol {
+        color: #d3869b;
+    }
+
     .article-body .hljs-variable,
     .article-body .hljs-template-variable {
-        color: #f5a97f;
+        color: #fe8019;
     }
 
     .article-body .hljs-built_in,
     .article-body .hljs-type,
     .article-body .hljs-link {
-        color: #8aadf4;
+        color: #83a598;
     }
 
     .article-body table {
@@ -535,7 +619,7 @@
         }
 
         .article-body .code-block pre {
-            font-size: 0.92rem;
+            font-size: 0.88rem;
             padding: 1rem 1rem 1.05rem;
             padding-right: 3.5rem;
         }

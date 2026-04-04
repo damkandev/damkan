@@ -1,0 +1,27 @@
+<script>
+  import Lenis from "lenis";
+
+  declare global {
+    interface Window {
+      __lenis?: Lenis;
+    }
+  }
+
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  if (!prefersReducedMotion.matches) {
+    const lenis = new Lenis({
+      autoRaf: true,
+      duration: 1.1,
+      smoothWheel: true,
+      smoothTouch: false,
+    });
+
+    window.__lenis = lenis;
+
+    window.addEventListener("beforeunload", () => {
+      delete window.__lenis;
+      lenis.destroy();
+    });
+  }
+</script>
