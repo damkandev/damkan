@@ -1,5 +1,6 @@
 ---
 import Favicons from "./Favicons.astro";
+import VercelAnalytics from "./VercelAnalytics.astro";
 import {
   DEFAULT_LOCALE,
   PREFERRED_LOCALE_STORAGE_KEY,
@@ -54,5 +55,6 @@ const { fallbackPath, routesByLocale } = Astro.props;
       Redirecting to
       <a href={fallbackPath}>{fallbackPath}</a>
     </p>
+    <VercelAnalytics />
   </body>
 </html>

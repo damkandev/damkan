@@ -6,6 +6,7 @@ import type { Article } from "../../services/articles";
 import LanguageSwitcher from "../LanguageSwitcher.astro";
 import Lenis from "../Lenis.astro";
 import ThemeToggle from "../ThemeToggle.astro";
+import VercelAnalytics from "../VercelAnalytics.astro";
 import ArticleEnhancements from "./ArticleEnhancements.astro";
 import ArticleRelated from "./ArticleRelated.astro";
 import ArticleTableOfContents from "./ArticleTableOfContents.astro";
@@ -134,4 +135,5 @@ const publishedDate = article.publishedAt
         </div>
     </main>
     <ArticleEnhancements />
+    <VercelAnalytics />
 </body>

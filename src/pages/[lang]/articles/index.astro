@@ -4,6 +4,7 @@ import Favicons from "../../../components/Favicons.astro";
 import LanguageSwitcher from "../../../components/LanguageSwitcher.astro";
 import Lenis from "../../../components/Lenis.astro";
 import ThemeToggle from "../../../components/ThemeToggle.astro";
+import VercelAnalytics from "../../../components/VercelAnalytics.astro";
 import { getLocaleTag, SUPPORTED_LOCALES, isLocale, type Locale } from "../../../i18n/config";
 import { getLocalizedArticlesPath, getLocalizedHomePath } from "../../../i18n/routes";
 import { getMessages } from "../../../i18n/ui";
@@ -116,5 +117,6 @@ const languageOptions = SUPPORTED_LOCALES.map((candidateLocale) => ({
         }
       </section>
     </main>
+    <VercelAnalytics />
   </body>
 </html>
