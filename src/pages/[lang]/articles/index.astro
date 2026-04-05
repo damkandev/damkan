@@ -1,5 +1,6 @@
 ---
 import "../../../styles/global.css";
+import Favicons from "../../../components/Favicons.astro";
 import LanguageSwitcher from "../../../components/LanguageSwitcher.astro";
 import Lenis from "../../../components/Lenis.astro";
 import ThemeToggle from "../../../components/ThemeToggle.astro";
@@ -36,6 +37,7 @@ const languageOptions = SUPPORTED_LOCALES.map((candidateLocale) => ({
     <meta name="viewport" content="width=device-width" />
     <title>{copy.articles.seoTitle}</title>
     <meta name="description" content={copy.articles.seoDescription} />
+    <Favicons />
     <link rel="canonical" href={Astro.url.href} />
     <link
       rel="alternate"

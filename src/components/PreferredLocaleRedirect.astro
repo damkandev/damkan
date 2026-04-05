@@ -1,4 +1,5 @@
 ---
+import Favicons from "./Favicons.astro";
 import {
   DEFAULT_LOCALE,
   PREFERRED_LOCALE_STORAGE_KEY,
@@ -20,6 +21,7 @@ const { fallbackPath, routesByLocale } = Astro.props;
     <meta name="viewport" content="width=device-width" />
     <meta name="robots" content="noindex" />
     <title>Redirecting…</title>
+    <Favicons title="Damián Panes" />
   </head>
   <body>
     <script

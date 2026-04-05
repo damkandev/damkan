@@ -1,4 +1,5 @@
 ---
+import Favicons from "../Favicons.astro";
 import { getOgLocale, type Locale } from "../../i18n/config";
 
 interface Props {
@@ -35,6 +36,7 @@ const {
 <meta name="viewport" content="width=device-width" />
 <title>{pageTitle}</title>
 <meta name="description" content={pageDescription} />
+<Favicons />
 <link rel="canonical" href={canonicalUrl} />
 <meta name="robots" content="index,follow" />
 
