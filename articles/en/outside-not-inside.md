@@ -4,6 +4,7 @@ slug: outside-not-inside
 translationKey: outside-not-inside
 excerpt: Why traditional markets are a real opportunity today if you know how to enter them.
 publishedAt: 2026-04-04
+ogImage: /ogs/afuera.png
 ---
 
 It's common to see developers spend entire days searching for sub-niches inside programming: wanting to create the next PostgreSQL, a language faster than Rust, or one more object-oriented than C++.

@@ -4,6 +4,7 @@ slug: afuera-no-adentro
 translationKey: outside-not-inside
 excerpt: Como los mercados tradicionales hoy en dia son una verdadera oportunidad si sabes incursionar en ellos.
 publishedAt: 2026-04-04
+ogImage: /ogs/afuera.png
 ---
 
 Es común ver a desarrolladores pasar días enteros buscando subnichos dentro de la programación: queriendo crear el próximo PostgreSQL, un lenguaje más rápido que Rust o más orientado a objetos que C++.
