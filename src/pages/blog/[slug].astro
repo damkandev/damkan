@@ -1,12 +1,12 @@
 ---
-import { listArticles } from "../../services/articles";
+import { listLegacyArticleSlugRoutes } from "../../services/articles";
 import { getLegacyBlogSlugRedirect } from "../../services/blogRedirects";
 
 export async function getStaticPaths() {
-    const articles = await listArticles();
+    const routes = await listLegacyArticleSlugRoutes();
 
-    return articles.map((article) => ({
-        params: { slug: article.slug },
+    return routes.map((route) => ({
+        params: { slug: route.slug },
     }));
 }
 

@@ -1,8 +1,15 @@
 ---
+import { getOgLocale, type Locale } from "../../i18n/config";
+
 interface Props {
+    alternateLinks?: Array<{
+        href: string;
+        hreflang: string;
+    }>;
     articleSchema: Record<string, unknown>;
     breadcrumbSchema: Record<string, unknown>;
     canonicalUrl: string;
+    locale: Locale;
     ogImageUrl: string;
     pageDescription: string;
     pageTitle: string;
@@ -11,9 +18,11 @@ interface Props {
 }
 
 const {
+    alternateLinks = [],
     articleSchema,
     breadcrumbSchema,
     canonicalUrl,
+    locale,
     ogImageUrl,
     pageDescription,
     pageTitle,
@@ -33,8 +42,13 @@ const {
 <meta property="og:title" content={pageTitle} />
 <meta property="og:description" content={pageDescription} />
 <meta property="og:url" content={canonicalUrl} />
-<meta property="og:locale" content="es_ES" />
+<meta property="og:locale" content={getOgLocale(locale)} />
 <meta property="og:site_name" content="Damián Panes" />
+{
+    alternateLinks.map((link) => (
+        <link href={link.href} hreflang={link.hreflang} rel="alternate" />
+    ))
+}
 {
     publishedAt && (
         <meta property="article:published_time" content={publishedAt} />

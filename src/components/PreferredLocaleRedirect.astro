@@ -1,0 +1,56 @@
+---
+import {
+  DEFAULT_LOCALE,
+  PREFERRED_LOCALE_STORAGE_KEY,
+  SUPPORTED_LOCALES,
+  type Locale,
+} from "../i18n/config";
+
+interface Props {
+  fallbackPath: string;
+  routesByLocale: Partial<Record<Locale, string>>;
+}
+
+const { fallbackPath, routesByLocale } = Astro.props;
+---
+
+<html lang={DEFAULT_LOCALE}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="robots" content="noindex" />
+    <title>Redirecting…</title>
+  </head>
+  <body>
+    <script
+      is:inline
+      define:vars={{
+        fallbackPath,
+        routesByLocale,
+        storageKey: PREFERRED_LOCALE_STORAGE_KEY,
+        supportedLocales: SUPPORTED_LOCALES,
+      }}
+    >
+      (function () {
+        var storedLocale = localStorage.getItem(storageKey);
+        var browserLocale = (navigator.language || "").slice(0, 2).toLowerCase();
+        var preferredLocale = supportedLocales.includes(storedLocale)
+          ? storedLocale
+          : supportedLocales.includes(browserLocale)
+            ? browserLocale
+            : null;
+        var target =
+          (preferredLocale && routesByLocale[preferredLocale]) ||
+          routesByLocale.es ||
+          routesByLocale.en ||
+          fallbackPath;
+
+        window.location.replace(target);
+      })();
+    </script>
+    <p>
+      Redirecting to
+      <a href={fallbackPath}>{fallbackPath}</a>
+    </p>
+  </body>
+</html>

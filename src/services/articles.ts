@@ -6,9 +6,12 @@ import {
 } from "../lib/markdown";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
+import { DEFAULT_LOCALE, type Locale, isLocale } from "../i18n/config";
 
 export type Article = {
   id: string;
+  locale: Locale;
+  translationKey: string;
   title: string;
   slug: string;
   excerpt: string;
@@ -23,6 +26,7 @@ export type Article = {
 };
 
 type ArticleFrontmatter = {
+  translationKey?: string;
   title?: string;
   slug?: string;
   excerpt?: string;
@@ -86,14 +90,63 @@ const parseMarkdownFile = (source: string) => {
 
 const isMarkdownFile = (fileName: string) => fileName.toLowerCase().endsWith(".md");
 
-const toArticle = async (fileName: string): Promise<Article | null> => {
-  const filePath = path.join(ARTICLES_DIRECTORY, fileName);
+type ArticleFileDescriptor = {
+  fileName: string;
+  locale: Locale;
+  relativePath: string;
+};
+
+const getArticleFiles = async (): Promise<ArticleFileDescriptor[]> => {
+  const entries = await readArticlesDirectory();
+  const articleFiles: ArticleFileDescriptor[] = [];
+
+  for (const entry of entries) {
+    if (entry.isFile() && isMarkdownFile(entry.name)) {
+      articleFiles.push({
+        fileName: entry.name,
+        locale: DEFAULT_LOCALE,
+        relativePath: entry.name,
+      });
+      continue;
+    }
+
+    if (!entry.isDirectory() || !isLocale(entry.name)) {
+      continue;
+    }
+
+    const localeEntries = await readdir(path.join(ARTICLES_DIRECTORY, entry.name), {
+      withFileTypes: true,
+    });
+
+    for (const localeEntry of localeEntries) {
+      if (!localeEntry.isFile() || !isMarkdownFile(localeEntry.name)) {
+        continue;
+      }
+
+      articleFiles.push({
+        fileName: localeEntry.name,
+        locale: entry.name,
+        relativePath: path.join(entry.name, localeEntry.name),
+      });
+    }
+  }
+
+  return articleFiles;
+};
+
+const toArticle = async ({
+  fileName,
+  locale,
+  relativePath,
+}: ArticleFileDescriptor): Promise<Article | null> => {
+  const filePath = path.join(ARTICLES_DIRECTORY, relativePath);
   const fileContents = await readFile(filePath, "utf8");
   const { frontmatter, content } = parseMarkdownFile(fileContents);
   const fileSlug = fileName.replace(/\.md$/i, "");
   const slug = slugify(frontmatter.slug || fileSlug);
+  const translationKey = slugify(frontmatter.translationKey || fileSlug);
 
-  if (!slug) {
+  if (!slug || !translationKey) {
     return null;
   }
 
@@ -119,7 +172,9 @@ const toArticle = async (fileName: string): Promise<Article | null> => {
   }
 
   return {
-    id: slug,
+    id: `${locale}:${slug}`,
+    locale,
+    translationKey,
     title,
     slug,
     excerpt,
@@ -147,29 +202,73 @@ const readArticlesDirectory = async () => {
   }
 };
 
-export const listArticles = async (): Promise<Article[]> => {
-  const entries = await readArticlesDirectory();
-  const articles = await Promise.all(
-    entries
-      .filter((entry) => entry.isFile() && isMarkdownFile(entry.name))
-      .map((entry) => toArticle(entry.name)),
-  );
+const sortArticles = (articles: Article[], locale: Locale): Article[] =>
+  articles.sort((left, right) => {
+    if (left.publishedAt && right.publishedAt) {
+      return right.publishedAt.localeCompare(left.publishedAt);
+    }
 
-  return articles
-    .filter((article): article is Article => Boolean(article))
-    .sort((left, right) => {
-      if (left.publishedAt && right.publishedAt) {
-        return right.publishedAt.localeCompare(left.publishedAt);
-      }
+    if (left.publishedAt) return -1;
+    if (right.publishedAt) return 1;
 
-      if (left.publishedAt) return -1;
-      if (right.publishedAt) return 1;
+    return left.title.localeCompare(right.title, locale);
+  });
 
-      return left.title.localeCompare(right.title, "es");
-    });
+export const listAllArticles = async (): Promise<Article[]> => {
+  const articleFiles = await getArticleFiles();
+  const articles = await Promise.all(articleFiles.map((file) => toArticle(file)));
+
+  return articles.filter((article): article is Article => Boolean(article));
 };
 
-export const fetchArticleBySlug = async (slug: string): Promise<Article | null> => {
-  const articles = await listArticles();
+export const listArticles = async (locale: Locale): Promise<Article[]> => {
+  const articles = await listAllArticles();
+
+  return sortArticles(
+    articles.filter((article) => article.locale === locale),
+    locale,
+  );
+};
+
+export const fetchArticleBySlug = async (
+  locale: Locale,
+  slug: string,
+): Promise<Article | null> => {
+  const articles = await listArticles(locale);
   return articles.find((article) => article.slug === slug) ?? null;
+};
+
+export const findArticleTranslations = async (
+  translationKey: string,
+): Promise<Partial<Record<Locale, Article>>> => {
+  const articles = await listAllArticles();
+
+  return articles.reduce<Partial<Record<Locale, Article>>>((translations, article) => {
+    if (article.translationKey === translationKey) {
+      translations[article.locale] = article;
+    }
+
+    return translations;
+  }, {});
+};
+
+export const listLegacyArticleSlugRoutes = async (): Promise<
+  Array<{
+    slug: string;
+    routesByLocale: Partial<Record<Locale, string>>;
+  }>
+> => {
+  const articles = await listAllArticles();
+  const routesBySlug = new Map<string, Partial<Record<Locale, string>>>();
+
+  for (const article of articles) {
+    const routes = routesBySlug.get(article.slug) ?? {};
+    routes[article.locale] = `/${article.locale}/articles/${article.slug}/`;
+    routesBySlug.set(article.slug, routes);
+  }
+
+  return Array.from(routesBySlug.entries()).map(([slug, routesByLocale]) => ({
+    slug,
+    routesByLocale,
+  }));
 };

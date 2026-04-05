@@ -1,0 +1,118 @@
+---
+import "../../../styles/global.css";
+import LanguageSwitcher from "../../../components/LanguageSwitcher.astro";
+import Lenis from "../../../components/Lenis.astro";
+import ThemeToggle from "../../../components/ThemeToggle.astro";
+import { getLocaleTag, SUPPORTED_LOCALES, isLocale, type Locale } from "../../../i18n/config";
+import { getLocalizedArticlesPath, getLocalizedHomePath } from "../../../i18n/routes";
+import { getMessages } from "../../../i18n/ui";
+import { listArticles } from "../../../services/articles";
+
+export async function getStaticPaths() {
+  return SUPPORTED_LOCALES.map((lang) => ({
+    params: { lang },
+  }));
+}
+
+const localeParam = Astro.params.lang;
+
+if (!isLocale(localeParam)) {
+  return Astro.redirect(getLocalizedHomePath("es"), 302);
+}
+
+const locale: Locale = localeParam;
+const copy = getMessages(locale);
+const articles = await listArticles(locale);
+const languageOptions = SUPPORTED_LOCALES.map((candidateLocale) => ({
+  href: getLocalizedArticlesPath(candidateLocale),
+  label: candidateLocale.toUpperCase(),
+  locale: candidateLocale,
+}));
+---
+
+<html lang={locale}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>{copy.articles.seoTitle}</title>
+    <meta name="description" content={copy.articles.seoDescription} />
+    <link rel="canonical" href={Astro.url.href} />
+    <link
+      rel="alternate"
+      hreflang="es"
+      href={new URL(getLocalizedArticlesPath("es"), Astro.url).href}
+    />
+    <link
+      rel="alternate"
+      hreflang="en"
+      href={new URL(getLocalizedArticlesPath("en"), Astro.url).href}
+    />
+    <script is:inline>
+      (function () {
+        var s = localStorage.getItem("theme");
+        var p = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        if (s === "dark" || (!s && p)) {
+          document.documentElement.classList.add("dark");
+        }
+      })();
+    </script>
+  </head>
+  <body
+    class="min-h-screen flex items-center justify-center bg-[#FFFCFC] text-[#24221D] p-8 transition-colors dark:bg-[#1c1a16] dark:text-[#f0ede6]"
+  >
+    <Lenis />
+    <LanguageSwitcher
+      currentLocale={locale}
+      label={copy.languageSwitcher.label}
+      options={languageOptions}
+    />
+    <ThemeToggle ariaLabel={copy.themeToggle.label} />
+    <main class="w-full max-w-3xl mx-auto flex flex-col gap-6 text-left">
+      <header class="space-y-2">
+        <h1 class="text-4xl font-semibold">{copy.articles.title}</h1>
+        <a
+          class="inline-flex items-center gap-4 mt-4 text-base font-semibold hover:text-black/40 dark:hover:text-white/40"
+          href={getLocalizedHomePath(locale)}
+        >
+          ← {copy.articles.backHome}
+        </a>
+      </header>
+
+      <section class="space-y-4">
+        {
+          articles.length === 0 ? (
+            <p class="text-black/60 dark:text-white/60">{copy.articles.empty}</p>
+          ) : (
+            <ul class="space-y-4">
+              {articles.map((article) => (
+                <li class="border-2 border-black/10 p-4 hover:border-black/30 transition-colors dark:border-white/10 dark:hover:border-white/30">
+                  <article class="space-y-2">
+                    <p class="text-sm text-black/40 dark:text-white/40">
+                      {article.publishedAt
+                        ? new Date(article.publishedAt).toLocaleDateString(getLocaleTag(locale), {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })
+                        : copy.articles.untitledDate}
+                    </p>
+                    <h2 class="text-2xl font-semibold">{article.title}</h2>
+                    <p class="text-black/70 dark:text-white/70">
+                      {article.excerpt || copy.articles.fallbackExcerpt}
+                    </p>
+                    <a
+                      class="font-semibold hover:text-black/40 dark:hover:text-white/40"
+                      href={`/${locale}/articles/${article.slug}/`}
+                    >
+                      {copy.articles.readMore} →
+                    </a>
+                  </article>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      </section>
+    </main>
+  </body>
+</html>

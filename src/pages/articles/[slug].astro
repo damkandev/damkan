@@ -1,103 +1,23 @@
 ---
-import "../../styles/global.css";
-import ArticleHead from "../../components/articles/ArticleHead.astro";
-import ArticleView from "../../components/articles/ArticleView.astro";
-import { renderMarkdownToHtml } from "../../lib/markdown";
-import { listArticles, type Article } from "../../services/articles";
+import PreferredLocaleRedirect from "../../components/PreferredLocaleRedirect.astro";
+import { getLocalizedArticlesPath } from "../../i18n/routes";
+import { listLegacyArticleSlugRoutes } from "../../services/articles";
 
 export async function getStaticPaths() {
-    const articles = await listArticles();
+  const routes = await listLegacyArticleSlugRoutes();
 
-    return articles.map((article) => ({
-        params: { slug: article.slug },
-        props: {
-            article,
-            relatedArticles: articles
-                .filter((candidate) => candidate.slug !== article.slug)
-                .slice(0, 3),
-        },
-    }));
+  return routes.map((route) => ({
+    params: { slug: route.slug },
+    props: {
+      routesByLocale: route.routesByLocale,
+    },
+  }));
 }
 
-interface Props {
-    article: Article;
-    relatedArticles: Article[];
-}
-
-const { article, relatedArticles } = Astro.props;
-
-const contentHtml = await renderMarkdownToHtml(article.content);
-const canonicalUrl = Astro.url.href;
-const pageTitle = `${article.seoTitle} | Artículos de Damián Panes`;
-const pageDescription = article.seoDescription;
-const wordCount = article.content.split(/\s+/).filter(Boolean).length;
-const ogImageUrl = article.ogImage
-    ? new URL(article.ogImage, Astro.url).href
-    : new URL("/og-fallback.png", Astro.url).href;
-const articleSchema = {
-    "@context": "https://schema.org",
-    "@type": "BlogPosting",
-    headline: article.seoTitle,
-    description: pageDescription,
-    url: canonicalUrl,
-    datePublished: article.publishedAt ?? undefined,
-    dateModified: article.updatedAt ?? article.publishedAt ?? undefined,
-    author: {
-        "@type": "Person",
-        name: "Damián Panes",
-        url: new URL("/", Astro.url).href,
-    },
-    publisher: {
-        "@type": "Person",
-        name: "Damián Panes",
-    },
-    image: ogImageUrl,
-    timeRequired: `PT${article.readingTimeMinutes}M`,
-    wordCount,
-    inLanguage: "es-ES",
-};
-const breadcrumbSchema = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-        {
-            "@type": "ListItem",
-            position: 1,
-            name: "Inicio",
-            item: new URL("/", Astro.url).href,
-        },
-        {
-            "@type": "ListItem",
-            position: 2,
-            name: "Artículos",
-            item: new URL("/articles/", Astro.url).href,
-        },
-        {
-            "@type": "ListItem",
-            position: 3,
-            name: article.title,
-            item: canonicalUrl,
-        },
-    ],
-};
+const { routesByLocale } = Astro.props;
 ---
 
-<html lang="es">
-    <head>
-        <ArticleHead
-            articleSchema={articleSchema}
-            breadcrumbSchema={breadcrumbSchema}
-            canonicalUrl={canonicalUrl}
-            ogImageUrl={ogImageUrl}
-            pageDescription={pageDescription}
-            pageTitle={pageTitle}
-            publishedAt={article.publishedAt}
-            updatedAt={article.updatedAt}
-        />
-    </head>
-    <ArticleView
-        article={article}
-        contentHtml={contentHtml}
-        relatedArticles={relatedArticles}
-    />
-</html>
+<PreferredLocaleRedirect
+  fallbackPath={routesByLocale.es || routesByLocale.en || getLocalizedArticlesPath("es")}
+  routesByLocale={routesByLocale}
+/>

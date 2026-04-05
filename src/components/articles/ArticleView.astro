@@ -1,5 +1,9 @@
 ---
+import type { Locale } from "../../i18n/config";
+import { getLocaleTag } from "../../i18n/config";
+import { getLocalizedArticlesPath } from "../../i18n/routes";
 import type { Article } from "../../services/articles";
+import LanguageSwitcher from "../LanguageSwitcher.astro";
 import Lenis from "../Lenis.astro";
 import ThemeToggle from "../ThemeToggle.astro";
 import ArticleEnhancements from "./ArticleEnhancements.astro";
@@ -9,13 +13,40 @@ import ArticleTableOfContents from "./ArticleTableOfContents.astro";
 interface Props {
     article: Article;
     contentHtml: string;
+    currentLocale: Locale;
+    languageLabel: string;
+    languageOptions: Array<{
+        href: string;
+        label: string;
+        locale: Locale;
+    }>;
+    messages: {
+        backToList: string;
+        dateUnavailable: string;
+        minRead: string;
+        relatedDescription: string;
+        relatedFallbackExcerpt: string;
+        relatedTitle: string;
+        tocLabel: string;
+        tocTitle: string;
+    };
     relatedArticles: Article[];
+    themeToggleLabel: string;
 }
 
-const { article, contentHtml, relatedArticles } = Astro.props;
+const {
+    article,
+    contentHtml,
+    currentLocale,
+    languageLabel,
+    languageOptions,
+    messages,
+    relatedArticles,
+    themeToggleLabel,
+} = Astro.props;
 
 const publishedDate = article.publishedAt
-    ? new Date(article.publishedAt).toLocaleDateString("es-CL", {
+    ? new Date(article.publishedAt).toLocaleDateString(getLocaleTag(currentLocale), {
           year: "numeric",
           month: "long",
           day: "numeric",
@@ -27,13 +58,18 @@ const publishedDate = article.publishedAt
     class="min-h-screen bg-[#FFFCFC] px-4 py-5 text-[#24221D] transition-colors sm:px-6 sm:py-8 lg:px-8 dark:bg-[#1c1a16] dark:text-[#f0ede6]"
 >
     <Lenis />
-    <ThemeToggle />
+    <LanguageSwitcher
+        currentLocale={currentLocale}
+        label={languageLabel}
+        options={languageOptions}
+    />
+    <ThemeToggle ariaLabel={themeToggleLabel} />
     <main class="mx-auto flex w-full max-w-6xl flex-col gap-5 text-left sm:gap-6">
         <a
             class="inline-flex items-center gap-2 text-sm font-semibold hover:text-black/40 sm:text-base dark:hover:text-white/40"
-            href="/articles"
+            href={getLocalizedArticlesPath(currentLocale)}
         >
-            ← Volver al listado
+            ← {messages.backToList}
         </a>
 
         <div
@@ -42,8 +78,8 @@ const publishedDate = article.publishedAt
             <article class="min-w-0 space-y-5 sm:space-y-6">
                 <header class="space-y-3">
                     <div class="flex flex-wrap gap-x-4 gap-y-2 text-sm text-black/40 dark:text-white/40">
-                        {publishedDate && <p>{publishedDate}</p>}
-                        <p>{article.readingTimeMinutes} min de lectura</p>
+                        <p>{publishedDate || messages.dateUnavailable}</p>
+                        <p>{article.readingTimeMinutes} {messages.minRead}</p>
                     </div>
 
                     <h1 class="text-3xl font-semibold leading-tight sm:text-4xl md:text-5xl">
@@ -62,6 +98,10 @@ const publishedDate = article.publishedAt
                     article.headings.length > 0 && (
                         <ArticleTableOfContents
                             headings={article.headings}
+                            labels={{
+                                mobile: messages.tocLabel,
+                                desktop: messages.tocTitle,
+                            }}
                             variant="mobile"
                         />
                     )
@@ -71,12 +111,24 @@ const publishedDate = article.publishedAt
                     class="article-body min-w-0 border-t border-black/10 pt-5 text-base leading-relaxed sm:pt-6 sm:text-[1.05rem] dark:border-white/10"
                     set:html={contentHtml}
                 />
-                <ArticleRelated relatedArticles={relatedArticles} />
+                <ArticleRelated
+                    description={messages.relatedDescription}
+                    emptyExcerpt={messages.relatedFallbackExcerpt}
+                    locale={currentLocale}
+                    relatedArticles={relatedArticles}
+                    title={messages.relatedTitle}
+                />
             </article>
 
             {
                 article.headings.length > 0 && (
-                    <ArticleTableOfContents headings={article.headings} />
+                    <ArticleTableOfContents
+                        headings={article.headings}
+                        labels={{
+                            mobile: messages.tocLabel,
+                            desktop: messages.tocTitle,
+                        }}
+                    />
                 )
             }
         </div>

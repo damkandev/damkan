@@ -1,0 +1,55 @@
+---
+import { PREFERRED_LOCALE_STORAGE_KEY, type Locale } from "../i18n/config";
+
+interface Props {
+  currentLocale: Locale;
+  label: string;
+  options: Array<{
+    href: string;
+    label: string;
+    locale: Locale;
+  }>;
+}
+
+const { currentLocale, label, options } = Astro.props;
+---
+
+<nav
+  aria-label={label}
+  class="fixed top-4 right-16 z-50 flex overflow-hidden border border-black/10 bg-[#FFFCFC]/80 text-sm text-[#24221D] backdrop-blur-sm dark:border-white/10 dark:bg-[#1c1a16]/80 dark:text-[#f0ede6]"
+>
+  {
+    options.map((option) => {
+      const isActive = option.locale === currentLocale;
+
+      return (
+        <a
+          class:list={[
+            "px-3 py-2 transition-colors",
+            isActive
+              ? "bg-[#24221D] text-[#FFFCFC] dark:bg-[#f0ede6] dark:text-[#1c1a16]"
+              : "hover:bg-black/5 dark:hover:bg-white/5",
+          ]}
+          data-language-link
+          data-locale={option.locale}
+          href={option.href}
+          hreflang={option.locale}
+          lang={option.locale}
+        >
+          {option.label}
+        </a>
+      );
+    })
+  }
+</nav>
+
+<script define:vars={{ storageKey: PREFERRED_LOCALE_STORAGE_KEY }}>
+  document.querySelectorAll("[data-language-link]").forEach((link) => {
+    link.addEventListener("click", () => {
+      const locale = link.getAttribute("data-locale");
+      if (locale) {
+        localStorage.setItem(storageKey, locale);
+      }
+    });
+  });
+</script>

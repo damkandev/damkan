@@ -1,0 +1,154 @@
+---
+import "../../../styles/global.css";
+import ArticleHead from "../../../components/articles/ArticleHead.astro";
+import ArticleView from "../../../components/articles/ArticleView.astro";
+import { getLocaleTag, SUPPORTED_LOCALES, isLocale, type Locale } from "../../../i18n/config";
+import {
+  getLocalizedArticlePath,
+  getLocalizedArticlesPath,
+  getLocalizedHomePath,
+} from "../../../i18n/routes";
+import { getMessages } from "../../../i18n/ui";
+import { renderMarkdownToHtml } from "../../../lib/markdown";
+import {
+  findArticleTranslations,
+  listAllArticles,
+  listArticles,
+  type Article,
+} from "../../../services/articles";
+
+export async function getStaticPaths() {
+  const articles = await listAllArticles();
+
+  return articles.map((article) => ({
+    params: { lang: article.locale, slug: article.slug },
+    props: { article },
+  }));
+}
+
+interface Props {
+  article: Article;
+}
+
+const localeParam = Astro.params.lang;
+
+if (!isLocale(localeParam)) {
+  return Astro.redirect(getLocalizedHomePath("es"), 302);
+}
+
+const currentLocale: Locale = localeParam;
+const { article } = Astro.props;
+
+if (article.locale !== currentLocale) {
+  return Astro.redirect(getLocalizedArticlePath(article.locale, article.slug), 302);
+}
+
+const copy = getMessages(currentLocale);
+const allLocalizedArticles = await listArticles(currentLocale);
+const relatedArticles = allLocalizedArticles
+  .filter((candidate) => candidate.translationKey !== article.translationKey)
+  .slice(0, 3);
+const translations = await findArticleTranslations(article.translationKey);
+const contentHtml = await renderMarkdownToHtml(article.content);
+const canonicalUrl = Astro.url.href;
+const pageTitle = `${article.seoTitle} | ${copy.articles.seoTitle.replace(" | Damián Panes", "")}`;
+const pageDescription = article.seoDescription;
+const wordCount = article.content.split(/\s+/).filter(Boolean).length;
+const ogImageUrl = article.ogImage
+  ? new URL(article.ogImage, Astro.url).href
+  : new URL("/og-fallback.png", Astro.url).href;
+const articleSchema = {
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  headline: article.seoTitle,
+  description: pageDescription,
+  url: canonicalUrl,
+  datePublished: article.publishedAt ?? undefined,
+  dateModified: article.updatedAt ?? article.publishedAt ?? undefined,
+  author: {
+    "@type": "Person",
+    name: "Damián Panes",
+    url: new URL(getLocalizedHomePath(currentLocale), Astro.url).href,
+  },
+  publisher: {
+    "@type": "Person",
+    name: "Damián Panes",
+  },
+  image: ogImageUrl,
+  timeRequired: `PT${article.readingTimeMinutes}M`,
+  wordCount,
+  inLanguage: getLocaleTag(currentLocale),
+};
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    {
+      "@type": "ListItem",
+      position: 1,
+      name: currentLocale === "es" ? "Inicio" : "Home",
+      item: new URL(getLocalizedHomePath(currentLocale), Astro.url).href,
+    },
+    {
+      "@type": "ListItem",
+      position: 2,
+      name: currentLocale === "es" ? "Artículos" : "Articles",
+      item: new URL(getLocalizedArticlesPath(currentLocale), Astro.url).href,
+    },
+    {
+      "@type": "ListItem",
+      position: 3,
+      name: article.title,
+      item: canonicalUrl,
+    },
+  ],
+};
+const alternateLinks = SUPPORTED_LOCALES.flatMap((locale) => {
+  const translatedArticle = translations[locale];
+
+  if (!translatedArticle) {
+    return [];
+  }
+
+  return [
+    {
+      href: new URL(getLocalizedArticlePath(locale, translatedArticle.slug), Astro.url).href,
+      hreflang: locale,
+    },
+  ];
+});
+const languageOptions = SUPPORTED_LOCALES.map((locale) => ({
+  href: translations[locale]
+    ? getLocalizedArticlePath(locale, translations[locale]!.slug)
+    : getLocalizedArticlesPath(locale),
+  label: locale.toUpperCase(),
+  locale,
+}));
+---
+
+<html lang={currentLocale}>
+  <head>
+    <ArticleHead
+      alternateLinks={alternateLinks}
+      articleSchema={articleSchema}
+      breadcrumbSchema={breadcrumbSchema}
+      canonicalUrl={canonicalUrl}
+      locale={currentLocale}
+      ogImageUrl={ogImageUrl}
+      pageDescription={pageDescription}
+      pageTitle={pageTitle}
+      publishedAt={article.publishedAt}
+      updatedAt={article.updatedAt}
+    />
+  </head>
+  <ArticleView
+    article={article}
+    contentHtml={contentHtml}
+    currentLocale={currentLocale}
+    languageLabel={copy.languageSwitcher.label}
+    languageOptions={languageOptions}
+    messages={copy.article}
+    relatedArticles={relatedArticles}
+    themeToggleLabel={copy.themeToggle.label}
+  />
+</html>

@@ -1,6 +1,7 @@
 ---
 title: Descansa en paz (por ahora)
 slug: descansa-en-paz-por-ahora
+translationKey: rest-in-peace-for-now
 excerpt: Sobre startups, trabajos normales y lo bonito de construir algo propio.
 publishedAt: 2025-11-24
 seoTitle: Descansa en paz (por ahora)

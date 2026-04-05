@@ -1,6 +1,7 @@
 ---
 title: Libros que recomienda gente cool
 slug: libros-que-recomienda-gente-cool
+translationKey: books-cool-people-recommend
 excerpt: Le pregunté a varios founders qué libros recomiendan y esta fue la selección que más me llamó la atención.
 publishedAt: 2025-11-24
 seoTitle: Libros que recomienda gente cool
