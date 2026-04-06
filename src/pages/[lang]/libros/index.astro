@@ -1,0 +1,137 @@
+---
+import "../../../styles/global.css";
+import Favicons from "../../../components/Favicons.astro";
+import LanguageSwitcher from "../../../components/LanguageSwitcher.astro";
+import Lenis from "../../../components/Lenis.astro";
+import ThemeToggle from "../../../components/ThemeToggle.astro";
+import VercelAnalytics from "../../../components/VercelAnalytics.astro";
+import { SUPPORTED_LOCALES, isLocale, type Locale } from "../../../i18n/config";
+import { getLocalizedBooksPath, getLocalizedBookPath, getLocalizedHomePath } from "../../../i18n/routes";
+import { getMessages } from "../../../i18n/ui";
+import { listBooks } from "../../../services/books";
+
+export async function getStaticPaths() {
+  return SUPPORTED_LOCALES.map((lang) => ({
+    params: { lang },
+  }));
+}
+
+const localeParam = Astro.params.lang;
+
+if (!isLocale(localeParam)) {
+  return Astro.redirect(getLocalizedHomePath("es"), 302);
+}
+
+const locale: Locale = localeParam;
+const copy = getMessages(locale);
+const books = await listBooks(locale);
+const languageOptions = SUPPORTED_LOCALES.map((candidateLocale) => ({
+  href: getLocalizedBooksPath(candidateLocale),
+  label: candidateLocale.toUpperCase(),
+  locale: candidateLocale,
+}));
+---
+
+<html lang={locale}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>{copy.books.seoTitle}</title>
+    <meta name="description" content={copy.books.seoDescription} />
+    <Favicons />
+    <link rel="canonical" href={Astro.url.href} />
+    <link
+      rel="alternate"
+      hreflang="es"
+      href={new URL(getLocalizedBooksPath("es"), Astro.url).href}
+    />
+    <link
+      rel="alternate"
+      hreflang="en"
+      href={new URL(getLocalizedBooksPath("en"), Astro.url).href}
+    />
+    <script is:inline>
+      (function () {
+        var s = localStorage.getItem("theme");
+        var p = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        if (s === "dark" || (!s && p)) {
+          document.documentElement.classList.add("dark");
+        }
+      })();
+    </script>
+  </head>
+  <body
+    class="min-h-screen flex items-center justify-center bg-[#FFFCFC] text-[#24221D] p-8 transition-colors dark:bg-[#1c1a16] dark:text-[#f0ede6]"
+  >
+    <Lenis />
+    <LanguageSwitcher
+      currentLocale={locale}
+      label={copy.languageSwitcher.label}
+      options={languageOptions}
+    />
+    <ThemeToggle ariaLabel={copy.themeToggle.label} />
+    <main class="w-full max-w-3xl mx-auto flex flex-col gap-6 text-left">
+      <header class="space-y-2">
+        <h1 class="text-4xl font-semibold">{copy.books.title}</h1>
+        <a
+          class="inline-flex items-center gap-4 mt-4 text-base font-semibold hover:text-black/40 dark:hover:text-white/40"
+          href={getLocalizedHomePath(locale)}
+        >
+          ← {copy.books.backHome}
+        </a>
+      </header>
+
+      <section>
+        {
+          books.length === 0 ? (
+            <p class="text-black/60 dark:text-white/60">{copy.books.empty}</p>
+          ) : (
+            <ul class="grid grid-cols-2 gap-6 sm:grid-cols-3">
+              {books.map((book) => (
+                <li>
+                  <a
+                    href={getLocalizedBookPath(locale, book.slug)}
+                    class="group flex flex-col gap-3"
+                  >
+                    <div class="border-2 border-black/10 transition-colors group-hover:border-black/30 dark:border-white/10 dark:group-hover:border-white/30 overflow-hidden aspect-[2/3] bg-black/5 dark:bg-white/5">
+                      {book.coverImage ? (
+                        <img
+                          src={book.coverImage}
+                          alt={book.title}
+                          class="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div class="w-full h-full flex items-end p-3">
+                          <p class="text-sm font-semibold leading-tight">{book.title}</p>
+                        </div>
+                      )}
+                    </div>
+                    <div class="space-y-1">
+                      {book.pages && (
+                        <p class="text-xs text-black/40 dark:text-white/40">
+                          {book.pages} {copy.books.pages}
+                        </p>
+                      )}
+                      <p class="font-semibold leading-snug">{book.title}</p>
+                      {book.author && (
+                        <p class="text-sm text-black/60 dark:text-white/60">{book.author}</p>
+                      )}
+                      <p class="text-sm text-black/70 dark:text-white/70 line-clamp-3">
+                        {book.excerpt || copy.books.fallbackExcerpt}
+                      </p>
+                      <p class="text-sm font-semibold group-hover:text-black/40 dark:group-hover:text-white/40 transition-colors">
+                        {copy.books.readMore} →
+                      </p>
+                    </div>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      </section>
+    </main>
+    <VercelAnalytics />
+  </body>
+</html>

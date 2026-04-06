@@ -6,9 +6,10 @@ import Lenis from "../../components/Lenis.astro";
 import ThemeToggle from "../../components/ThemeToggle.astro";
 import VercelAnalytics from "../../components/VercelAnalytics.astro";
 import { SUPPORTED_LOCALES, isLocale, type Locale } from "../../i18n/config";
-import { getLocalizedArticlesPath, getLocalizedHomePath } from "../../i18n/routes";
+import { getLocalizedArticlesPath, getLocalizedBooksPath, getLocalizedBookPath, getLocalizedHomePath } from "../../i18n/routes";
 import { getMessages } from "../../i18n/ui";
 import { listArticles } from "../../services/articles";
+import { listBooks } from "../../services/books";
 
 export async function getStaticPaths() {
   return SUPPORTED_LOCALES.map((lang) => ({
@@ -26,6 +27,8 @@ const locale: Locale = localeParam;
 const copy = getMessages(locale);
 const articles = await listArticles(locale);
 const latestArticles = articles.slice(0, 3);
+const books = await listBooks(locale);
+const latestBooks = books.slice(0, 6);
 const languageOptions = SUPPORTED_LOCALES.map((candidateLocale) => ({
   href: getLocalizedHomePath(candidateLocale),
   label: candidateLocale.toUpperCase(),
@@ -103,6 +106,48 @@ const languageOptions = SUPPORTED_LOCALES.map((candidateLocale) => ({
         <a
           class="font-semibold hover:text-black/30 dark:hover:text-white/30"
           href={getLocalizedArticlesPath(locale)}
+        >
+          {copy.home.seeMore}
+        </a>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-2xl font-semibold">{copy.home.booksTitle}</h2>
+        {
+          latestBooks.length === 0 ? (
+            <p class="text-sm text-black/40 dark:text-white/40">{copy.books.empty}</p>
+          ) : (
+            <ul class="grid grid-cols-3 gap-3 sm:grid-cols-6">
+              {latestBooks.map((book) => (
+                <li>
+                  <a
+                    href={getLocalizedBookPath(locale, book.slug)}
+                    class="group block"
+                    title={book.title}
+                  >
+                    <div class="border-2 border-black/10 transition hover:border-black/30 dark:border-white/10 dark:hover:border-white/30 overflow-hidden aspect-[2/3] bg-black/5 dark:bg-white/5">
+                      {book.coverImage ? (
+                        <img
+                          src={book.coverImage}
+                          alt={book.title}
+                          class="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div class="w-full h-full flex items-end p-2">
+                          <p class="text-xs font-semibold leading-tight">{book.title}</p>
+                        </div>
+                      )}
+                    </div>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+        <a
+          class="font-semibold hover:text-black/30 dark:hover:text-white/30"
+          href={getLocalizedBooksPath(locale)}
         >
           {copy.home.seeMore}
         </a>

@@ -21,8 +21,21 @@ type Messages = {
     title: string;
     untitledDate: string;
   };
+  books: {
+    backHome: string;
+    backToList: string;
+    empty: string;
+    fallbackExcerpt: string;
+    pages: string;
+    readMore: string;
+    seoDescription: string;
+    seoTitle: string;
+    title: string;
+    untitledDate: string;
+  };
   home: {
     articlesTitle: string;
+    booksTitle: string;
     bio: string;
     empty: string;
     fallbackExcerpt: string;
@@ -61,8 +74,21 @@ export const messages: Record<Locale, Messages> = {
       title: "Ideas, notas y aprendizajes",
       untitledDate: "Sin fecha",
     },
+    books: {
+      backHome: "Volver al inicio",
+      backToList: "Volver a libros",
+      empty: "Todavía no hay libros cargados.",
+      fallbackExcerpt: "Sin descripción",
+      pages: "págs.",
+      readMore: "leer reseña",
+      seoDescription: "Libros que leo: resúmenes y reseñas de Damián Panes.",
+      seoTitle: "Libros | Damián Panes",
+      title: "Libros que leo",
+      untitledDate: "Sin fecha",
+    },
     home: {
       articlesTitle: "Artículos",
+      booksTitle: "Libros",
       bio: "Me gusta el helado de pasas al ron, tengo 5 veces repetidas el mismo par de zapatillas pero aparte de eso me gusta mucho programar y crear empresas, principalmente solucionar problemas.",
       empty: "Aún no hay artículos cargados para este idioma.",
       fallbackExcerpt: "Sin descripción breve.",
@@ -99,8 +125,21 @@ export const messages: Record<Locale, Messages> = {
       title: "Ideas, notes, and lessons",
       untitledDate: "No date",
     },
+    books: {
+      backHome: "Back to home",
+      backToList: "Back to books",
+      empty: "No books loaded yet.",
+      fallbackExcerpt: "No short description.",
+      pages: "pages",
+      readMore: "read review",
+      seoDescription: "Books I read: summaries and reviews by Damián Panes.",
+      seoTitle: "Books | Damián Panes",
+      title: "Books I read",
+      untitledDate: "No date",
+    },
     home: {
       articlesTitle: "Articles",
+      booksTitle: "Books",
       bio: "I like rum raisin ice cream, I own the same pair of sneakers five times over, and beyond that I mostly like building software, companies, and solving problems.",
       empty: "There are no articles for this language yet.",
       fallbackExcerpt: "No short description.",
