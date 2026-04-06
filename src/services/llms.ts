@@ -3,7 +3,6 @@ import { getMessages } from "../i18n/ui";
 import {
   getLocalizedArticlePath,
   getLocalizedArticlesPath,
-  getLocalizedBooksPath,
   getLocalizedHomePath,
 } from "../i18n/routes";
 import { listAllArticles, type Article } from "./articles";
@@ -26,6 +25,8 @@ const SOCIAL_LINKS = [
 const getBaseUrl = (site?: URL): URL => site ?? new URL("https://dapan.es");
 
 const toAbsoluteUrl = (site: URL, path: string): string => new URL(path, site).href;
+
+const getLocalizedBooksPath = (locale: Locale): string => `/${locale}/libros/`;
 
 const compareArticles = (left: Article, right: Article): number => {
   if (left.publishedAt && right.publishedAt) {
