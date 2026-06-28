@@ -1,0 +1,18 @@
+---
+import { createHeadingId } from "../../services/articleDefinition";
+
+interface Props {
+  as?: "h1" | "h2" | "h3";
+  class?: string;
+  id?: string;
+  text: string;
+}
+
+const { as = "h2", class: className, id: providedId, text } = Astro.props;
+const Tag = as;
+const id = providedId ?? createHeadingId(text);
+---
+
+<Tag class={className} id={id}>
+  <slot>{text}</slot>
+</Tag>

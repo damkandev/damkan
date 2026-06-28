@@ -1,12 +1,20 @@
+import { readdir, readFile } from "node:fs/promises";
+import path from "node:path";
+import type { AstroComponentFactory } from "astro/runtime/server/index.js";
 import {
   estimateReadingTimeMinutes,
   extractMarkdownHeadings,
   summarizeMarkdown,
   type MarkdownHeading,
 } from "../lib/markdown";
-import { readdir, readFile } from "node:fs/promises";
-import path from "node:path";
 import { DEFAULT_LOCALE, type Locale, isLocale } from "../i18n/config";
+import {
+  createHeadingId,
+  defineArticle,
+  slugifyArticleValue,
+  type ArticleDefinition,
+  type ArticleSourceKind,
+} from "./articleDefinition";
 
 export type Article = {
   id: string;
@@ -15,7 +23,6 @@ export type Article = {
   title: string;
   slug: string;
   excerpt: string;
-  content: string;
   publishedAt: string | null;
   updatedAt: string | null;
   readingTimeMinutes: number;
@@ -23,6 +30,10 @@ export type Article = {
   seoTitle: string;
   seoDescription: string;
   ogImage: string | null;
+  sourceKind: ArticleSourceKind;
+  markdownContent: string | null;
+  bodyComponent: AstroComponentFactory | null;
+  wordCount: number;
 };
 
 type ArticleFrontmatter = {
@@ -38,16 +49,25 @@ type ArticleFrontmatter = {
   draft?: boolean;
 };
 
-const ARTICLES_DIRECTORY = path.join(process.cwd(), "articles");
+type MarkdownArticleFileDescriptor = {
+  fileName: string;
+  locale: Locale;
+  relativePath: string;
+};
 
-const slugify = (value: string) =>
-  value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9-\s]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
+type AstroArticleModule = {
+  article?: ArticleDefinition;
+  default: AstroComponentFactory;
+};
+
+const ARTICLES_DIRECTORY = path.join(process.cwd(), "src/content/articles");
+const ASTRO_ARTICLES_GLOB = import.meta.glob<AstroArticleModule>("../content/articles/**/*.astro");
+const ASTRO_ARTICLE_SOURCE_GLOB = import.meta.glob<string>("../content/articles/**/*.astro", {
+  query: "?raw",
+  import: "default",
+});
+
+let articleCache: Promise<Article[]> | null = null;
 
 const parseFrontmatterValue = (value: string): string | boolean | null => {
   const normalized = value.trim();
@@ -90,15 +110,168 @@ const parseMarkdownFile = (source: string) => {
 
 const isMarkdownFile = (fileName: string) => fileName.toLowerCase().endsWith(".md");
 
-type ArticleFileDescriptor = {
-  fileName: string;
-  locale: Locale;
-  relativePath: string;
+const stripAstroFrontmatter = (source: string) => {
+  const normalizedSource = source.replace(/\r\n/g, "\n");
+
+  if (!normalizedSource.startsWith("---\n")) {
+    return normalizedSource;
+  }
+
+  const endIndex = normalizedSource.indexOf("\n---\n", 4);
+  return endIndex === -1 ? normalizedSource : normalizedSource.slice(endIndex + 5);
 };
 
-const getArticleFiles = async (): Promise<ArticleFileDescriptor[]> => {
+const stripInlineMarkup = (source: string) =>
+  source
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\{[^}]*\}/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const extractAstroText = (source: string) =>
+  stripInlineMarkup(stripAstroFrontmatter(source).replace(/```[\s\S]*?```/g, " "));
+
+const extractAstroHeadings = (source: string): MarkdownHeading[] => {
+  const normalized = stripAstroFrontmatter(source);
+  const headings: MarkdownHeading[] = [];
+  const componentHeadingPattern =
+    /<ArticleHeading\b([^>]*)>([\s\S]*?)<\/ArticleHeading>|<ArticleHeading\b([^>]*)\/>/g;
+  const nativeHeadingPattern = /<h([1-3])\b([^>]*)>([\s\S]*?)<\/h\1>/g;
+  const extractAttribute = (attributes: string, name: string) => {
+    const attributeMatch = attributes.match(new RegExp(`${name}\\s*=\\s*["']([^"']+)["']`));
+    return attributeMatch?.[1]?.trim();
+  };
+
+  for (const match of normalized.matchAll(componentHeadingPattern)) {
+    const attributes = match[1] ?? match[3] ?? "";
+    const content = match[2] ?? "";
+
+    const explicitLevel = extractAttribute(attributes, "as");
+    const textFromAttribute = extractAttribute(attributes, "text");
+    const text = textFromAttribute || stripInlineMarkup(content);
+    const level = Number(explicitLevel?.replace("h", "") || 2);
+
+    if (!text || ![1, 2, 3].includes(level)) {
+      continue;
+    }
+
+    const depth = level as MarkdownHeading["depth"];
+    const id = extractAttribute(attributes, "id") || createHeadingId(text);
+
+    headings.push({ depth, id, text });
+  }
+
+  for (const match of normalized.matchAll(nativeHeadingPattern)) {
+    const level = Number(match[1]);
+    const attributes = match[2] ?? "";
+    const content = match[3] ?? "";
+    const text = stripInlineMarkup(content);
+    const explicitId = extractAttribute(attributes, "id");
+
+    if (!text || !explicitId || ![1, 2, 3].includes(level)) {
+      continue;
+    }
+
+    headings.push({
+      depth: level as MarkdownHeading["depth"],
+      id: explicitId,
+      text,
+    });
+  }
+
+  return headings;
+};
+
+const buildArticle = ({
+  locale,
+  sourceKind,
+  fileSlug,
+  frontmatter,
+  titleFallback,
+  excerptFallbackSource,
+  headings,
+  markdownContent,
+  bodyComponent,
+  wordCount,
+}: {
+  locale: Locale;
+  sourceKind: ArticleSourceKind;
+  fileSlug: string;
+  frontmatter: ArticleFrontmatter | ArticleDefinition;
+  titleFallback: string;
+  excerptFallbackSource: string;
+  headings: MarkdownHeading[];
+  markdownContent: string | null;
+  bodyComponent: AstroComponentFactory | null;
+  wordCount: number;
+}): Article | null => {
+  const slug = slugifyArticleValue(frontmatter.slug || fileSlug);
+  const translationKey = slugifyArticleValue(frontmatter.translationKey || fileSlug);
+
+  if (!slug || !translationKey) {
+    return null;
+  }
+
+  if (frontmatter.draft) {
+    return null;
+  }
+
+  const title = frontmatter.title?.trim() || titleFallback;
+  const excerpt = frontmatter.excerpt?.trim() || summarizeMarkdown(excerptFallbackSource, 180);
+  const publishedAt =
+    typeof frontmatter.publishedAt === "string" && frontmatter.publishedAt.trim()
+      ? frontmatter.publishedAt.trim()
+      : null;
+  const updatedAt =
+    typeof frontmatter.updatedAt === "string" && frontmatter.updatedAt.trim()
+      ? frontmatter.updatedAt.trim()
+      : null;
+  const seoTitle = frontmatter.seoTitle?.trim() || title;
+  const seoDescription = frontmatter.seoDescription?.trim() || excerpt;
+  const ogImage =
+    typeof frontmatter.ogImage === "string" && frontmatter.ogImage.trim()
+      ? frontmatter.ogImage.trim()
+      : null;
+
+  return {
+    id: `${locale}:${slug}`,
+    locale,
+    translationKey,
+    title,
+    slug,
+    excerpt,
+    publishedAt,
+    updatedAt,
+    readingTimeMinutes: estimateReadingTimeMinutes(excerptFallbackSource),
+    headings,
+    seoTitle,
+    seoDescription,
+    ogImage,
+    sourceKind,
+    markdownContent,
+    bodyComponent,
+    wordCount,
+  };
+};
+
+const readArticlesDirectory = async () => {
+  try {
+    return await readdir(ARTICLES_DIRECTORY, { withFileTypes: true });
+  } catch (error) {
+    const maybeError = error as NodeJS.ErrnoException;
+    if (maybeError.code === "ENOENT") {
+      return [];
+    }
+
+    throw error;
+  }
+};
+
+const getMarkdownArticleFiles = async (): Promise<MarkdownArticleFileDescriptor[]> => {
   const entries = await readArticlesDirectory();
-  const articleFiles: ArticleFileDescriptor[] = [];
+  const articleFiles: MarkdownArticleFileDescriptor[] = [];
 
   for (const entry of entries) {
     if (entry.isFile() && isMarkdownFile(entry.name)) {
@@ -134,72 +307,82 @@ const getArticleFiles = async (): Promise<ArticleFileDescriptor[]> => {
   return articleFiles;
 };
 
-const toArticle = async ({
+const toMarkdownArticle = async ({
   fileName,
   locale,
   relativePath,
-}: ArticleFileDescriptor): Promise<Article | null> => {
+}: MarkdownArticleFileDescriptor): Promise<Article | null> => {
   const filePath = path.join(ARTICLES_DIRECTORY, relativePath);
   const fileContents = await readFile(filePath, "utf8");
   const { frontmatter, content } = parseMarkdownFile(fileContents);
   const fileSlug = fileName.replace(/\.md$/i, "");
-  const slug = slugify(frontmatter.slug || fileSlug);
-  const translationKey = slugify(frontmatter.translationKey || fileSlug);
 
-  if (!slug || !translationKey) {
-    return null;
-  }
+  return buildArticle({
+    locale,
+    sourceKind: "markdown",
+    fileSlug,
+    frontmatter,
+    titleFallback: fileSlug.replace(/-/g, " "),
+    excerptFallbackSource: content,
+    headings: extractMarkdownHeadings(content),
+    markdownContent: content,
+    bodyComponent: null,
+    wordCount: content.split(/\s+/).filter(Boolean).length,
+  });
+};
 
-  const title = frontmatter.title?.trim() || fileSlug.replace(/-/g, " ");
-  const excerpt = frontmatter.excerpt?.trim() || summarizeMarkdown(content, 180);
-  const publishedAt =
-    typeof frontmatter.publishedAt === "string" && frontmatter.publishedAt.trim()
-      ? frontmatter.publishedAt.trim()
-      : null;
-  const updatedAt =
-    typeof frontmatter.updatedAt === "string" && frontmatter.updatedAt.trim()
-      ? frontmatter.updatedAt.trim()
-      : null;
-  const seoTitle = frontmatter.seoTitle?.trim() || title;
-  const seoDescription = frontmatter.seoDescription?.trim() || excerpt;
-  const ogImage =
-    typeof frontmatter.ogImage === "string" && frontmatter.ogImage.trim()
-      ? frontmatter.ogImage.trim()
-      : null;
+const getAstroArticleContext = (modulePath: string) => {
+  const segments = modulePath.split("/");
+  const fileName = segments.at(-1) ?? "";
+  const localeSegment = fileName.replace(/\.astro$/i, "");
+  const translationKeySegment = segments.at(-2) ?? "";
 
-  if (frontmatter.draft) {
+  if (!isLocale(localeSegment) || !translationKeySegment) {
     return null;
   }
 
   return {
-    id: `${locale}:${slug}`,
-    locale,
-    translationKey,
-    title,
-    slug,
-    excerpt,
-    content,
-    publishedAt,
-    updatedAt,
-    readingTimeMinutes: estimateReadingTimeMinutes(content),
-    headings: extractMarkdownHeadings(content),
-    seoTitle,
-    seoDescription,
-    ogImage,
+    locale: localeSegment,
+    translationKey: translationKeySegment,
   };
 };
 
-const readArticlesDirectory = async () => {
-  try {
-    return await readdir(ARTICLES_DIRECTORY, { withFileTypes: true });
-  } catch (error) {
-    const maybeError = error as NodeJS.ErrnoException;
-    if (maybeError.code === "ENOENT") {
-      return [];
-    }
+const toAstroArticle = async ([modulePath, loadModule]: [
+  string,
+  () => Promise<AstroArticleModule>,
+]): Promise<Article | null> => {
+  const context = getAstroArticleContext(modulePath);
 
-    throw error;
+  if (!context) {
+    return null;
   }
+
+  const loadSource = ASTRO_ARTICLE_SOURCE_GLOB[modulePath];
+
+  if (!loadSource) {
+    return null;
+  }
+
+  const [module, source] = await Promise.all([loadModule(), loadSource()]);
+  const frontmatter = defineArticle({
+    translationKey: context.translationKey,
+    ...(module.article ?? {}),
+  });
+  const plainText = extractAstroText(source);
+  const fileSlug = frontmatter.slug || context.translationKey;
+
+  return buildArticle({
+    locale: context.locale,
+    sourceKind: "astro",
+    fileSlug,
+    frontmatter,
+    titleFallback: context.translationKey.replace(/-/g, " "),
+    excerptFallbackSource: plainText,
+    headings: extractAstroHeadings(source),
+    markdownContent: null,
+    bodyComponent: module.default,
+    wordCount: plainText.split(/\s+/).filter(Boolean).length,
+  });
 };
 
 const sortArticles = (articles: Article[], locale: Locale): Article[] =>
@@ -214,11 +397,21 @@ const sortArticles = (articles: Article[], locale: Locale): Article[] =>
     return left.title.localeCompare(right.title, locale);
   });
 
-export const listAllArticles = async (): Promise<Article[]> => {
-  const articleFiles = await getArticleFiles();
-  const articles = await Promise.all(articleFiles.map((file) => toArticle(file)));
+const loadArticles = async (): Promise<Article[]> => {
+  const markdownFiles = await getMarkdownArticleFiles();
+  const [markdownArticles, astroArticles] = await Promise.all([
+    Promise.all(markdownFiles.map((file) => toMarkdownArticle(file))),
+    Promise.all(Object.entries(ASTRO_ARTICLES_GLOB).map((entry) => toAstroArticle(entry))),
+  ]);
 
-  return articles.filter((article): article is Article => Boolean(article));
+  return [...markdownArticles, ...astroArticles].filter(
+    (article): article is Article => Boolean(article),
+  );
+};
+
+export const listAllArticles = async (): Promise<Article[]> => {
+  articleCache ??= loadArticles();
+  return articleCache;
 };
 
 export const listArticles = async (locale: Locale): Promise<Article[]> => {

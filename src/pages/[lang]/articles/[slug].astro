@@ -11,10 +11,10 @@ import {
 import { getMessages } from "../../../i18n/ui";
 import { renderMarkdownToHtml } from "../../../lib/markdown";
 import {
+  fetchArticleBySlug,
   findArticleTranslations,
   listAllArticles,
   listArticles,
-  type Article,
 } from "../../../services/articles";
 
 export async function getStaticPaths() {
@@ -22,12 +22,7 @@ export async function getStaticPaths() {
 
   return articles.map((article) => ({
     params: { lang: article.locale, slug: article.slug },
-    props: { article },
   }));
-}
-
-interface Props {
-  article: Article;
 }
 
 const localeParam = Astro.params.lang;
@@ -37,7 +32,17 @@ if (!isLocale(localeParam)) {
 }
 
 const currentLocale: Locale = localeParam;
-const { article } = Astro.props;
+const { slug } = Astro.params;
+
+if (!slug) {
+  return Astro.redirect(getLocalizedArticlesPath(currentLocale), 302);
+}
+
+const article = await fetchArticleBySlug(currentLocale, slug);
+
+if (!article) {
+  return Astro.redirect(getLocalizedArticlesPath(currentLocale), 302);
+}
 
 if (article.locale !== currentLocale) {
   return Astro.redirect(getLocalizedArticlePath(article.locale, article.slug), 302);
@@ -49,11 +54,14 @@ const relatedArticles = allLocalizedArticles
   .filter((candidate) => candidate.translationKey !== article.translationKey)
   .slice(0, 3);
 const translations = await findArticleTranslations(article.translationKey);
-const contentHtml = await renderMarkdownToHtml(article.content);
+const contentHtml =
+  article.sourceKind === "markdown" && article.markdownContent
+    ? await renderMarkdownToHtml(article.markdownContent)
+    : undefined;
+const ArticleBody = article.bodyComponent;
 const canonicalUrl = Astro.url.href;
 const pageTitle = `${article.seoTitle} | ${copy.articles.seoTitle.replace(" | Damián Panes", "")}`;
 const pageDescription = article.seoDescription;
-const wordCount = article.content.split(/\s+/).filter(Boolean).length;
 const ogImageUrl = article.ogImage
   ? new URL(article.ogImage, Astro.url).href
   : new URL("/og-fallback.png", Astro.url).href;
@@ -76,7 +84,7 @@ const articleSchema = {
   },
   image: ogImageUrl,
   timeRequired: `PT${article.readingTimeMinutes}M`,
-  wordCount,
+  wordCount: article.wordCount,
   inLanguage: getLocaleTag(currentLocale),
 };
 const breadcrumbSchema = {
@@ -150,5 +158,7 @@ const languageOptions = SUPPORTED_LOCALES.map((locale) => ({
     messages={copy.article}
     relatedArticles={relatedArticles}
     themeToggleLabel={copy.themeToggle.label}
-  />
+  >
+    {ArticleBody && <ArticleBody />}
+  </ArticleView>
 </html>

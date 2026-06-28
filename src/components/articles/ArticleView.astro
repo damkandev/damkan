@@ -13,7 +13,7 @@ import ArticleTableOfContents from "./ArticleTableOfContents.astro";
 
 interface Props {
     article: Article;
-    contentHtml: string;
+    contentHtml?: string;
     currentLocale: Locale;
     languageLabel: string;
     languageOptions: Array<{
@@ -110,8 +110,15 @@ const publishedDate = article.publishedAt
 
                 <section
                     class="article-body min-w-0 border-t border-black/10 pt-5 text-base leading-relaxed sm:pt-6 sm:text-[1.05rem] dark:border-white/10"
-                    set:html={contentHtml}
-                />
+                >
+                    {
+                        contentHtml ? (
+                            <Fragment set:html={contentHtml} />
+                        ) : (
+                            <slot />
+                        )
+                    }
+                </section>
                 <ArticleRelated
                     description={messages.relatedDescription}
                     emptyExcerpt={messages.relatedFallbackExcerpt}

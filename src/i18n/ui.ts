@@ -39,6 +39,9 @@ type Messages = {
     bio: string;
     empty: string;
     fallbackExcerpt: string;
+    loading: string;
+    nowPlaying: string;
+    lastPlayed: string;
     seeMore: string;
     seoDescription: string;
     seoTitle: string;
@@ -92,6 +95,9 @@ export const messages: Record<Locale, Messages> = {
       bio: "Me gusta el helado de pasas al ron, tengo 5 veces repetidas el mismo par de zapatillas pero aparte de eso me gusta mucho programar y crear empresas, principalmente solucionar problemas.",
       empty: "Aún no hay artículos cargados para este idioma.",
       fallbackExcerpt: "Sin descripción breve.",
+      loading: "Cargando...",
+      nowPlaying: "Actualmente escuchando",
+      lastPlayed: "Último escuchado",
       seeMore: "ver más",
       seoDescription: "Sitio personal de Damián Panes con artículos y notas.",
       seoTitle: "Damián Panes",
@@ -143,6 +149,9 @@ export const messages: Record<Locale, Messages> = {
       bio: "I like rum raisin ice cream, I own the same pair of sneakers five times over, and beyond that I mostly like building software, companies, and solving problems.",
       empty: "There are no articles for this language yet.",
       fallbackExcerpt: "No short description.",
+      loading: "Loading...",
+      nowPlaying: "Now playing",
+      lastPlayed: "Last played",
       seeMore: "see more",
       seoDescription: "Personal site of Damián Panes with articles and notes.",
       seoTitle: "Damián Panes",
