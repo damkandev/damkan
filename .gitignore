@@ -1,7 +1,11 @@
 # build output
 dist/
+.vercel/
 # generated types
 .astro/
+
+# serena mcp local config
+.serena/
 
 # dependencies
 node_modules/
