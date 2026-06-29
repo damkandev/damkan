@@ -1,0 +1,278 @@
+---
+import mathContent from "../../lib/ascii-graph/math.md?raw";
+---
+
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>ascii-graph test</title>
+    <style is:global>
+      body {
+        background: #000;
+        color: #0f0;
+        font-family: monospace;
+        margin: 0;
+        padding: 1rem;
+      }
+      #graph-container {
+        position: relative;
+        width: 100%;
+        height: 80vh;
+        overflow: hidden;
+        background: #000;
+        border: 1px solid #0f0;
+        cursor: crosshair;
+        user-select: none;
+      }
+      #ascii-grid {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+      #nodes-layer {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+      .ascii-cell {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 8px;
+        height: 14px;
+        line-height: 14px;
+        font-size: 14px;
+        white-space: pre;
+        color: #0f0;
+      }
+      .ascii-node {
+        position: absolute;
+        top: 0;
+        left: 0;
+        border: 1px solid #0f0;
+        background: #000;
+        pointer-events: auto;
+        cursor: grab;
+      }
+      .controls {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-top: 0.75rem;
+        font-size: 0.85rem;
+      }
+      select,
+      button {
+        background: #000;
+        color: #0f0;
+        border: 1px solid #0f0;
+        font-family: monospace;
+        padding: 0.3rem 0.5rem;
+      }
+      .hint {
+        margin: 0.5rem 0 0;
+        font-size: 0.8rem;
+        opacity: 0.7;
+      }
+      #math-panel {
+        display: none;
+        position: fixed;
+        inset: 2rem;
+        overflow-y: auto;
+        background: #000;
+        border: 1px solid #0f0;
+        padding: 1.5rem;
+        z-index: 10;
+      }
+      #math-panel[data-open] {
+        display: block;
+      }
+      #math-panel pre {
+        white-space: pre-wrap;
+        font-size: 0.85rem;
+        line-height: 1.5;
+        margin: 0;
+      }
+      #math-close-btn {
+        position: sticky;
+        top: 0;
+        float: right;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="graph-container">
+      <div id="ascii-grid"></div>
+      <div id="nodes-layer"></div>
+    </div>
+    <div class="controls">
+      <select id="strategy-select">
+        <option value="verlet">Verlet (constraints)</option>
+        <option value="force-directed">Force-directed (Hooke+Coulomb)</option>
+        <option value="drag-propagation">Drag propagation</option>
+        <option value="matter-js" selected>matter-js</option>
+        <option value="d3-force">d3-force</option>
+      </select>
+      <button id="reset-btn">Reset</button>
+      <button id="randomize-btn">Randomize (30 nodos)</button>
+      <label for="node-size-slider">tamaño nodo: <span id="node-size-value">16</span>px</label>
+      <input type="range" id="node-size-slider" min="8" max="64" step="1" value="16" />
+      <button id="math-btn">Matemáticas</button>
+    </div>
+    <div id="math-panel">
+      <button id="math-close-btn">cerrar [x]</button>
+      <pre>{mathContent}</pre>
+    </div>
+    <p class="hint">
+      Click en espacio vacío: crear nodo. Shift + drag de un nodo a otro: conectar. Drag de un nodo: mover.
+    </p>
+
+    <script>
+      import { Graph } from "../../lib/ascii-graph/graph";
+      import { AsciiGraphRenderer } from "../../lib/ascii-graph/renderer";
+      import { VerletStrategy } from "../../lib/ascii-graph/strategies/verlet";
+      import { ForceDirectedStrategy } from "../../lib/ascii-graph/strategies/force-directed";
+      import { DragPropagationStrategy } from "../../lib/ascii-graph/strategies/drag-propagation";
+      import { MatterJsStrategy } from "../../lib/ascii-graph/strategies/matter-js";
+      import { D3ForceStrategy } from "../../lib/ascii-graph/strategies/d3-force";
+      import type { SimulationStrategy } from "../../lib/ascii-graph/types";
+
+      const container = document.getElementById("graph-container") as HTMLElement;
+      const gridEl = document.getElementById("ascii-grid") as HTMLElement;
+      const nodesEl = document.getElementById("nodes-layer") as HTMLElement;
+      const select = document.getElementById("strategy-select") as HTMLSelectElement;
+      const resetBtn = document.getElementById("reset-btn") as HTMLButtonElement;
+      const randomizeBtn = document.getElementById("randomize-btn") as HTMLButtonElement;
+      const nodeSizeSlider = document.getElementById("node-size-slider") as HTMLInputElement;
+      const nodeSizeValue = document.getElementById("node-size-value") as HTMLElement;
+      const mathBtn = document.getElementById("math-btn") as HTMLButtonElement;
+      const mathPanel = document.getElementById("math-panel") as HTMLElement;
+      const mathCloseBtn = document.getElementById("math-close-btn") as HTMLButtonElement;
+
+      mathBtn.addEventListener("click", () => mathPanel.toggleAttribute("data-open", true));
+      mathCloseBtn.addEventListener("click", () => mathPanel.toggleAttribute("data-open", false));
+
+      const graph = new Graph();
+      const renderer = new AsciiGraphRenderer(gridEl, nodesEl);
+      renderer.setNodeSize(Number(nodeSizeSlider.value));
+
+      // rest length grows with node size so the rope stays visible instead of hiding under overlapping boxes
+      const restLength = () => Math.max(80, Number(nodeSizeSlider.value) * 1.6);
+
+      nodeSizeSlider.addEventListener("input", () => {
+        renderer.setNodeSize(Number(nodeSizeSlider.value));
+        nodeSizeValue.textContent = nodeSizeSlider.value;
+      });
+
+      const bounds = () => ({ width: container.clientWidth, height: container.clientHeight });
+
+      const strategyFactories: Record<string, () => SimulationStrategy> = {
+        verlet: () => new VerletStrategy(bounds(), restLength()),
+        "force-directed": () => new ForceDirectedStrategy(bounds(), restLength()),
+        "drag-propagation": () => new DragPropagationStrategy(restLength()),
+        "matter-js": () => new MatterJsStrategy(bounds(), restLength()),
+        "d3-force": () => new D3ForceStrategy(bounds(), restLength()),
+      };
+
+      let active: SimulationStrategy = strategyFactories["matter-js"]();
+
+      nodeSizeSlider.addEventListener("change", () => {
+        active.destroy?.();
+        active = strategyFactories[select.value]();
+        active.init(graph.getSnapshot());
+      });
+
+      function seedDefault(): void {
+        graph.clear();
+        const { width, height } = bounds();
+        const ids: string[] = [];
+        for (let i = 0; i < 8; i++) {
+          ids.push(graph.addNode(Math.random() * width, Math.random() * height).id);
+        }
+        for (let i = 0; i < ids.length - 1; i++) {
+          graph.addEdge(ids[i], ids[i + 1]);
+        }
+      }
+
+      seedDefault();
+      active.init(graph.getSnapshot());
+
+      select.addEventListener("change", () => {
+        active.destroy?.();
+        active = strategyFactories[select.value]();
+        active.init(graph.getSnapshot());
+      });
+
+      resetBtn.addEventListener("click", () => {
+        active.destroy?.();
+        seedDefault();
+        active.init(graph.getSnapshot());
+      });
+
+      randomizeBtn.addEventListener("click", () => {
+        active.destroy?.();
+        const { width, height } = bounds();
+        graph.randomize(30, 0.08, width, height);
+        active.init(graph.getSnapshot());
+      });
+
+      container.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        const rect = container.getBoundingClientRect();
+        graph.addNode(e.clientX - rect.left, e.clientY - rect.top);
+        active.init(graph.getSnapshot());
+      });
+
+      let draggingId: string | null = null;
+      let connectFromId: string | null = null;
+
+      nodesEl.addEventListener("pointerdown", (e) => {
+        const target = e.target as HTMLElement;
+        const nodeId = target.dataset.nodeId;
+        if (!nodeId) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.shiftKey) {
+          connectFromId = nodeId;
+        } else {
+          draggingId = nodeId;
+          active.onDragStart?.(nodeId);
+        }
+      });
+
+      window.addEventListener("pointermove", (e) => {
+        if (!draggingId) return;
+        const rect = container.getBoundingClientRect();
+        active.onDragMove?.(draggingId, e.clientX - rect.left, e.clientY - rect.top);
+      });
+
+      window.addEventListener("pointerup", (e) => {
+        if (draggingId) {
+          active.onDragEnd?.(draggingId);
+          draggingId = null;
+        }
+        if (connectFromId) {
+          const target = e.target as HTMLElement;
+          const toId = target.dataset.nodeId;
+          if (toId && toId !== connectFromId) {
+            graph.addEdge(connectFromId, toId);
+            active.init(graph.getSnapshot());
+          }
+          connectFromId = null;
+        }
+      });
+
+      let lastTime = performance.now();
+      function loop(now: number): void {
+        const dt = Math.min((now - lastTime) / 1000, 1 / 30);
+        lastTime = now;
+        active.step(dt);
+        const snapshot = graph.getSnapshot();
+        renderer.render(snapshot.nodes, snapshot.edges);
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+    </script>
+  </body>
+</html>

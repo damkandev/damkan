@@ -1,0 +1,37 @@
+---
+import Panel from "../../lib/tui-panel/Panel.astro";
+---
+
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>tui-panel test</title>
+    <style is:global>
+      body {
+        background: #000;
+        color: #0f0;
+        font-family: monospace;
+        margin: 0;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        max-width: 32rem;
+      }
+      p {
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <Panel title="Projects" shortcut="P">
+      <p>Atajo de una sola letra: la "P" se resalta.</p>
+    </Panel>
+    <Panel title="Preferences" shortcut="Pr">
+      <p>Atajo de varias letras: "Pr" se resalta para no chocar con otro panel que ya use "P".</p>
+    </Panel>
+    <Panel title="Help">
+      <p>Sin prop "shortcut": el título no resalta nada.</p>
+    </Panel>
+  </body>
+</html>

@@ -1,0 +1,56 @@
+---
+const experiments = [
+  { href: "/test/nodos", title: "nodos", description: "Nodos ASCII con física comparativa (verlet, force-directed, matter-js, d3-force...)" },
+  { href: "/test/panels", title: "panels", description: "Paneles TUI con atajo resaltado en el borde" },
+];
+---
+
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>test index</title>
+    <style>
+      body {
+        background: #000;
+        color: #0f0;
+        font-family: monospace;
+        margin: 0;
+        padding: 1.5rem;
+      }
+      h1 {
+        font-size: 1.1rem;
+        margin: 0 0 1rem;
+      }
+      ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      li {
+        margin-bottom: 0.75rem;
+      }
+      a {
+        color: #0f0;
+        text-decoration: underline;
+      }
+      p {
+        margin: 0.2rem 0 0;
+        opacity: 0.7;
+        font-size: 0.85rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>/test — índice de experimentos</h1>
+    <ul>
+      {
+        experiments.map((e) => (
+          <li>
+            <a href={e.href}>{e.href}</a>
+            <p>{e.description}</p>
+          </li>
+        ))
+      }
+    </ul>
+  </body>
+</html>

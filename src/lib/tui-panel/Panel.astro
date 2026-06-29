@@ -1,0 +1,46 @@
+---
+interface Props {
+  title: string;
+  shortcut?: string;
+  class?: string;
+}
+
+const { title, shortcut, class: className } = Astro.props;
+
+const matchIndex = shortcut ? title.toLowerCase().indexOf(shortcut.toLowerCase()) : -1;
+const before = matchIndex >= 0 ? title.slice(0, matchIndex) : title;
+const highlighted = matchIndex >= 0 ? title.slice(matchIndex, matchIndex + shortcut!.length) : "";
+const after = matchIndex >= 0 ? title.slice(matchIndex + shortcut!.length) : "";
+---
+
+<fieldset class:list={["tui-panel", className]} tabindex="0" data-tui-shortcut={highlighted || undefined}>
+  <legend>{before}{highlighted && <span class="tui-shortcut">{highlighted}</span>}{after}</legend>
+  <slot />
+</fieldset>
+
+<script>
+  import "./keybinds";
+</script>
+
+<style>
+  .tui-panel {
+    font-family: monospace;
+    background: #000;
+    color: #0f0;
+    border: 1px solid #0f0;
+    border-radius: 0;
+    margin: 0;
+    padding: 0.75rem;
+  }
+  .tui-panel:focus {
+    outline: none;
+    border-color: #ff0;
+  }
+  legend {
+    padding: 0 0.5em;
+  }
+  .tui-shortcut {
+    color: #ff0;
+    text-decoration: underline;
+  }
+</style>
