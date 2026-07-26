@@ -33,15 +33,8 @@
         const target = document.getElementById(hash.slice(1));
         if (!target) return;
 
-        const lenis = window.__lenis;
-
         if (updateUrl) {
             window.history.pushState(null, "", hash);
-        }
-
-        if (lenis) {
-            lenis.scrollTo(target, { offset: -24 });
-            return;
         }
 
         target.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -238,7 +231,6 @@
                     if (!item.frame) {
                         const frame = document.createElement("div");
                         frame.className = "mermaid-frame";
-                        frame.setAttribute("data-lenis-prevent-wheel", "");
                         frame.addEventListener(
                             "wheel",
                             (e) => e.stopPropagation(),

@@ -4,7 +4,6 @@ import { getLocaleTag } from "../../i18n/config";
 import { getLocalizedArticlesPath } from "../../i18n/routes";
 import type { Article } from "../../services/articles";
 import LanguageSwitcher from "../LanguageSwitcher.astro";
-import Lenis from "../Lenis.astro";
 import ThemeToggle from "../ThemeToggle.astro";
 import VercelAnalytics from "../VercelAnalytics.astro";
 import ArticleEnhancements from "./ArticleEnhancements.astro";
@@ -58,7 +57,6 @@ const publishedDate = article.publishedAt
 <body
     class="min-h-screen bg-[#FFFCFC] px-4 py-5 text-[#24221D] transition-colors sm:px-6 sm:py-8 lg:px-8 dark:bg-[#1c1a16] dark:text-[#f0ede6]"
 >
-    <Lenis />
     <LanguageSwitcher
         currentLocale={currentLocale}
         label={languageLabel}
