@@ -1,11 +1,7 @@
 # build output
 dist/
-.vercel/
 # generated types
 .astro/
-
-# serena mcp local config
-.serena/
 
 # dependencies
 node_modules/
@@ -26,5 +22,3 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
-
-.env.local
