@@ -4,7 +4,9 @@ import AsciiTitle from "../../components/AsciiTitle.astro";
 import AsciiTicket from "../../components/AsciiTicket.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import testimonialOne from "../../public/1.png";
+import testimonialOneEn from "../../public/1_en.png";
 import testimonialTwo from "../../public/2.png";
+import testimonialTwoEn from "../../public/2_en.png";
 import { articlePath, copy, isLocale, locales, type Locale } from "../../lib/site";
 
 export function getStaticPaths() {
@@ -14,6 +16,9 @@ export function getStaticPaths() {
 if (!isLocale(Astro.params.lang)) return Astro.redirect("/es/", 302);
 const locale: Locale = Astro.params.lang;
 const c = copy[locale];
+const testimonials = locale === "en"
+  ? [testimonialOneEn, testimonialTwoEn]
+  : [testimonialOne, testimonialTwo];
 const articles = (await getCollection("articles"))
   .filter((entry) => entry.data.locale === locale)
   .sort((a, b) => b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf());
@@ -25,8 +30,8 @@ const articles = (await getCollection("articles"))
 
     <section class="testimonials" aria-labelledby="testimonials-heading">
       <div class="testimonials-grid">
-        <img src={testimonialOne.src} width={testimonialOne.width} height={testimonialOne.height} alt={locale === "es" ? "Mensaje de Juan Sutil Palma elogiando la página de Damián" : "Message from Juan Sutil Palma praising Damián's website"} />
-        <img src={testimonialTwo.src} width={testimonialTwo.width} height={testimonialTwo.height} alt={locale === "es" ? "Conversación con Nacho riéndose de una publicación de Damián" : "Chat with Nacho laughing about one of Damián's posts"} />
+        <img src={testimonials[0].src} width={testimonials[0].width} height={testimonials[0].height} alt={locale === "es" ? "Mensaje de Juan Sutil Palma elogiando la página de Damián" : "Message from Juan Sutil Palma praising Damián's website"} />
+        <img src={testimonials[1].src} width={testimonials[1].width} height={testimonials[1].height} alt={locale === "es" ? "Conversación con Nacho riéndose de una publicación de Damián" : "Chat with Nacho laughing about one of Damián's posts"} />
       </div>
       <p id="testimonials-heading">{c.testimonials}</p>
     </section>
