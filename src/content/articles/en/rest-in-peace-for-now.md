@@ -1,6 +1,7 @@
 ---
 title: Rest in peace (for now)
 slug: rest-in-peace-for-now
+locale: en
 translationKey: rest-in-peace-for-now
 excerpt: On startups, regular jobs, and the beauty of building something of your own.
 publishedAt: 2026-02-15

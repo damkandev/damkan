@@ -1,6 +1,7 @@
 ---
 title: Books cool people recommend
 slug: books-cool-people-recommend
+locale: en
 translationKey: books-cool-people-recommend
 excerpt: I asked several founders which books they recommend, and this was the selection that caught my attention the most.
 publishedAt: 2025-11-24

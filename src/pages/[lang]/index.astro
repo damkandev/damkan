@@ -1,276 +1,63 @@
 ---
-import "../../styles/global.css";
-import Favicons from "../../components/Favicons.astro";
-import LanguageSwitcher from "../../components/LanguageSwitcher.astro";
-import ThemeToggle from "../../components/ThemeToggle.astro";
-import VercelAnalytics from "../../components/VercelAnalytics.astro";
-import { SUPPORTED_LOCALES, isLocale, type Locale } from "../../i18n/config";
-import {
-    getLocalizedArticlesPath,
-    getLocalizedBooksPath,
-    getLocalizedBookPath,
-    getLocalizedHomePath,
-} from "../../i18n/routes";
-import { getMessages } from "../../i18n/ui";
-import { listArticles } from "../../services/articles";
-import { listBooks } from "../../services/books";
+import { getCollection } from "astro:content";
+import AsciiTitle from "../../components/AsciiTitle.astro";
+import AsciiTicket from "../../components/AsciiTicket.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import testimonialOne from "../../public/1.png";
+import testimonialTwo from "../../public/2.png";
+import { articlePath, copy, isLocale, locales, type Locale } from "../../lib/site";
 
-export async function getStaticPaths() {
-    return SUPPORTED_LOCALES.map((lang) => ({
-        params: { lang },
-    }));
+export function getStaticPaths() {
+  return locales.map((lang) => ({ params: { lang } }));
 }
 
-const localeParam = Astro.params.lang;
-
-if (!isLocale(localeParam)) {
-    return Astro.redirect(getLocalizedHomePath("es"), 302);
-}
-
-const locale: Locale = localeParam;
-const copy = getMessages(locale);
-const articles = await listArticles(locale);
-const latestArticles = articles.slice(0, 3);
-const books = await listBooks(locale);
-const latestBooks = books.slice(0, 6);
-const languageOptions = SUPPORTED_LOCALES.map((candidateLocale) => ({
-    href: getLocalizedHomePath(candidateLocale),
-    label: candidateLocale.toUpperCase(),
-    locale: candidateLocale,
-}));
+if (!isLocale(Astro.params.lang)) return Astro.redirect("/es/", 302);
+const locale: Locale = Astro.params.lang;
+const c = copy[locale];
+const articles = (await getCollection("articles"))
+  .filter((entry) => entry.data.locale === locale)
+  .sort((a, b) => b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf());
 ---
+<BaseLayout locale={locale}>
+  <main class="receipt">
+    <AsciiTitle kind="logo" locale={locale} />
+    <p class="intro">{c.bio}</p>
 
-<html lang={locale}>
-    <head>
-        <meta charset="utf-8" />
-        <link
-            rel="preload"
-            href="/fonts/lora-latin.woff2"
-            as="font"
-            type="font/woff2"
-            crossorigin="anonymous"
-        />
-        <meta name="viewport" content="width=device-width" />
-        <meta name="generator" content={Astro.generator} />
-        <title>{copy.home.seoTitle}</title>
-        <meta name="description" content={copy.home.seoDescription} />
-        <Favicons />
-        <link rel="canonical" href={Astro.url.href} />
-        <link
-            rel="alternate"
-            hreflang="es"
-            href={new URL(getLocalizedHomePath("es"), Astro.url).href}
-        />
-        <link
-            rel="alternate"
-            hreflang="en"
-            href={new URL(getLocalizedHomePath("en"), Astro.url).href}
-        />
-        <script is:inline>
-            (function () {
-                var s = localStorage.getItem("theme");
-                var p = window.matchMedia(
-                    "(prefers-color-scheme: dark)",
-                ).matches;
-                if (s === "dark" || (!s && p)) {
-                    document.documentElement.classList.add("dark");
-                }
-            })();
-        </script>
-    </head>
-    <body
-        class="min-h-screen flex flex-col md:flex-row mx-auto max-w-[1600px] bg-[#FFFCFC] text-[#24221D] transition-colors dark:bg-[#1c1a16] dark:text-[#f0ede6]"
-    >
-        <LanguageSwitcher
-            currentLocale={locale}
-            label={copy.languageSwitcher.label}
-            options={languageOptions}
-        />
-        <ThemeToggle ariaLabel={copy.themeToggle.label} />
-        <div
-            class="w-full md:w-1/2 md:h-screen md:sticky md:top-0 flex items-center justify-center p-8"
-        >
-            <img src="/tipo.svg" alt="" class="w-full max-w-xl h-auto" />
-        </div>
-        <main
-            class="w-full md:w-1/2 flex flex-col gap-4 text-left p-8 md:py-16"
-        >
-            <h1 class="text-4xl font-semibold">Damián Panes</h1>
-            <p class="text-lg leading-relaxed">
-                {copy.home.bio}
-            </p>
+    <section class="testimonials" aria-labelledby="testimonials-heading">
+      <div class="testimonials-grid">
+        <img src={testimonialOne.src} width={testimonialOne.width} height={testimonialOne.height} alt={locale === "es" ? "Mensaje de Juan Sutil Palma elogiando la página de Damián" : "Message from Juan Sutil Palma praising Damián's website"} />
+        <img src={testimonialTwo.src} width={testimonialTwo.width} height={testimonialTwo.height} alt={locale === "es" ? "Conversación con Nacho riéndose de una publicación de Damián" : "Chat with Nacho laughing about one of Damián's posts"} />
+      </div>
+      <p id="testimonials-heading">{c.testimonials}</p>
+    </section>
 
-            <div
-                class="flex items-center gap-3"
-                id="now-playing-row"
-                data-now-playing-label={copy.home.nowPlaying}
-                data-last-played-label={copy.home.lastPlayed}
-            >
-                <img src="/fonografo.svg" alt="" class="w-6 h-9" />
-                <p class="text-base" id="now-playing">{copy.home.loading}</p>
-            </div>
+    <div class="section-rule" data-ascii-rule aria-hidden="true"></div>
 
-            <script is:inline>
-                fetch("/api/spotify-now-playing.json")
-                    .then((r) => r.json())
-                    .then((data) => {
-                        var row = document.getElementById("now-playing-row");
-                        var el = document.getElementById("now-playing");
-                        if (!el || !row) return;
-                        if (!data || !data.track) {
-                            row.style.display = "none";
-                            return;
-                        }
-                        var label = data.isPlaying
-                            ? row.dataset.nowPlayingLabel
-                            : row.dataset.lastPlayedLabel;
-                        el.textContent = label + ": ";
-                        var trackEl = document.createElement("span");
-                        trackEl.style.color = "#A6FF9D";
-                        trackEl.textContent = data.track + " - " + data.artist;
-                        el.appendChild(trackEl);
-                    })
-                    .catch(function () {
-                        var el = document.getElementById("now-playing-row");
-                        if (el) el.style.display = "none";
-                    });
-            </script>
+    <section class="articles" aria-labelledby="articles-heading">
+      <AsciiTitle kind="articles" locale={locale} />
+      <p id="articles-heading">{c.articlesIntro}</p>
+      <div class="ticket-list">
+        {articles.map((article) => (
+          <AsciiTicket
+            href={articlePath(locale, article.data.slug)}
+            title={article.data.title}
+            description={article.data.excerpt}
+            cta={c.readMore}
+          />
+        ))}
+      </div>
+    </section>
 
-            <section class="space-y-4">
-                <h2 class="text-2xl font-semibold">
-                    {copy.home.articlesTitle}
-                </h2>
-                {
-                    latestArticles.length === 0 ? (
-                        <p class="text-sm text-black/40 dark:text-white/40">
-                            {copy.home.empty}
-                        </p>
-                    ) : (
-                        <ul class="grid gap-3">
-                            {latestArticles.map((article) => (
-                                <li>
-                                    <a
-                                        class="block border-2 border-black/10 p-4 transition hover:border-black/30 dark:border-white/10 dark:hover:border-white/30"
-                                        href={`/${locale}/articles/${article.slug}/`}
-                                    >
-                                        <p class="text-xl font-medium">
-                                            {article.title}
-                                        </p>
-                                        <p class="text-slate-600 dark:text-[#F0EDE6]/80">
-                                            {article.excerpt ||
-                                                copy.home.fallbackExcerpt}
-                                        </p>
-                                    </a>
-                                </li>
-                            ))}
-                        </ul>
-                    )
-                }
-                <a
-                    class="font-semibold hover:text-black/30 dark:hover:text-white/30"
-                    href={getLocalizedArticlesPath(locale)}
-                >
-                    {copy.home.seeMore}
-                </a>
-            </section>
+    <div class="section-rule" data-ascii-rule aria-hidden="true"></div>
 
-            <section class="space-y-4">
-                <h2 class="text-2xl font-semibold">{copy.home.booksTitle}</h2>
-                {
-                    latestBooks.length === 0 ? (
-                        <p class="text-sm text-black/40 dark:text-white/40">
-                            {copy.books.empty}
-                        </p>
-                    ) : (
-                        <ul class="grid grid-cols-3 gap-3 sm:grid-cols-6">
-                            {latestBooks.map((book) => (
-                                <li>
-                                    <a
-                                        href={getLocalizedBookPath(
-                                            locale,
-                                            book.slug,
-                                        )}
-                                        class="group block"
-                                        title={book.title}
-                                    >
-                                        <div class="border-2 border-black/10 transition hover:border-black/30 dark:border-white/10 dark:hover:border-white/30 overflow-hidden aspect-[2/3] bg-black/5 dark:bg-white/5">
-                                            {book.coverImage ? (
-                                                <img
-                                                    src={book.coverImage}
-                                                    alt={book.title}
-                                                    class="w-full h-full object-cover"
-                                                    loading="lazy"
-                                                />
-                                            ) : (
-                                                <div class="w-full h-full flex items-end p-2">
-                                                    <p class="text-xs font-semibold leading-tight">
-                                                        {book.title}
-                                                    </p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </a>
-                                </li>
-                            ))}
-                        </ul>
-                    )
-                }
-                <a
-                    class="font-semibold hover:text-black/30 dark:hover:text-white/30"
-                    href={getLocalizedBooksPath(locale)}
-                >
-                    {copy.home.seeMore}
-                </a>
-            </section>
-
-            <section class="space-y-4">
-                <h3 class="text-xl font-semibold">{copy.home.socialTitle}</h3>
-                <ul
-                    class="list-disc list-inside text-base text-current space-y-2"
-                >
-                    <li>
-                        <a
-                            class="hover:underline"
-                            href="https://www.linkedin.com/in/damianpanes/"
-                            rel="noopener noreferrer"
-                            target="_blank">LinkedIn</a
-                        >
-                    </li>
-                    <li>
-                        <a
-                            class="hover:underline"
-                            href="https://github.com/damkandev"
-                            rel="noopener noreferrer"
-                            target="_blank">GitHub</a
-                        >
-                    </li>
-                    <li>
-                        <a
-                            class="hover:underline"
-                            href="https://www.instagram.com/damian.panes/"
-                            rel="noopener noreferrer"
-                            target="_blank">Instagram</a
-                        >
-                    </li>
-                    <li>
-                        <a
-                            class="hover:underline"
-                            href="https://www.goodreads.com/user/show/196006762-dami-n-panes"
-                            rel="noopener noreferrer"
-                            target="_blank">GoodReads</a
-                        >
-                    </li>
-                    <li>
-                        <a
-                            class="hover:underline"
-                            href="https://www.youtube.com/@damianpanes"
-                            rel="noopener noreferrer"
-                            target="_blank">Youtube</a
-                        >
-                    </li>
-                </ul>
-            </section>
-        </main>
-        <VercelAnalytics />
-    </body>
-</html>
+    <section class="socials" aria-labelledby="socials-heading">
+      <AsciiTitle kind="socials" locale={locale} />
+      <p id="socials-heading">{c.socials}</p>
+      <ul>
+        <li><a href="https://www.instagram.com/damian.panes/" rel="noopener noreferrer" target="_blank">Instagram</a></li>
+        <li><a href="https://www.linkedin.com/in/damianpanes/" rel="noopener noreferrer" target="_blank">LinkedIn</a></li>
+        <li><a href="https://github.com/damkandev" rel="noopener noreferrer" target="_blank">GitHub</a></li>
+      </ul>
+    </section>
+  </main>
+</BaseLayout>

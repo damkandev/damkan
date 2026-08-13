@@ -1,11 +1,12 @@
----
-import PreferredLocaleRedirect from "../components/PreferredLocaleRedirect.astro";
-import { getLocalizedHomePath } from "../i18n/routes";
 
-const routesByLocale = {
-  es: getLocalizedHomePath("es"),
-  en: getLocalizedHomePath("en"),
-};
----
-
-<PreferredLocaleRedirect fallbackPath={routesByLocale.es} routesByLocale={routesByLocale} />
+<!doctype html>
+<html lang="es">
+	<head>
+		<meta charset="utf-8" />
+		<meta http-equiv="refresh" content="0;url=/es/" />
+		<meta name="robots" content="noindex,follow" />
+		<link rel="canonical" href="https://dapan.es/es/" />
+		<title>Damián Panes</title>
+	</head>
+	<body><a href="/es/">Continuar a dapan.es</a></body>
+</html>

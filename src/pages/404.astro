@@ -1,0 +1,68 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+<BaseLayout
+  locale="es"
+  title="Página no encontrada | Damián Panes"
+  description="La página que buscas no existe."
+  noindex
+>
+  <main class="not-found">
+    <h1 class="not-found__ascii" aria-label="Error 404">
+      <pre aria-hidden="true">{String.raw`░██   ░██   ░██████   ░██   ░██
+░██   ░██  ░██  ░██  ░██   ░██
+░████████  ░██  ░██  ░████████
+      ░██  ░██  ░██       ░██
+      ░██   ░██████        ░██`}</pre>
+    </h1>
+
+    <div class="section-rule" data-ascii-rule aria-hidden="true"></div>
+
+    <section class="not-found__message" aria-labelledby="not-found-title">
+      <h2 id="not-found-title" data-not-found-title>Página no encontrada.</h2>
+      <p data-not-found-copy>Parece que esta parte de la boleta no existe.</p>
+      <a class="not-found__home" href="/es/" data-not-found-home>&lt;&lt; Volver al inicio</a>
+    </section>
+  </main>
+
+  <script is:inline>
+    (() => {
+      const english = window.location.pathname === "/en" || window.location.pathname.startsWith("/en/");
+      const language = english ? "en" : "es";
+      const content = english
+        ? {
+            title: "Page not found.",
+            copy: "It looks like this part of the receipt does not exist.",
+            home: "<< Back home",
+            href: "/en/",
+            documentTitle: "Page not found | Damián Panes",
+          }
+        : {
+            title: "Página no encontrada.",
+            copy: "Parece que esta parte de la boleta no existe.",
+            home: "<< Volver al inicio",
+            href: "/es/",
+            documentTitle: "Página no encontrada | Damián Panes",
+          };
+
+      document.documentElement.lang = language;
+      document.title = content.documentTitle;
+      document.querySelector(".site-chrome").setAttribute("aria-label", english ? "Language and theme" : "Idioma y tema");
+      document.querySelector("[data-not-found-title]").textContent = content.title;
+      document.querySelector("[data-not-found-copy]").textContent = content.copy;
+      const home = document.querySelector("[data-not-found-home]");
+      home.textContent = content.home;
+      home.href = content.href;
+
+      const languageLinks = document.querySelectorAll(".site-chrome a");
+      languageLinks.forEach((link) => {
+        const targetLanguage = link.textContent.trim().toLowerCase();
+        link.href = `/${targetLanguage}/`;
+        if (targetLanguage === language) link.setAttribute("aria-current", "page");
+        else link.removeAttribute("aria-current");
+      });
+      document.querySelector('[data-set-theme="dark"]').textContent = english ? "DARK" : "OSCURO";
+      document.querySelector('[data-set-theme="light"]').textContent = english ? "LIGHT" : "CLARO";
+    })();
+  </script>
+</BaseLayout>

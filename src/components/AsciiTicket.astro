@@ -1,0 +1,28 @@
+---
+interface Props {
+  href: string;
+  title: string;
+  description: string;
+  cta: string;
+}
+
+const { href, title, description, cta } = Astro.props;
+---
+<article
+  class="ascii-ticket"
+  data-ascii-ticket
+>
+  <div class="ascii-ticket__box">
+    <span class="ascii-ticket__edge ascii-ticket__edge--top" aria-hidden="true"></span>
+    <div class="ascii-ticket__middle">
+      <span class="ascii-ticket__rail" aria-hidden="true"></span>
+      <div class="ascii-ticket__content">
+        <h3>{title}</h3>
+        <p>{description}</p>
+        <a class="ascii-ticket__cta" href={href}>{cta}</a>
+      </div>
+      <span class="ascii-ticket__rail" aria-hidden="true"></span>
+    </div>
+    <span class="ascii-ticket__edge ascii-ticket__edge--bottom" aria-hidden="true"></span>
+  </div>
+</article>

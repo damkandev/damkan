@@ -1,164 +1,50 @@
 ---
-import "../../../styles/global.css";
-import ArticleHead from "../../../components/articles/ArticleHead.astro";
-import ArticleView from "../../../components/articles/ArticleView.astro";
-import { getLocaleTag, SUPPORTED_LOCALES, isLocale, type Locale } from "../../../i18n/config";
-import {
-  getLocalizedArticlePath,
-  getLocalizedArticlesPath,
-  getLocalizedHomePath,
-} from "../../../i18n/routes";
-import { getMessages } from "../../../i18n/ui";
-import { renderMarkdownToHtml } from "../../../lib/markdown";
-import {
-  fetchArticleBySlug,
-  findArticleTranslations,
-  listAllArticles,
-  listArticles,
-} from "../../../services/articles";
+import { getCollection, render, type CollectionEntry } from "astro:content";
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import { articlePath, copy, homePath, isLocale, type Locale } from "../../../lib/site";
 
 export async function getStaticPaths() {
-  const articles = await listAllArticles();
-
-  return articles.map((article) => ({
-    params: { lang: article.locale, slug: article.slug },
+  const entries = await getCollection("articles");
+  return entries.map((entry) => ({
+    params: { lang: entry.data.locale, slug: entry.data.slug },
+    props: { entry, entries },
   }));
 }
 
-const localeParam = Astro.params.lang;
-
-if (!isLocale(localeParam)) {
-  return Astro.redirect(getLocalizedHomePath("es"), 302);
+interface Props {
+  entry: CollectionEntry<"articles">;
+  entries: CollectionEntry<"articles">[];
 }
 
-const currentLocale: Locale = localeParam;
-const { slug } = Astro.params;
-
-if (!slug) {
-  return Astro.redirect(getLocalizedArticlesPath(currentLocale), 302);
-}
-
-const article = await fetchArticleBySlug(currentLocale, slug);
-
-if (!article) {
-  return Astro.redirect(getLocalizedArticlesPath(currentLocale), 302);
-}
-
-if (article.locale !== currentLocale) {
-  return Astro.redirect(getLocalizedArticlePath(article.locale, article.slug), 302);
-}
-
-const copy = getMessages(currentLocale);
-const allLocalizedArticles = await listArticles(currentLocale);
-const relatedArticles = allLocalizedArticles
-  .filter((candidate) => candidate.translationKey !== article.translationKey)
-  .slice(0, 3);
-const translations = await findArticleTranslations(article.translationKey);
-const contentHtml =
-  article.sourceKind === "markdown" && article.markdownContent
-    ? await renderMarkdownToHtml(article.markdownContent)
-    : undefined;
-const ArticleBody = article.bodyComponent;
-const canonicalUrl = Astro.url.href;
-const pageTitle = `${article.seoTitle} | ${copy.articles.seoTitle.replace(" | Damián Panes", "")}`;
-const pageDescription = article.seoDescription;
-const ogImageUrl = article.ogImage
-  ? new URL(article.ogImage, Astro.url).href
-  : new URL("/og-fallback.png", Astro.url).href;
-const articleSchema = {
-  "@context": "https://schema.org",
-  "@type": "BlogPosting",
-  headline: article.seoTitle,
-  description: pageDescription,
-  url: canonicalUrl,
-  datePublished: article.publishedAt ?? undefined,
-  dateModified: article.updatedAt ?? article.publishedAt ?? undefined,
-  author: {
-    "@type": "Person",
-    name: "Damián Panes",
-    url: new URL(getLocalizedHomePath(currentLocale), Astro.url).href,
-  },
-  publisher: {
-    "@type": "Person",
-    name: "Damián Panes",
-  },
-  image: ogImageUrl,
-  timeRequired: `PT${article.readingTimeMinutes}M`,
-  wordCount: article.wordCount,
-  inLanguage: getLocaleTag(currentLocale),
-};
-const breadcrumbSchema = {
-  "@context": "https://schema.org",
-  "@type": "BreadcrumbList",
-  itemListElement: [
-    {
-      "@type": "ListItem",
-      position: 1,
-      name: currentLocale === "es" ? "Inicio" : "Home",
-      item: new URL(getLocalizedHomePath(currentLocale), Astro.url).href,
-    },
-    {
-      "@type": "ListItem",
-      position: 2,
-      name: currentLocale === "es" ? "Artículos" : "Articles",
-      item: new URL(getLocalizedArticlesPath(currentLocale), Astro.url).href,
-    },
-    {
-      "@type": "ListItem",
-      position: 3,
-      name: article.title,
-      item: canonicalUrl,
-    },
-  ],
-};
-const alternateLinks = SUPPORTED_LOCALES.flatMap((locale) => {
-  const translatedArticle = translations[locale];
-
-  if (!translatedArticle) {
-    return [];
-  }
-
-  return [
-    {
-      href: new URL(getLocalizedArticlePath(locale, translatedArticle.slug), Astro.url).href,
-      hreflang: locale,
-    },
-  ];
-});
-const languageOptions = SUPPORTED_LOCALES.map((locale) => ({
-  href: translations[locale]
-    ? getLocalizedArticlePath(locale, translations[locale]!.slug)
-    : getLocalizedArticlesPath(locale),
-  label: locale.toUpperCase(),
-  locale,
-}));
+const { entry, entries } = Astro.props;
+const locale: Locale = isLocale(Astro.params.lang) ? Astro.params.lang : "es";
+const c = copy[locale];
+const alternate = entries.find((candidate) =>
+  candidate.data.translationKey === entry.data.translationKey && candidate.data.locale !== locale
+);
+const alternatePath = alternate
+  ? articlePath(alternate.data.locale, alternate.data.slug)
+  : homePath(locale === "es" ? "en" : "es");
+const { Content } = await render(entry);
+const date = new Intl.DateTimeFormat(locale === "es" ? "es-CL" : "en-US", { dateStyle: "long" }).format(entry.data.publishedAt);
+const seoTitle = `${entry.data.seoTitle ?? entry.data.title} | Damián Panes`;
 ---
-
-<html lang={currentLocale}>
-  <head>
-    <ArticleHead
-      alternateLinks={alternateLinks}
-      articleSchema={articleSchema}
-      breadcrumbSchema={breadcrumbSchema}
-      canonicalUrl={canonicalUrl}
-      locale={currentLocale}
-      ogImageUrl={ogImageUrl}
-      pageDescription={pageDescription}
-      pageTitle={pageTitle}
-      publishedAt={article.publishedAt}
-      updatedAt={article.updatedAt}
-    />
-  </head>
-  <ArticleView
-    article={article}
-    contentHtml={contentHtml}
-    currentLocale={currentLocale}
-    languageLabel={copy.languageSwitcher.label}
-    languageOptions={languageOptions}
-    messages={copy.article}
-    relatedArticles={relatedArticles}
-    themeToggleLabel={copy.themeToggle.label}
-  >
-    {ArticleBody && <ArticleBody />}
-  </ArticleView>
-</html>
+<BaseLayout
+  locale={locale}
+  title={seoTitle}
+  description={entry.data.seoDescription ?? entry.data.excerpt}
+  alternatePath={alternatePath}
+  ogImage={entry.data.ogImage}
+  pageType="article"
+  publishedAt={entry.data.publishedAt}
+>
+  <main class="article">
+    <a class="article-back" href={homePath(locale)}>{c.back}</a>
+    <header class="article-header">
+      <h1>{entry.data.title}</h1>
+      <p>{entry.data.excerpt}</p>
+      <time class="article-meta" datetime={entry.data.publishedAt.toISOString()}>{date}</time>
+    </header>
+    <article class="article-body"><Content /></article>
+  </main>
+</BaseLayout>

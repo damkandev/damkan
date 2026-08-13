@@ -1,0 +1,21 @@
+---
+import type { Locale } from "../lib/site";
+import { copy, homePath } from "../lib/site";
+interface Props { locale: Locale; alternatePath?: string }
+const { locale, alternatePath } = Astro.props;
+const other = locale === "es" ? "en" : "es";
+const c = copy[locale];
+const otherPath = alternatePath ?? homePath(other);
+---
+<nav class="site-chrome" aria-label={locale === "es" ? "Idioma y tema" : "Language and theme"}>
+  <span>[</span>
+  <a href={locale === "es" ? undefined : otherPath} aria-current={locale === "es" ? "page" : undefined}>ES</a>
+  <span>|</span>
+  <a href={locale === "en" ? undefined : otherPath} aria-current={locale === "en" ? "page" : undefined}>EN</a>
+  <span>]</span>
+  <span>[</span>
+  <button type="button" data-set-theme="dark">{c.dark}</button>
+  <span>|</span>
+  <button type="button" data-set-theme="light">{c.light}</button>
+  <span>]</span>
+</nav>
