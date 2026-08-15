@@ -123,6 +123,10 @@ const structuredData = noindex
           ? stored
           : matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
         document.documentElement.dataset.theme = theme;
+        if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          document.documentElement.setAttribute("data-printing", "true");
+          setTimeout(() => document.documentElement.removeAttribute("data-printing"), 2500);
+        }
       })();
     </script>
   </head>
@@ -257,6 +261,38 @@ const structuredData = noindex
         renderAscii(element);
         asciiObserver.observe(element);
       });
+
+      const printPage = (content: HTMLElement) => {
+        const finishPrinting = () => {
+          content.style.clipPath = "";
+          document.documentElement.removeAttribute("data-printing");
+        };
+        const lineHeight = Number.parseFloat(getComputedStyle(content).lineHeight) || 21;
+        let printed = 0;
+        const tick = () => {
+          const lines = Math.max(1, Math.ceil(content.scrollHeight / lineHeight));
+          const rowsPerTick = Math.max(1, Math.round(lines / 90));
+          printed = Math.min(lines, printed + rowsPerTick);
+          content.style.clipPath = `inset(0 0 calc(100% - ${printed * lineHeight}px) 0)`;
+          if (printed >= lines) {
+            finishPrinting();
+            return;
+          }
+          const delay = (1150 / (lines / rowsPerTick)) * (0.7 + Math.random() * 0.6);
+          const hiccup = Math.random() < 0.05 ? 40 + Math.random() * 60 : 0;
+          setTimeout(tick, delay + hiccup);
+        };
+        tick();
+      };
+
+      const printedContent = document.querySelector<HTMLElement>(".page-shell");
+      if (printedContent && document.documentElement.hasAttribute("data-printing")) {
+        if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          document.documentElement.removeAttribute("data-printing");
+        } else {
+          printPage(printedContent);
+        }
+      }
 
       addEventListener("pagehide", () => {
         shader?.dispose();

@@ -25,7 +25,8 @@ button { border: 0; padding: 0; color: inherit; background: transparent; font: i
 
 #paper-texture { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; background: var(--paper); }
 #paper-texture canvas { opacity: 0.8; }
-.page-shell { position: relative; width: min(100%, 720px); min-height: 100vh; margin: 0 auto; overflow: hidden; background: var(--paper); box-shadow: 0 0 48px rgba(0, 0, 0, 0.28); }
+.page-shell { position: relative; width: min(100%, 720px); min-height: 100vh; margin: 0 auto; overflow: hidden; background: var(--paper); box-shadow: 0 0 48px rgba(0, 0, 0, 0.28); transition: box-shadow 0.4s; }
+html[data-printing] .page-shell { clip-path: inset(0 0 100% 0); box-shadow: none; }
 .page-content { position: relative; z-index: 1; min-height: 100vh; padding: 34px 24px 70px; }
 .site-chrome { display: flex; justify-content: center; gap: 0.62em; min-height: 22px; white-space: nowrap; }
 .site-chrome [aria-current="page"], .site-chrome button[aria-pressed="true"] { font-weight: 700; }
@@ -103,4 +104,5 @@ button { border: 0; padding: 0; color: inherit; background: transparent; font: i
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; }
   #paper-texture canvas { display: none; }
+  html[data-printing] .page-shell { clip-path: none; }
 }
