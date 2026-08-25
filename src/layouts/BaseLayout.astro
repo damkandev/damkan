@@ -4,6 +4,7 @@ import "@fontsource/jetbrains-mono/700.css";
 import "../styles/global.css";
 import faviconUrl from "../public/icono.svg?url";
 import SiteChrome from "../components/SiteChrome.astro";
+import Analytics from "@vercel/analytics/astro";
 import type { Locale } from "../lib/site";
 import { copy, homePath } from "../lib/site";
 
@@ -302,5 +303,6 @@ const structuredData = noindex
         asciiObserver.disconnect();
       }, { once: true });
     </script>
+    <Analytics />
   </body>
 </html>
