@@ -414,12 +414,7 @@ export const renderPdf = (
     cursorY += heightMm;
   };
 
-  presentation.slides.forEach((slide, index) => {
-    if (index > 0) {
-      gap(5);
-      writeText(`--- Slide ${index + 1} ---`, { style: "normal", size: 9 * scale });
-      gap(3);
-    }
+  presentation.slides.forEach((slide) => {
     if (slide.title !== "") {
       writeText(slide.title, styles.title);
       gap(1.5);
