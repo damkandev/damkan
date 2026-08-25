@@ -20,10 +20,12 @@ if (!hasExtractableText(parsed)) throw new Error("expected extractable text");
 if (parsed.slides.length !== 3) throw new Error(`expected 3 slides, got ${parsed.slides.length}`);
 
 const [first, second, third] = parsed.slides;
+if (first.slideNumber !== 1) throw new Error("bad slide number");
 if (first.title !== "Primera presentación") throw new Error("bad title");
 if (!first.subtitle.includes("áéíóú")) throw new Error("bad subtitle accents");
 if (JSON.stringify(first.blocks.map((b) => b.level)) !== "[0,1,2,1,0]") throw new Error("bad levels");
 if (!first.blocks[4].text.includes('"comillas"')) throw new Error("sanitize failed");
+if (first.blocks[0].id !== "s1-sh2-p0") throw new Error("bad block id");
 if (second.blocks[0].text !== "Caja superior") throw new Error("textbox order failed");
 if (second.blocks[1].text !== "A1 | B1") throw new Error("table extraction failed");
 if (second.blocks[2].text !== "A2 | B2") throw new Error("table row 2 failed");

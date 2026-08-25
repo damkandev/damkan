@@ -22,15 +22,20 @@ export class PptxParseError extends Error {
   }
 }
 
+export type BlockType = "title" | "subtitle" | "body" | "ignored";
+
 export interface ParsedBlock {
   level: number;
   text: string;
+  type: BlockType;
+  id: string;
 }
 
 export interface ParsedSlide {
   title: string;
   subtitle: string;
   blocks: ParsedBlock[];
+  slideNumber: number;
 }
 
 export interface ParsedPresentation {
@@ -122,15 +127,17 @@ const paragraphText = (paragraph: Element): string => {
   return sanitizeText(text);
 };
 
-const blocksFromTextBody = (body: Element): ParsedBlock[] =>
+const blocksFromTextBody = (body: Element, slideNum: number, shapeIndex: number): ParsedBlock[] =>
   directChildren(body, DRAWINGML, "p")
-    .map((paragraph) => ({
+    .map((paragraph, paraIndex) => ({
       level: paragraphLevel(paragraph),
       text: paragraphText(paragraph).trim(),
+      type: "body" as BlockType,
+      id: `s${slideNum}-sh${shapeIndex}-p${paraIndex}`,
     }))
     .filter((block) => block.text.length > 0);
 
-const blocksFromTable = (table: Element): ParsedBlock[] => {
+const blocksFromTable = (table: Element, slideNum: number, shapeIndex: number): ParsedBlock[] => {
   const blocks: ParsedBlock[] = [];
   for (const row of directChildren(table, DRAWINGML, "tr")) {
     const cells = directChildren(row, DRAWINGML, "tc")
@@ -144,7 +151,14 @@ const blocksFromTable = (table: Element): ParsedBlock[] => {
           .trim();
       })
       .filter((cell) => cell.length > 0);
-    if (cells.length > 0) blocks.push({ level: 0, text: cells.join(" | ") });
+    if (cells.length > 0) {
+      blocks.push({
+        level: 0,
+        text: cells.join(" | "),
+        type: "body",
+        id: `s${slideNum}-sh${shapeIndex}-t${blocks.length}`,
+      });
+    }
   }
   return blocks;
 };
@@ -164,13 +178,15 @@ const shapeOffset = (element: Element): Offset | undefined => {
 
 const fragmentsFromSlide = (
   root: Element,
+  slideNumber: number,
 ): { title: string; subtitle: string; blocks: ParsedBlock[] } => {
   const fragments: ShapeFragment[] = [];
+  let shapeIndex = 0;
 
   for (const shape of descendants(root, PRESENTATIONML, "sp")) {
     const body = firstDescendant(shape, PRESENTATIONML, "txBody");
     if (!body) continue;
-    const blocks = blocksFromTextBody(body);
+    const blocks = blocksFromTextBody(body, slideNumber, shapeIndex++);
     if (blocks.length === 0) continue;
     const placeholder = firstDescendant(shape, PRESENTATIONML, "ph");
     const type = placeholder?.getAttribute("type") ?? "";
@@ -192,7 +208,7 @@ const fragmentsFromSlide = (
   for (const frame of descendants(root, PRESENTATIONML, "graphicFrame")) {
     const table = firstDescendant(frame, DRAWINGML, "tbl");
     if (!table) continue;
-    const blocks = blocksFromTable(table);
+    const blocks = blocksFromTable(table, slideNumber, shapeIndex++);
     if (blocks.length === 0) continue;
     const offset = shapeOffset(frame);
     fragments.push({
@@ -281,13 +297,16 @@ export const parsePptx = async (data: ArrayBuffer): Promise<ParsedPresentation> 
 
   const parser = new DOMParser();
   const slides: ParsedSlide[] = [];
+  let slideNumber = 1;
   for (const path of slidePaths) {
     const entry = zip.file(path);
     if (!entry) continue;
     const document = parser.parseFromString(await entry.async("string"), "application/xml");
     const root = document.documentElement;
     if (!root) continue;
-    slides.push(fragmentsFromSlide(root));
+    const result = fragmentsFromSlide(root, slideNumber);
+    slides.push({ ...result, slideNumber });
+    slideNumber++;
   }
 
   return { slides };
@@ -403,6 +422,17 @@ export const renderPdf = (
       gap(2.5);
     }
     for (const block of slide.blocks) {
+      if (block.type === "ignored") continue;
+      if (block.type === "title") {
+        writeText(block.text, styles.title);
+        gap(1.5);
+        continue;
+      }
+      if (block.type === "subtitle") {
+        writeText(block.text, styles.subtitle);
+        gap(2.5);
+        continue;
+      }
       const level = Math.min(block.level, 6);
       const style = level === 0 ? styles.bodyLevelZero : styles.bodyDeeper;
       writeText(level === 0 ? block.text : `- ${block.text}`, style, level * LEVEL_INDENT_MM);

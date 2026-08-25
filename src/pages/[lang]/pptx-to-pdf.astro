@@ -70,6 +70,13 @@ const seoTitle = `${c.pageTitle} | Damián Panes`;
 
       <button class="converter__submit" type="submit" disabled>[ {c.convert} ]</button>
     </form>
+
+    <div class="preview" data-preview hidden>
+      <div class="section-rule" data-ascii-rule aria-hidden="true"></div>
+      <h2 class="preview__title">{c.preview.title}</h2>
+      <div class="preview__content" data-preview-content></div>
+    </div>
+
     <p class="converter__status" data-converter-status aria-live="polite"></p>
     <a class="converter__download" data-converter-download hidden download>[ {c.messages.download} ]</a>
     <p class="converter__privacy">{c.privacy}</p>
@@ -83,13 +90,17 @@ const seoTitle = `${c.pageTitle} | Damián Panes`;
     hasExtractableText,
     parsePptx,
     renderPdf,
+    type ParsedPresentation,
+    type BlockType,
   } from "../../lib/pptx-to-pdf";
 
   const form = document.querySelector<HTMLFormElement>("[data-converter]");
   const statusElement = document.querySelector<HTMLElement>("[data-converter-status]");
   const downloadElement = document.querySelector<HTMLAnchorElement>("[data-converter-download]");
+  const previewElement = document.querySelector<HTMLElement>("[data-preview]");
+  const previewContent = document.querySelector<HTMLElement>("[data-preview-content]");
 
-  if (form && statusElement && downloadElement) {
+  if (form && statusElement && downloadElement && previewElement && previewContent) {
     const input = form.querySelector<HTMLInputElement>("input[type='file']");
     const submit = form.querySelector<HTMLButtonElement>("button[type='submit']");
     const messages: Record<string, string> = JSON.parse(form.dataset.copy ?? "{}");
@@ -98,6 +109,7 @@ const seoTitle = `${c.pageTitle} | Damián Panes`;
 
     let busy = false;
     let objectUrl: string | undefined;
+    let parsedData: ParsedPresentation | null = null;
 
     const setStatus = (text: string, kind: "idle" | "info" | "error" | "ok") => {
       statusElement.textContent = text;
@@ -118,21 +130,79 @@ const seoTitle = `${c.pageTitle} | Damián Panes`;
 
     const formatSize = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 
-    input?.addEventListener("change", () => {
+    const renderPreview = (data: ParsedPresentation) => {
+      previewContent.innerHTML = "";
+      for (const slide of data.slides) {
+        const slideEl = document.createElement("div");
+        slideEl.className = "preview__slide";
+        slideEl.innerHTML = `<div class="preview__slide-header">${message("slide")} ${slide.slideNumber}</div>`;
+
+        if (slide.title) {
+          slideEl.innerHTML += `<div class="preview__block"><span class="preview__block-text" data-type="title">${escapeHtml(slide.title)}</span></div>`;
+        }
+        if (slide.subtitle) {
+          slideEl.innerHTML += `<div class="preview__block"><span class="preview__block-text" data-type="subtitle">${escapeHtml(slide.subtitle)}</span></div>`;
+        }
+
+        if (slide.blocks.length === 0 && !slide.title && !slide.subtitle) {
+          slideEl.innerHTML += `<div class="preview__empty">${message("empty")}</div>`;
+        }
+
+        for (const block of slide.blocks) {
+          const blockEl = document.createElement("div");
+          blockEl.className = "preview__block";
+          blockEl.innerHTML = `
+            <select class="preview__block-select" data-block-id="${block.id}">
+              <option value="title"${block.type === "title" ? " selected" : ""}>${message("title")}</option>
+              <option value="subtitle"${block.type === "subtitle" ? " selected" : ""}>${message("subtitle")}</option>
+              <option value="body"${block.type === "body" ? " selected" : ""}>${message("body")}</option>
+              <option value="ignored"${block.type === "ignored" ? " selected" : ""}>${message("ignored")}</option>
+            </select>
+            <span class="preview__block-text" data-block-id="${block.id}" data-type="${block.type}" data-level="${block.level}">${escapeHtml(block.text)}</span>
+          `;
+          slideEl.appendChild(blockEl);
+        }
+
+        previewContent.appendChild(slideEl);
+      }
+
+      previewElement.hidden = false;
+    };
+
+    const escapeHtml = (text: string) =>
+      text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+    previewContent.addEventListener("change", (event) => {
+      const target = event.target as HTMLSelectElement;
+      if (!target.matches(".preview__block-select")) return;
+      const blockId = target.dataset.blockId;
+      const newType = target.value as BlockType;
+      if (!parsedData || !blockId) return;
+
+      for (const slide of parsedData.slides) {
+        for (const block of slide.blocks) {
+          if (block.id === blockId) {
+            block.type = newType;
+            const textEl = previewContent.querySelector<HTMLElement>(`.preview__block-text[data-block-id="${blockId}"]`);
+            if (textEl) textEl.dataset.type = newType;
+            return;
+          }
+        }
+      }
+    });
+
+    input?.addEventListener("change", async () => {
       const file = input.files?.[0];
       if (submit) submit.disabled = !file;
       discardResult();
+      previewElement.hidden = true;
+      parsedData = null;
       if (!file) {
         setStatus("", "idle");
         return;
       }
       setStatus(`${message("selected")} ${file.name} (${formatSize(file.size)})`, "info");
-    });
 
-    form.addEventListener("submit", (event) => {
-      event.preventDefault();
-      const file = input?.files?.[0];
-      if (!file || busy || !submit) return;
       if (!/\.pptx$/i.test(file.name)) {
         fail(message("notPptx"));
         return;
@@ -141,6 +211,27 @@ const seoTitle = `${c.pageTitle} | Damián Panes`;
         fail(message("tooBig"));
         return;
       }
+
+      try {
+        setStatus(message("processing"), "info");
+        const parsed = await parsePptx(await file.arrayBuffer());
+        if (!hasExtractableText(parsed)) throw new PptxParseError("empty");
+        parsedData = parsed;
+        renderPreview(parsed);
+        setStatus(`${message("selected")} ${file.name} (${formatSize(file.size)})`, "ok");
+      } catch (error: unknown) {
+        if (error instanceof PptxParseError) fail(message(error.reason));
+        else {
+          console.error(error);
+          fail(message("unexpected"));
+        }
+      }
+    });
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const file = input?.files?.[0];
+      if (!file || busy || !submit || !parsedData) return;
 
       busy = true;
       submit.disabled = true;
@@ -153,9 +244,7 @@ const seoTitle = `${c.pageTitle} | Damián Panes`;
         if (input) input.disabled = false;
       };
 
-      (async () => {
-        const parsed = await parsePptx(await file.arrayBuffer());
-        if (!hasExtractableText(parsed)) throw new PptxParseError("empty");
+      try {
         const pdfName = `${file.name.replace(/\.pptx$/i, "")}.pdf`;
         const fontSelect = form.querySelector<HTMLSelectElement>("[name='font']");
         const sizeSelect = form.querySelector<HTMLSelectElement>("[name='size']");
@@ -165,7 +254,7 @@ const seoTitle = `${c.pageTitle} | Damián Panes`;
           size: (sizeSelect?.value as "small" | "medium" | "large") ?? "medium",
           alignment: (alignmentSelect?.value as "left" | "center" | "right" | "justify") ?? "left",
         };
-        const blob = renderPdf(parsed, pdfName, options);
+        const blob = renderPdf(parsedData, pdfName, options);
         discardResult();
         objectUrl = URL.createObjectURL(blob);
         downloadElement.href = objectUrl;
@@ -173,15 +262,12 @@ const seoTitle = `${c.pageTitle} | Damián Panes`;
         downloadElement.hidden = false;
         downloadElement.click();
         setStatus(`${message("done")} ${pdfName} (${formatSize(blob.size)})`, "ok");
-      })()
-        .catch((error: unknown) => {
-          if (error instanceof PptxParseError) fail(message(error.reason));
-          else {
-            console.error(error);
-            fail(message("unexpected"));
-          }
-        })
-        .finally(finish);
+      } catch (error: unknown) {
+        console.error(error);
+        fail(message("unexpected"));
+      } finally {
+        finish();
+      }
     });
 
     addEventListener(
