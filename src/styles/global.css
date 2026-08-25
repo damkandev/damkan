@@ -102,6 +102,7 @@ html[data-printing] .page-shell { clip-path: inset(0 0 100% 0); box-shadow: none
 .converter__download { display: inline-block; margin-top: 14px; font-weight: 700; }
 .converter__download[hidden] { display: none; }
 .converter__privacy { margin: 26px 0 0; color: var(--muted); }
+.converter__dedication { margin: 40px 0 0; font-style: italic; color: var(--muted); text-align: center; }
 
 @media (max-width: 699px) {
   :root { font-size: 14px; }
