@@ -57,6 +57,10 @@ export const copy = {
           ignored: "Ignorar",
         },
         empty: "Este slide no tiene texto.",
+        showing: "Mostrando {x} de {y} slides",
+        showingAll: "Mostrando los {y} slides",
+        showAll: "VER TODOS",
+        showLess: "VER MENOS",
       },
       messages: {
         selected: "Archivo cargado:",
@@ -128,6 +132,10 @@ export const copy = {
           ignored: "Ignore",
         },
         empty: "This slide has no text.",
+        showing: "Showing {x} of {y} slides",
+        showingAll: "Showing all {y} slides",
+        showAll: "SHOW ALL",
+        showLess: "SHOW LESS",
       },
       messages: {
         selected: "File loaded:",

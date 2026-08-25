@@ -105,6 +105,9 @@ html[data-printing] .page-shell { clip-path: inset(0 0 100% 0); box-shadow: none
 
 .preview { margin-top: 24px; }
 .preview__title { font-size: 1rem; font-weight: 700; margin: 0 0 16px; }
+.preview__summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; padding: 8px 12px; background: color-mix(in srgb, var(--muted) 10%, transparent); border-radius: 4px; font-size: 0.85rem; color: var(--muted); }
+.preview__toggle { font: inherit; font-size: 0.85rem; color: inherit; background: transparent; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 0.2em; }
+.preview__toggle:hover { font-weight: 700; }
 .preview__slide { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px dashed var(--rule); }
 .preview__slide:last-child { border-bottom: none; }
 .preview__slide-header { font-size: 0.85rem; color: var(--muted); margin-bottom: 8px; }

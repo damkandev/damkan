@@ -36,6 +36,7 @@ export interface ParsedSlide {
   subtitle: string;
   blocks: ParsedBlock[];
   slideNumber: number;
+  needsReview: boolean;
 }
 
 export interface ParsedPresentation {
@@ -305,7 +306,8 @@ export const parsePptx = async (data: ArrayBuffer): Promise<ParsedPresentation> 
     const root = document.documentElement;
     if (!root) continue;
     const result = fragmentsFromSlide(root, slideNumber);
-    slides.push({ ...result, slideNumber });
+    const needsReview = (result.title === "" && result.blocks.length > 0) || slideNumber === 1;
+    slides.push({ ...result, slideNumber, needsReview });
     slideNumber++;
   }
 

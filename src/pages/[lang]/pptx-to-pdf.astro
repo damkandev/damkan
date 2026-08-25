@@ -74,6 +74,7 @@ const seoTitle = `${c.pageTitle} | Damián Panes`;
     <div class="preview" data-preview hidden>
       <div class="section-rule" data-ascii-rule aria-hidden="true"></div>
       <h2 class="preview__title">{c.preview.title}</h2>
+      <div class="preview__summary" data-preview-summary hidden></div>
       <div class="preview__content" data-preview-content></div>
     </div>
 
@@ -99,8 +100,9 @@ const seoTitle = `${c.pageTitle} | Damián Panes`;
   const downloadElement = document.querySelector<HTMLAnchorElement>("[data-converter-download]");
   const previewElement = document.querySelector<HTMLElement>("[data-preview]");
   const previewContent = document.querySelector<HTMLElement>("[data-preview-content]");
+  const previewSummary = document.querySelector<HTMLElement>("[data-preview-summary]");
 
-  if (form && statusElement && downloadElement && previewElement && previewContent) {
+  if (form && statusElement && downloadElement && previewElement && previewContent && previewSummary) {
     const input = form.querySelector<HTMLInputElement>("input[type='file']");
     const submit = form.querySelector<HTMLButtonElement>("button[type='submit']");
     const messages: Record<string, string> = JSON.parse(form.dataset.copy ?? "{}");
@@ -110,6 +112,7 @@ const seoTitle = `${c.pageTitle} | Damián Panes`;
     let busy = false;
     let objectUrl: string | undefined;
     let parsedData: ParsedPresentation | null = null;
+    let showAllSlides = false;
 
     const setStatus = (text: string, kind: "idle" | "info" | "error" | "ok") => {
       statusElement.textContent = text;
@@ -130,40 +133,65 @@ const seoTitle = `${c.pageTitle} | Damián Panes`;
 
     const formatSize = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 
+    const renderSlide = (slide: ParsedSlide) => {
+      const slideEl = document.createElement("div");
+      slideEl.className = "preview__slide";
+      slideEl.innerHTML = `<div class="preview__slide-header">${message("slide")} ${slide.slideNumber}</div>`;
+
+      if (slide.title) {
+        slideEl.innerHTML += `<div class="preview__block"><span class="preview__block-text" data-type="title">${escapeHtml(slide.title)}</span></div>`;
+      }
+      if (slide.subtitle) {
+        slideEl.innerHTML += `<div class="preview__block"><span class="preview__block-text" data-type="subtitle">${escapeHtml(slide.subtitle)}</span></div>`;
+      }
+
+      if (slide.blocks.length === 0 && !slide.title && !slide.subtitle) {
+        slideEl.innerHTML += `<div class="preview__empty">${message("empty")}</div>`;
+      }
+
+      for (const block of slide.blocks) {
+        const blockEl = document.createElement("div");
+        blockEl.className = "preview__block";
+        blockEl.innerHTML = `
+          <select class="preview__block-select" data-block-id="${block.id}">
+            <option value="title"${block.type === "title" ? " selected" : ""}>${message("title")}</option>
+            <option value="subtitle"${block.type === "subtitle" ? " selected" : ""}>${message("subtitle")}</option>
+            <option value="body"${block.type === "body" ? " selected" : ""}>${message("body")}</option>
+            <option value="ignored"${block.type === "ignored" ? " selected" : ""}>${message("ignored")}</option>
+          </select>
+          <span class="preview__block-text" data-block-id="${block.id}" data-type="${block.type}" data-level="${block.level}">${escapeHtml(block.text)}</span>
+        `;
+        slideEl.appendChild(blockEl);
+      }
+
+      return slideEl;
+    };
+
     const renderPreview = (data: ParsedPresentation) => {
       previewContent.innerHTML = "";
-      for (const slide of data.slides) {
-        const slideEl = document.createElement("div");
-        slideEl.className = "preview__slide";
-        slideEl.innerHTML = `<div class="preview__slide-header">${message("slide")} ${slide.slideNumber}</div>`;
+      const total = data.slides.length;
+      const slidesToShow = showAllSlides
+        ? data.slides
+        : data.slides.filter((slide) => slide.needsReview);
 
-        if (slide.title) {
-          slideEl.innerHTML += `<div class="preview__block"><span class="preview__block-text" data-type="title">${escapeHtml(slide.title)}</span></div>`;
-        }
-        if (slide.subtitle) {
-          slideEl.innerHTML += `<div class="preview__block"><span class="preview__block-text" data-type="subtitle">${escapeHtml(slide.subtitle)}</span></div>`;
-        }
+      for (const slide of slidesToShow) {
+        previewContent.appendChild(renderSlide(slide));
+      }
 
-        if (slide.blocks.length === 0 && !slide.title && !slide.subtitle) {
-          slideEl.innerHTML += `<div class="preview__empty">${message("empty")}</div>`;
-        }
-
-        for (const block of slide.blocks) {
-          const blockEl = document.createElement("div");
-          blockEl.className = "preview__block";
-          blockEl.innerHTML = `
-            <select class="preview__block-select" data-block-id="${block.id}">
-              <option value="title"${block.type === "title" ? " selected" : ""}>${message("title")}</option>
-              <option value="subtitle"${block.type === "subtitle" ? " selected" : ""}>${message("subtitle")}</option>
-              <option value="body"${block.type === "body" ? " selected" : ""}>${message("body")}</option>
-              <option value="ignored"${block.type === "ignored" ? " selected" : ""}>${message("ignored")}</option>
-            </select>
-            <span class="preview__block-text" data-block-id="${block.id}" data-type="${block.type}" data-level="${block.level}">${escapeHtml(block.text)}</span>
-          `;
-          slideEl.appendChild(blockEl);
-        }
-
-        previewContent.appendChild(slideEl);
+      if (slidesToShow.length < total) {
+        previewSummary.hidden = false;
+        previewSummary.innerHTML = `
+          <span>${message("showing").replace("{x}", String(slidesToShow.length)).replace("{y}", String(total))}</span>
+          <button type="button" class="preview__toggle" data-action="show-all">[ ${message("showAll")} ]</button>
+        `;
+      } else if (showAllSlides && total > 0) {
+        previewSummary.hidden = false;
+        previewSummary.innerHTML = `
+          <span>${message("showingAll").replace("{y}", String(total))}</span>
+          <button type="button" class="preview__toggle" data-action="show-less">[ ${message("showLess")} ]</button>
+        `;
+      } else {
+        previewSummary.hidden = true;
       }
 
       previewElement.hidden = false;
@@ -191,12 +219,27 @@ const seoTitle = `${c.pageTitle} | Damián Panes`;
       }
     });
 
+    previewSummary.addEventListener("click", (event) => {
+      const target = event.target as HTMLElement;
+      if (!target.matches("[data-action]")) return;
+      const action = target.dataset.action;
+      if (action === "show-all") {
+        showAllSlides = true;
+        if (parsedData) renderPreview(parsedData);
+      } else if (action === "show-less") {
+        showAllSlides = false;
+        if (parsedData) renderPreview(parsedData);
+      }
+    });
+
     input?.addEventListener("change", async () => {
       const file = input.files?.[0];
       if (submit) submit.disabled = !file;
       discardResult();
       previewElement.hidden = true;
+      previewSummary.hidden = true;
       parsedData = null;
+      showAllSlides = false;
       if (!file) {
         setStatus("", "idle");
         return;

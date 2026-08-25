@@ -21,14 +21,17 @@ if (parsed.slides.length !== 3) throw new Error(`expected 3 slides, got ${parsed
 
 const [first, second, third] = parsed.slides;
 if (first.slideNumber !== 1) throw new Error("bad slide number");
+if (first.needsReview !== true) throw new Error("slide 1 should need review");
 if (first.title !== "Primera presentación") throw new Error("bad title");
 if (!first.subtitle.includes("áéíóú")) throw new Error("bad subtitle accents");
 if (JSON.stringify(first.blocks.map((b) => b.level)) !== "[0,1,2,1,0]") throw new Error("bad levels");
 if (!first.blocks[4].text.includes('"comillas"')) throw new Error("sanitize failed");
 if (first.blocks[0].id !== "s1-sh2-p0") throw new Error("bad block id");
+if (second.needsReview !== true) throw new Error("slide 2 should need review (no title)");
 if (second.blocks[0].text !== "Caja superior") throw new Error("textbox order failed");
 if (second.blocks[1].text !== "A1 | B1") throw new Error("table extraction failed");
 if (second.blocks[2].text !== "A2 | B2") throw new Error("table row 2 failed");
+if (third.needsReview !== false) throw new Error("slide 3 should not need review (empty)");
 if (third.title !== "" || third.subtitle !== "" || third.blocks.length !== 0) throw new Error("empty slide not empty");
 
 const blob = renderPdf(parsed, "fixture.pdf");
