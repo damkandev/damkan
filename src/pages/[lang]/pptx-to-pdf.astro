@@ -36,8 +36,39 @@ const seoTitle = `${c.pageTitle} | Damián Panes`;
           type="file"
           accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation"
         />
-        <button class="converter__submit" type="submit" disabled>[ {c.convert} ]</button>
       </div>
+
+      <div class="converter__settings">
+        <div class="converter__setting">
+          <label class="converter__setting-label" for="pdf-font">{c.settings.font}</label>
+          <select class="converter__select" id="pdf-font" name="font">
+            <option value="helvetica">{c.settings.fonts.helvetica}</option>
+            <option value="times">{c.settings.fonts.times}</option>
+            <option value="courier">{c.settings.fonts.courier}</option>
+          </select>
+        </div>
+
+        <div class="converter__setting">
+          <label class="converter__setting-label" for="pdf-size">{c.settings.size}</label>
+          <select class="converter__select" id="pdf-size" name="size">
+            <option value="small">{c.settings.sizes.small}</option>
+            <option value="medium" selected>{c.settings.sizes.medium}</option>
+            <option value="large">{c.settings.sizes.large}</option>
+          </select>
+        </div>
+
+        <div class="converter__setting">
+          <label class="converter__setting-label" for="pdf-alignment">{c.settings.alignment}</label>
+          <select class="converter__select" id="pdf-alignment" name="alignment">
+            <option value="left">{c.settings.alignments.left}</option>
+            <option value="center">{c.settings.alignments.center}</option>
+            <option value="right">{c.settings.alignments.right}</option>
+            <option value="justify">{c.settings.alignments.justify}</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="converter__submit" type="submit" disabled>[ {c.convert} ]</button>
     </form>
     <p class="converter__status" data-converter-status aria-live="polite"></p>
     <a class="converter__download" data-converter-download hidden download>[ {c.messages.download} ]</a>
@@ -126,7 +157,15 @@ const seoTitle = `${c.pageTitle} | Damián Panes`;
         const parsed = await parsePptx(await file.arrayBuffer());
         if (!hasExtractableText(parsed)) throw new PptxParseError("empty");
         const pdfName = `${file.name.replace(/\.pptx$/i, "")}.pdf`;
-        const blob = renderPdf(parsed, pdfName);
+        const fontSelect = form.querySelector<HTMLSelectElement>("[name='font']");
+        const sizeSelect = form.querySelector<HTMLSelectElement>("[name='size']");
+        const alignmentSelect = form.querySelector<HTMLSelectElement>("[name='alignment']");
+        const options = {
+          font: (fontSelect?.value as "helvetica" | "times" | "courier") ?? "helvetica",
+          size: (sizeSelect?.value as "small" | "medium" | "large") ?? "medium",
+          alignment: (alignmentSelect?.value as "left" | "center" | "right" | "justify") ?? "left",
+        };
+        const blob = renderPdf(parsed, pdfName, options);
         discardResult();
         objectUrl = URL.createObjectURL(blob);
         downloadElement.href = objectUrl;

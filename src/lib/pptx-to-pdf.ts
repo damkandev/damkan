@@ -307,17 +307,48 @@ const LINE_HEIGHT_RATIO = 1.42;
 const LEVEL_INDENT_MM = 6;
 const PARAGRAPH_GAP_MM = 2.2;
 
+type FontFamily = "helvetica" | "times" | "courier";
+type TextSize = "small" | "medium" | "large";
+type Alignment = "left" | "center" | "right" | "justify";
+
+export interface PdfOptions {
+  font?: FontFamily;
+  size?: TextSize;
+  alignment?: Alignment;
+}
+
 interface TextStyle {
   style: "normal" | "bold" | "italic";
   size: number;
 }
 
-const TITLE_STYLE: TextStyle = { style: "bold", size: 17 };
-const SUBTITLE_STYLE: TextStyle = { style: "italic", size: 13 };
-const BODY_LEVEL_ZERO_STYLE: TextStyle = { style: "normal", size: 11 };
-const BODY_DEEPER_STYLE: TextStyle = { style: "normal", size: 10 };
+const SIZE_SCALES: Record<TextSize, number> = {
+  small: 0.85,
+  medium: 1,
+  large: 1.2,
+};
 
-export const renderPdf = (presentation: ParsedPresentation, documentTitle: string): Blob => {
+const getStyles = (scale: number): {
+  title: TextStyle;
+  subtitle: TextStyle;
+  bodyLevelZero: TextStyle;
+  bodyDeeper: TextStyle;
+} => ({
+  title: { style: "bold", size: 17 * scale },
+  subtitle: { style: "italic", size: 13 * scale },
+  bodyLevelZero: { style: "normal", size: 11 * scale },
+  bodyDeeper: { style: "normal", size: 10 * scale },
+});
+
+export const renderPdf = (
+  presentation: ParsedPresentation,
+  documentTitle: string,
+  options: PdfOptions = {},
+): Blob => {
+  const { font = "helvetica", size = "medium", alignment = "left" } = options;
+  const scale = SIZE_SCALES[size];
+  const styles = getStyles(scale);
+
   const pdf = new jsPDF({ unit: "mm", format: "a4", compress: true });
   pdf.setProperties({ title: documentTitle, creator: "dapan.es" });
 
@@ -332,14 +363,22 @@ export const renderPdf = (presentation: ParsedPresentation, documentTitle: strin
   };
 
   const writeText = (text: string, textStyle: TextStyle, indentMm = 0) => {
-    pdf.setFont("helvetica", textStyle.style);
+    pdf.setFont(font, textStyle.style);
     pdf.setFontSize(textStyle.size);
     const lineHeightMm = textStyle.size * MM_PER_PT * LINE_HEIGHT_RATIO;
     const maxWidth = Math.max(CONTENT_WIDTH_MM - indentMm, 40);
     for (const segment of text.split("\n")) {
       for (const line of pdf.splitTextToSize(segment, maxWidth)) {
         ensureRoom(lineHeightMm);
-        pdf.text(line, MARGIN_MM + indentMm, cursorY + lineHeightMm * 0.78);
+        const x =
+          alignment === "center"
+            ? MARGIN_MM + (CONTENT_WIDTH_MM - indentMm) / 2
+            : alignment === "right"
+              ? PAGE_WIDTH_MM - MARGIN_MM
+              : MARGIN_MM + indentMm;
+        pdf.text(line, x, cursorY + lineHeightMm * 0.78, {
+          align: alignment === "justify" ? "left" : alignment,
+        });
         cursorY += lineHeightMm;
       }
     }
@@ -349,18 +388,23 @@ export const renderPdf = (presentation: ParsedPresentation, documentTitle: strin
     cursorY += heightMm;
   };
 
-  presentation.slides.forEach((slide) => {
+  presentation.slides.forEach((slide, index) => {
+    if (index > 0) {
+      gap(5);
+      writeText(`--- Slide ${index + 1} ---`, { style: "normal", size: 9 * scale });
+      gap(3);
+    }
     if (slide.title !== "") {
-      writeText(slide.title, TITLE_STYLE);
+      writeText(slide.title, styles.title);
       gap(1.5);
     }
     if (slide.subtitle !== "") {
-      writeText(slide.subtitle, SUBTITLE_STYLE);
+      writeText(slide.subtitle, styles.subtitle);
       gap(2.5);
     }
     for (const block of slide.blocks) {
       const level = Math.min(block.level, 6);
-      const style = level === 0 ? BODY_LEVEL_ZERO_STYLE : BODY_DEEPER_STYLE;
+      const style = level === 0 ? styles.bodyLevelZero : styles.bodyDeeper;
       writeText(level === 0 ? block.text : `- ${block.text}`, style, level * LEVEL_INDENT_MM);
       gap(PARAGRAPH_GAP_MM);
     }

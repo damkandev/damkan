@@ -26,6 +26,27 @@ export const copy = {
       convert: "CONVERTIR >>",
       privacy:
         "El archivo se procesa por completo en tu navegador y nunca sale de tu computador.",
+      settings: {
+        font: "Fuente",
+        size: "Tamaño",
+        alignment: "Alineación",
+        fonts: {
+          helvetica: "Helvetica",
+          times: "Times",
+          courier: "Courier",
+        },
+        sizes: {
+          small: "Pequeño",
+          medium: "Medio",
+          large: "Grande",
+        },
+        alignments: {
+          left: "Izquierda",
+          center: "Centro",
+          right: "Derecha",
+          justify: "Justificado",
+        },
+      },
       messages: {
         selected: "Archivo cargado:",
         processing: "Convirtiendo…",
@@ -60,6 +81,27 @@ export const copy = {
       convert: "CONVERT >>",
       privacy:
         "Your file is processed entirely in your browser and never leaves your computer.",
+      settings: {
+        font: "Font",
+        size: "Size",
+        alignment: "Alignment",
+        fonts: {
+          helvetica: "Helvetica",
+          times: "Times",
+          courier: "Courier",
+        },
+        sizes: {
+          small: "Small",
+          medium: "Medium",
+          large: "Large",
+        },
+        alignments: {
+          left: "Left",
+          center: "Center",
+          right: "Right",
+          justify: "Justify",
+        },
+      },
       messages: {
         selected: "File loaded:",
         processing: "Converting…",

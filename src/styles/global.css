@@ -92,7 +92,12 @@ html[data-printing] .page-shell { clip-path: inset(0 0 100% 0); box-shadow: none
 .converter__input { max-width: 100%; font: inherit; color: inherit; }
 .converter__input::file-selector-button,
 .converter__input::-webkit-file-upload-button { padding: 0; border: 0; background: transparent; color: inherit; font: inherit; font-weight: 700; cursor: pointer; text-decoration: underline; text-underline-offset: 0.2em; }
-.converter__submit { font-weight: 700; }
+.converter__settings { display: flex; flex-wrap: wrap; gap: 16px 24px; margin-top: 18px; padding: 14px 0; border-top: 1px dashed var(--rule); border-bottom: 1px dashed var(--rule); }
+.converter__setting { display: flex; flex-direction: column; gap: 4px; }
+.converter__setting-label { font-size: 0.85rem; color: var(--muted); }
+.converter__select { font: inherit; color: inherit; background: transparent; border: 0; padding: 2px 0; cursor: pointer; text-decoration: underline; text-underline-offset: 0.2em; }
+.converter__select:hover { font-weight: 700; }
+.converter__submit { font-weight: 700; margin-top: 18px; }
 .converter__submit:hover:not(:disabled),
 .converter__input::file-selector-button:hover,
 .converter__input::-webkit-file-upload-button:hover { text-decoration: underline; text-underline-offset: 0.2em; }
