@@ -35,6 +35,7 @@ html[data-printing] .page-shell { clip-path: inset(0 0 100% 0); box-shadow: none
 .ascii-title pre { width: max-content; margin: 0; color: inherit; font: inherit; line-height: inherit; }
 .ascii-title--logo { margin-bottom: 20px; }
 .ascii-title--articles, .ascii-title--socials { margin-bottom: 14px; }
+.ascii-title--pptx { margin-bottom: 14px; font-size: clamp(5px, 1.55vw, 9.5px); }
 .intro { margin: 0; }
 .section-rule { height: 1.32em; margin: 30px 0; overflow: hidden; white-space: pre; color: var(--rule); }
 .testimonials { margin-top: 40px; }
@@ -42,15 +43,15 @@ html[data-printing] .page-shell { clip-path: inset(0 0 100% 0); box-shadow: none
 .testimonials-grid { display: grid; grid-template-columns: 314fr 295fr; gap: 14px; width: min(calc(100vw - 48px), 624px); margin-left: 50%; transform: translateX(-50%); }
 .testimonials-grid img { display: block; width: 100%; height: 205px; object-fit: cover; border: 1px solid rgba(24, 23, 20, 0.14); filter: grayscale(1); }
 .articles { margin-top: 48px; }
-.ticket-list { display: grid; gap: 0; margin-top: 30px; }
-.ascii-ticket { display: block; width: 100%; overflow: hidden; }
-.ascii-ticket__box { margin-inline: auto; }
+.ticket-list { display: grid; min-width: 0; gap: 0; margin-top: 30px; }
+.ascii-ticket { display: block; width: 100%; min-width: 0; overflow: hidden; }
+.ascii-ticket__box { width: 100%; max-width: 100%; margin-inline: auto; }
 .ascii-ticket__edge { display: block; height: 1.32em; overflow: hidden; color: var(--rule); line-height: 1.32em; white-space: pre; }
 .ascii-ticket__middle { position: relative; height: fit-content; }
-.ascii-ticket__rail { position: absolute; top: 0; bottom: 0; display: block; overflow: hidden; color: var(--rule); line-height: 1.32em; white-space: pre; }
+.ascii-ticket__rail { position: absolute; top: 0; bottom: 0; display: block; width: 1ch; overflow: hidden; color: var(--rule); line-height: 1.32em; white-space: pre; }
 .ascii-ticket__rail:first-child { left: 0; }
 .ascii-ticket__rail:last-child { right: 0; text-align: right; }
-.ascii-ticket__content { min-width: 0; padding-inline: 2ch; line-height: 1.32em; }
+.ascii-ticket__content { width: 100%; min-width: 0; padding-inline: 2ch; overflow-wrap: anywhere; line-height: 1.32em; }
 .ascii-ticket__content h3 { margin: 0; font-size: 1rem; line-height: inherit; }
 .ascii-ticket__content p { margin: 0; }
 .ascii-ticket__cta { display: block; margin-top: 1.32em; font-weight: 700; }
@@ -84,6 +85,24 @@ html[data-printing] .page-shell { clip-path: inset(0 0 100% 0); box-shadow: none
 .not-found__message p { margin: 0 0 2.64em; }
 .not-found__home { font-weight: 700; }
 
+.tool { width: min(100%, 520px); margin: 54px auto 0; }
+.converter { margin-top: 24px; }
+.converter__field { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.converter__label { font-weight: 700; }
+.converter__input { max-width: 100%; font: inherit; color: inherit; }
+.converter__input::file-selector-button,
+.converter__input::-webkit-file-upload-button { padding: 0; border: 0; background: transparent; color: inherit; font: inherit; font-weight: 700; cursor: pointer; text-decoration: underline; text-underline-offset: 0.2em; }
+.converter__submit { font-weight: 700; }
+.converter__submit:hover:not(:disabled),
+.converter__input::file-selector-button:hover,
+.converter__input::-webkit-file-upload-button:hover { text-decoration: underline; text-underline-offset: 0.2em; }
+.converter__submit:disabled { opacity: 0.45; cursor: default; text-decoration: none; }
+.converter__status { min-height: 1.32em; margin: 18px 0 0; overflow-wrap: anywhere; }
+.converter__status[data-kind="error"] { font-weight: 700; }
+.converter__download { display: inline-block; margin-top: 14px; font-weight: 700; }
+.converter__download[hidden] { display: none; }
+.converter__privacy { margin: 26px 0 0; color: var(--muted); }
+
 @media (max-width: 699px) {
   :root { font-size: 14px; }
   .page-shell { width: 100%; box-shadow: none; }
@@ -97,6 +116,8 @@ html[data-printing] .page-shell { clip-path: inset(0 0 100% 0); box-shadow: none
   .testimonials-grid img { height: auto; }
   .articles { margin-top: 42px; }
   .article { margin-top: 42px; }
+  .tool { margin-top: 42px; }
+  .ascii-title--pptx { font-size: clamp(4.5px, 1.5vw, 9.5px); }
   .not-found { margin-top: 12vh; }
   .not-found__ascii { font-size: clamp(7px, 2.5vw, 10px); }
 }

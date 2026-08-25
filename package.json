@@ -16,6 +16,12 @@
     "@astrojs/sitemap": "^3.7.3",
     "@fontsource/jetbrains-mono": "5.3.0",
     "@paper-design/shaders": "^0.0.78",
-    "astro": "^7.2.1"
+    "astro": "^7.2.1",
+    "jspdf": "^4.2.1",
+    "jszip": "^3.10.1"
+  },
+  "devDependencies": {
+    "@xmldom/xmldom": "^0.9.12",
+    "tsx": "^4.23.12"
   }
 }

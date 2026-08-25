@@ -1,7 +1,7 @@
 ---
 import type { Locale } from "../lib/site";
 
-interface Props { kind: "logo" | "articles" | "socials"; locale?: Locale }
+interface Props { kind: "logo" | "articles" | "socials" | "pptx"; locale?: Locale }
 const { kind, locale = "es" } = Astro.props;
 const Tag = kind === "logo" ? "h1" : "h2";
 const art = {
@@ -12,30 +12,72 @@ const art = {
 ░██    ░██  ░███████  ░██    ░██  ░███████  ░██    ░██     ░█████████  ░███████
 ░██   ░███ ░██   ░██  ░███   ░██ ░██   ░██  ░██    ░██     ░██               ░██
  ░█████░██  ░█████░██ ░██░█████   ░█████░██ ░██    ░██ ░██  ░███████   ░███████
-                      ░██
-                      ░██`,
+                       ░██
+                       ░██`,
   articles: String.raw`                       ░██    ░██                      ░██
-                       ░██                             ░██
+                        ░██                             ░██
  ░██████   ░██░████ ░████████ ░██ ░███████  ░██    ░██ ░██  ░███████   ░███████
       ░██  ░███        ░██    ░██░██    ░██ ░██    ░██ ░██ ░██    ░██ ░██
  ░███████  ░██         ░██    ░██░██        ░██    ░██ ░██ ░██    ░██  ░███████
 ░██   ░██  ░██         ░██    ░██░██    ░██ ░██   ░███ ░██ ░██    ░██        ░██
  ░█████░██ ░██          ░████ ░██ ░███████   ░█████░██ ░██  ░███████   ░███████`,
   socials: String.raw`░██░████ ░██░████  ░███████   ░███████
-░███     ░███     ░██        ░██
-░██      ░██       ░███████   ░███████
-░██      ░██             ░██        ░██
-░██      ░██       ░███████   ░███████`,
+ ░███     ░███     ░██        ░██
+ ░██      ░██       ░███████   ░███████
+ ░██      ░██             ░██        ░██
+ ░██      ░██       ░███████   ░███████`,
 };
 const articlesEnglish = String.raw`                       ░██    ░██           ░██
-                       ░██                  ░██
+                        ░██                  ░██
  ░██████   ░██░████ ░████████ ░██ ░███████  ░██  ░███████   ░███████
       ░██  ░███        ░██    ░██░██    ░██ ░██ ░██    ░██ ░██
  ░███████  ░██         ░██    ░██░██        ░██ ░█████████  ░███████
 ░██   ░██  ░██         ░██    ░██░██    ░██ ░██ ░██               ░██
  ░█████░██ ░██          ░████ ░██ ░███████  ░██  ░███████   ░███████`;
-const selectedArt = kind === "articles" && locale === "en" ? articlesEnglish : art[kind];
-const labels = { logo: "dapan.es", articles: locale === "en" ? "articles" : "artículos", socials: "rrss" };
+const pptxGlyphs = {
+  p: [
+    "░██████  ",
+    "░██   ░██",
+    "░███████ ",
+    "░██      ",
+    "░██      ",
+    "░██      ",
+    "░██      ",
+  ],
+  t: [
+    "░█████████",
+    "   ░██   ",
+    "   ░██   ",
+    "   ░██   ",
+    "   ░██   ",
+    "   ░██   ",
+    "   ░██   ",
+  ],
+  x: [
+    "░██   ░██",
+    " ░██ ░██ ",
+    "  ░███   ",
+    "   ░██   ",
+    "  ░███   ",
+    " ░██ ░██ ",
+    "░██   ░██",
+  ],
+};
+const pptxArt = [0, 1, 2, 3, 4, 5, 6]
+  .map((row) => [pptxGlyphs.p, pptxGlyphs.p, pptxGlyphs.t, pptxGlyphs.x].map((glyph) => glyph[row]).join(" "))
+  .join("\n");
+const selectedArt =
+  kind === "pptx"
+    ? pptxArt
+    : kind === "articles" && locale === "en"
+      ? articlesEnglish
+      : art[kind];
+const labels = {
+  logo: "dapan.es",
+  articles: locale === "en" ? "articles" : "artículos",
+  socials: "rrss",
+  pptx: locale === "en" ? "pptx to pdf" : "pptx a pdf",
+};
 ---
 <Tag class:list={["ascii-title", `ascii-title--${kind}`]} aria-label={labels[kind]}>
   <pre aria-hidden="true">{selectedArt}</pre>

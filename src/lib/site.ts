@@ -16,6 +16,28 @@ export const copy = {
     back: "<< Volver al inicio",
     light: "CLARO",
     dark: "OSCURO",
+    pptxToPdf: {
+      pageTitle: "PPTX a PDF",
+      metaDescription:
+        "Convierte presentaciones PPTX a un PDF limpio con solo el texto: sin fondos ni imágenes, conservando la jerarquía de títulos. Todo ocurre en tu navegador.",
+      intro:
+        "Sube una presentación .pptx y recibe un PDF con únicamente su texto: sin fondos, sin imágenes y sin decoración, pero manteniendo la jerarquía de títulos, subtítulos y viñetas.",
+      chooseLabel: "Presentación (.pptx)",
+      convert: "CONVERTIR >>",
+      privacy:
+        "El archivo se procesa por completo en tu navegador y nunca sale de tu computador.",
+      messages: {
+        selected: "Archivo cargado:",
+        processing: "Convirtiendo…",
+        done: "PDF listo:",
+        download: "[ DESCARGAR PDF ]",
+        notPptx: "Ese archivo no es un .pptx. Los .ppt antiguos no son compatibles.",
+        tooBig: "La presentación supera el máximo de 50 MB.",
+        format: "No pude leer la presentación. ¿Está dañada?",
+        empty: "No encontré texto para convertir en esa presentación.",
+        unexpected: "Algo falló al convertir. Intenta de nuevo.",
+      },
+    },
   },
   en: {
     title: "Damián Panes | Programmer and founder",
@@ -28,6 +50,28 @@ export const copy = {
     back: "<< Back home",
     light: "LIGHT",
     dark: "DARK",
+    pptxToPdf: {
+      pageTitle: "PPTX to PDF",
+      metaDescription:
+        "Turn PPTX presentations into a clean, text-only PDF: no backgrounds or images, keeping the title hierarchy. Everything happens in your browser.",
+      intro:
+        "Upload a .pptx deck and get a PDF with only its text: no backgrounds, images, or decoration, but keeping the hierarchy of titles, subtitles, and bullets.",
+      chooseLabel: "Presentation (.pptx)",
+      convert: "CONVERT >>",
+      privacy:
+        "Your file is processed entirely in your browser and never leaves your computer.",
+      messages: {
+        selected: "File loaded:",
+        processing: "Converting…",
+        done: "PDF ready:",
+        download: "[ DOWNLOAD PDF ]",
+        notPptx: "That file is not a .pptx. Legacy .ppt files are not supported.",
+        tooBig: "The presentation exceeds the 50 MB limit.",
+        format: "I couldn't read the presentation. Is it corrupted?",
+        empty: "I found no text to convert in that presentation.",
+        unexpected: "Something went wrong. Please try again.",
+      },
+    },
   },
 } as const;
 

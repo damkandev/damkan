@@ -1,0 +1,155 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import AsciiTitle from "../../components/AsciiTitle.astro";
+import { MAX_PPTX_BYTES } from "../../lib/pptx-to-pdf";
+import { copy, homePath, isLocale, locales, type Locale } from "../../lib/site";
+
+export function getStaticPaths() {
+  return locales.map((lang) => ({ params: { lang } }));
+}
+
+if (!isLocale(Astro.params.lang)) return Astro.redirect("/es/", 302);
+const locale: Locale = Astro.params.lang;
+const c = copy[locale].pptxToPdf;
+const seoTitle = `${c.pageTitle} | Damián Panes`;
+---
+<BaseLayout locale={locale} title={seoTitle} description={c.metaDescription}>
+  <main class="tool">
+    <a class="article-back" href={homePath(locale)}>{copy[locale].back}</a>
+    <AsciiTitle kind="pptx" locale={locale} />
+    <p class="intro">{c.intro}</p>
+
+    <div class="section-rule" data-ascii-rule aria-hidden="true"></div>
+
+    <form
+      class="converter"
+      data-converter
+      data-max-bytes={String(MAX_PPTX_BYTES)}
+      data-copy={JSON.stringify(c.messages)}
+    >
+      <div class="converter__field">
+        <label class="converter__label" for="pptx-file">{c.chooseLabel}</label>
+        <input
+          class="converter__input"
+          id="pptx-file"
+          name="file"
+          type="file"
+          accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        />
+        <button class="converter__submit" type="submit" disabled>[ {c.convert} ]</button>
+      </div>
+    </form>
+    <p class="converter__status" data-converter-status aria-live="polite"></p>
+    <a class="converter__download" data-converter-download hidden download>[ {c.messages.download} ]</a>
+    <p class="converter__privacy">{c.privacy}</p>
+  </main>
+</BaseLayout>
+
+<script>
+  import {
+    PptxParseError,
+    hasExtractableText,
+    parsePptx,
+    renderPdf,
+  } from "../../lib/pptx-to-pdf";
+
+  const form = document.querySelector<HTMLFormElement>("[data-converter]");
+  const statusElement = document.querySelector<HTMLElement>("[data-converter-status]");
+  const downloadElement = document.querySelector<HTMLAnchorElement>("[data-converter-download]");
+
+  if (form && statusElement && downloadElement) {
+    const input = form.querySelector<HTMLInputElement>("input[type='file']");
+    const submit = form.querySelector<HTMLButtonElement>("button[type='submit']");
+    const messages: Record<string, string> = JSON.parse(form.dataset.copy ?? "{}");
+    const maxBytes = Number(form.dataset.maxBytes ?? "0");
+    const message = (key: string) => messages[key] ?? "";
+
+    let busy = false;
+    let objectUrl: string | undefined;
+
+    const setStatus = (text: string, kind: "idle" | "info" | "error" | "ok") => {
+      statusElement.textContent = text;
+      statusElement.dataset.kind = kind;
+    };
+
+    const discardResult = () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrl = undefined;
+      downloadElement.hidden = true;
+      downloadElement.removeAttribute("href");
+    };
+
+    const fail = (text: string) => {
+      discardResult();
+      setStatus(text, "error");
+    };
+
+    const formatSize = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+
+    input?.addEventListener("change", () => {
+      const file = input.files?.[0];
+      if (submit) submit.disabled = !file;
+      discardResult();
+      if (!file) {
+        setStatus("", "idle");
+        return;
+      }
+      setStatus(`${message("selected")} ${file.name} (${formatSize(file.size)})`, "info");
+    });
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const file = input?.files?.[0];
+      if (!file || busy || !submit) return;
+      if (!/\.pptx$/i.test(file.name)) {
+        fail(message("notPptx"));
+        return;
+      }
+      if (file.size > maxBytes) {
+        fail(message("tooBig"));
+        return;
+      }
+
+      busy = true;
+      submit.disabled = true;
+      if (input) input.disabled = true;
+      setStatus(message("processing"), "info");
+
+      const finish = () => {
+        busy = false;
+        submit.disabled = false;
+        if (input) input.disabled = false;
+      };
+
+      (async () => {
+        const parsed = await parsePptx(await file.arrayBuffer());
+        if (!hasExtractableText(parsed)) throw new PptxParseError("empty");
+        const pdfName = `${file.name.replace(/\.pptx$/i, "")}.pdf`;
+        const blob = renderPdf(parsed, pdfName);
+        discardResult();
+        objectUrl = URL.createObjectURL(blob);
+        downloadElement.href = objectUrl;
+        downloadElement.download = pdfName;
+        downloadElement.hidden = false;
+        downloadElement.click();
+        setStatus(`${message("done")} ${pdfName} (${formatSize(blob.size)})`, "ok");
+      })()
+        .catch((error: unknown) => {
+          if (error instanceof PptxParseError) fail(message(error.reason));
+          else {
+            console.error(error);
+            fail(message("unexpected"));
+          }
+        })
+        .finally(finish);
+    });
+
+    addEventListener(
+      "pagehide",
+      () => {
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+      },
+      { once: true },
+    );
+  }
+</script>

@@ -230,8 +230,11 @@ const structuredData = noindex
         if (!box || !content || edges.length !== 2 || rails.length !== 2) return;
 
         const characterWidth = measureCharacter(ticket);
-        const columns = Math.max(24, Math.floor(ticket.clientWidth / characterWidth));
-        const snappedWidth = columns * characterWidth;
+        const availableWidth = ticket.getBoundingClientRect().width;
+        if (!Number.isFinite(characterWidth) || characterWidth <= 0 || availableWidth <= 0) return;
+
+        const columns = Math.max(2, Math.floor(availableWidth / characterWidth));
+        const snappedWidth = Math.min(availableWidth, columns * characterWidth);
         const border = `|${"-".repeat(columns - 2)}|`;
         box.style.width = `${snappedWidth}px`;
         edges.forEach((edge) => { edge.textContent = border; });
