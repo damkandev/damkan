@@ -30,6 +30,7 @@ export const copy = {
         font: "Fuente",
         size: "Tamaño",
         alignment: "Alineación",
+        orientation: "Orientación",
         fonts: {
           helvetica: "Helvetica",
           times: "Times",
@@ -45,6 +46,10 @@ export const copy = {
           center: "Centro",
           right: "Derecha",
           justify: "Justificado",
+        },
+        orientations: {
+          portrait: "Vertical",
+          landscape: "Horizontal",
         },
       },
       preview: {
@@ -105,6 +110,7 @@ export const copy = {
         font: "Font",
         size: "Size",
         alignment: "Alignment",
+        orientation: "Orientation",
         fonts: {
           helvetica: "Helvetica",
           times: "Times",
@@ -120,6 +126,10 @@ export const copy = {
           center: "Center",
           right: "Right",
           justify: "Justify",
+        },
+        orientations: {
+          portrait: "Portrait",
+          landscape: "Landscape",
         },
       },
       preview: {

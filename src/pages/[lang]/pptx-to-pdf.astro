@@ -66,6 +66,14 @@ const seoTitle = `${c.pageTitle} | Damián Panes`;
             <option value="justify">{c.settings.alignments.justify}</option>
           </select>
         </div>
+
+        <div class="converter__setting">
+          <label class="converter__setting-label" for="pdf-orientation">{c.settings.orientation}</label>
+          <select class="converter__select" id="pdf-orientation" name="orientation">
+            <option value="portrait">{c.settings.orientations.portrait}</option>
+            <option value="landscape">{c.settings.orientations.landscape}</option>
+          </select>
+        </div>
       </div>
 
       <button class="converter__submit" type="submit" disabled>[ {c.convert} ]</button>
@@ -292,10 +300,12 @@ const seoTitle = `${c.pageTitle} | Damián Panes`;
         const fontSelect = form.querySelector<HTMLSelectElement>("[name='font']");
         const sizeSelect = form.querySelector<HTMLSelectElement>("[name='size']");
         const alignmentSelect = form.querySelector<HTMLSelectElement>("[name='alignment']");
+        const orientationSelect = form.querySelector<HTMLSelectElement>("[name='orientation']");
         const options = {
           font: (fontSelect?.value as "helvetica" | "times" | "courier") ?? "helvetica",
           size: (sizeSelect?.value as "small" | "medium" | "large") ?? "medium",
           alignment: (alignmentSelect?.value as "left" | "center" | "right" | "justify") ?? "left",
+          orientation: (orientationSelect?.value as "portrait" | "landscape") ?? "portrait",
         };
         const blob = renderPdf(parsedData, pdfName, options);
         discardResult();

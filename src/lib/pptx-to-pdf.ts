@@ -320,10 +320,9 @@ export const hasExtractableText = (presentation: ParsedPresentation): boolean =>
   );
 
 const MM_PER_PT = 25.4 / 72;
-const PAGE_WIDTH_MM = 210;
-const PAGE_HEIGHT_MM = 297;
+const A4_PORTRAIT_WIDTH = 210;
+const A4_PORTRAIT_HEIGHT = 297;
 const MARGIN_MM = 20;
-const CONTENT_WIDTH_MM = PAGE_WIDTH_MM - MARGIN_MM * 2;
 const LINE_HEIGHT_RATIO = 1.42;
 const LEVEL_INDENT_MM = 6;
 const PARAGRAPH_GAP_MM = 2.2;
@@ -331,11 +330,13 @@ const PARAGRAPH_GAP_MM = 2.2;
 type FontFamily = "helvetica" | "times" | "courier";
 type TextSize = "small" | "medium" | "large";
 type Alignment = "left" | "center" | "right" | "justify";
+type Orientation = "portrait" | "landscape";
 
 export interface PdfOptions {
   font?: FontFamily;
   size?: TextSize;
   alignment?: Alignment;
+  orientation?: Orientation;
 }
 
 interface TextStyle {
@@ -366,14 +367,18 @@ export const renderPdf = (
   documentTitle: string,
   options: PdfOptions = {},
 ): Blob => {
-  const { font = "helvetica", size = "medium", alignment = "left" } = options;
+  const { font = "helvetica", size = "medium", alignment = "left", orientation = "portrait" } = options;
   const scale = SIZE_SCALES[size];
   const styles = getStyles(scale);
 
-  const pdf = new jsPDF({ unit: "mm", format: "a4", compress: true });
+  const pageWidth = orientation === "landscape" ? A4_PORTRAIT_HEIGHT : A4_PORTRAIT_WIDTH;
+  const pageHeight = orientation === "landscape" ? A4_PORTRAIT_WIDTH : A4_PORTRAIT_HEIGHT;
+  const contentWidth = pageWidth - MARGIN_MM * 2;
+
+  const pdf = new jsPDF({ unit: "mm", format: "a4", orientation, compress: true });
   pdf.setProperties({ title: documentTitle, creator: "dapan.es" });
 
-  const bottomLimit = PAGE_HEIGHT_MM - MARGIN_MM;
+  const bottomLimit = pageHeight - MARGIN_MM;
   let cursorY = MARGIN_MM;
 
   const ensureRoom = (lineHeightMm: number) => {
@@ -387,15 +392,15 @@ export const renderPdf = (
     pdf.setFont(font, textStyle.style);
     pdf.setFontSize(textStyle.size);
     const lineHeightMm = textStyle.size * MM_PER_PT * LINE_HEIGHT_RATIO;
-    const maxWidth = Math.max(CONTENT_WIDTH_MM - indentMm, 40);
+    const maxWidth = Math.max(contentWidth - indentMm, 40);
     for (const segment of text.split("\n")) {
       for (const line of pdf.splitTextToSize(segment, maxWidth)) {
         ensureRoom(lineHeightMm);
         const x =
           alignment === "center"
-            ? MARGIN_MM + (CONTENT_WIDTH_MM - indentMm) / 2
+            ? MARGIN_MM + (contentWidth - indentMm) / 2
             : alignment === "right"
-              ? PAGE_WIDTH_MM - MARGIN_MM
+              ? pageWidth - MARGIN_MM
               : MARGIN_MM + indentMm;
         pdf.text(line, x, cursorY + lineHeightMm * 0.78, {
           align: alignment === "justify" ? "left" : alignment,
