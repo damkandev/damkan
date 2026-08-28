@@ -45,6 +45,7 @@ html[data-printing] .page-shell { clip-path: inset(0 0 100% 0); box-shadow: none
 .articles { margin-top: 48px; }
 .ticket-list { display: grid; min-width: 0; gap: 0; margin-top: 30px; }
 .ascii-ticket { display: block; width: 100%; min-width: 0; overflow: hidden; }
+.ascii-ticket[hidden] { display: none; }
 .ascii-ticket__box { width: 100%; max-width: 100%; margin-inline: auto; }
 .ascii-ticket__edge { display: block; height: 1.32em; overflow: hidden; color: var(--rule); line-height: 1.32em; white-space: pre; }
 .ascii-ticket__middle { position: relative; height: fit-content; }
@@ -55,6 +56,12 @@ html[data-printing] .page-shell { clip-path: inset(0 0 100% 0); box-shadow: none
 .ascii-ticket__content h3 { margin: 0; font-size: 1rem; line-height: inherit; }
 .ascii-ticket__content p { margin: 0; }
 .ascii-ticket__cta { display: block; margin-top: 1.32em; font-weight: 700; }
+.articles-pagination { display: grid; grid-template-columns: 12ch auto 12ch; justify-content: center; align-items: center; gap: 2ch; margin-top: 22px; }
+.articles-pagination button { font-weight: 700; }
+.articles-pagination button:first-child { justify-self: start; }
+.articles-pagination button:last-child { justify-self: end; }
+.articles-pagination button:disabled { opacity: 0.38; cursor: default; text-decoration: none; }
+.articles-pagination [data-page-status] { color: var(--muted); text-align: center; }
 .character-probe { position: absolute; visibility: hidden; white-space: pre; pointer-events: none; }
 .socials { margin-top: 34px; }
 .socials ul { margin: 20px 0 0; padding: 0; list-style: none; }
@@ -141,6 +148,7 @@ html[data-printing] .page-shell { clip-path: inset(0 0 100% 0); box-shadow: none
   .testimonials-grid { grid-template-columns: 1fr; width: min(100%, 380px); gap: 12px; }
   .testimonials-grid img { height: auto; }
   .articles { margin-top: 42px; }
+  .articles-pagination { grid-template-columns: 12ch auto 12ch; gap: 0.75ch; font-size: 0.85rem; }
   .article { margin-top: 42px; }
   .tool { margin-top: 42px; }
   .ascii-title--pptx { font-size: clamp(4.5px, 1.5vw, 9.5px); }

@@ -22,6 +22,8 @@ const testimonials = locale === "en"
 const articles = (await getCollection("articles"))
   .filter((entry) => entry.data.locale === locale)
   .sort((a, b) => b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf());
+const articlesPerPage = 3;
+const articlePageCount = Math.ceil(articles.length / articlesPerPage);
 ---
 <BaseLayout locale={locale}>
   <main class="receipt">
@@ -41,16 +43,37 @@ const articles = (await getCollection("articles"))
     <section class="articles" aria-labelledby="articles-heading">
       <AsciiTitle kind="articles" locale={locale} />
       <p id="articles-heading">{c.articlesIntro}</p>
-      <div class="ticket-list">
-        {articles.map((article) => (
+      <div
+        class="ticket-list"
+        data-articles-list
+        data-page-size={articlesPerPage}
+      >
+        {articles.map((article, index) => (
           <AsciiTicket
             href={articlePath(locale, article.data.slug)}
             title={article.data.title}
             description={article.data.excerpt}
             cta={c.readMore}
+            data-article-index={index}
           />
         ))}
       </div>
+      {articlePageCount > 1 && (
+        <nav
+          class="articles-pagination"
+          data-articles-pagination
+          data-page-count={articlePageCount}
+          aria-label={locale === "es" ? "Paginación de artículos" : "Article pagination"}
+        >
+          <button type="button" data-page-previous>{c.articlesPagination.previous}</button>
+          <span aria-live="polite" aria-atomic="true" data-page-status>
+            {c.articlesPagination.page
+              .replace("{current}", "1")
+              .replace("{total}", String(articlePageCount))}
+          </span>
+          <button type="button" data-page-next>{c.articlesPagination.next}</button>
+        </nav>
+      )}
     </section>
 
     <div class="section-rule" data-ascii-rule aria-hidden="true"></div>
@@ -66,3 +89,57 @@ const articles = (await getCollection("articles"))
     </section>
   </main>
 </BaseLayout>
+
+<script>
+  const list = document.querySelector<HTMLElement>("[data-articles-list]");
+  const pagination = document.querySelector<HTMLElement>("[data-articles-pagination]");
+
+  if (list && pagination) {
+    const articles = [...list.querySelectorAll<HTMLElement>("[data-article-index]")];
+    const previous = pagination.querySelector<HTMLButtonElement>("[data-page-previous]");
+    const next = pagination.querySelector<HTMLButtonElement>("[data-page-next]");
+    const status = pagination.querySelector<HTMLElement>("[data-page-status]");
+    const pageSize = Number(list.dataset.pageSize);
+    const pageCount = Number(pagination.dataset.pageCount);
+    const statusTemplate = status?.textContent?.trim() ?? "";
+
+    const pageFromUrl = () => {
+      const requestedPage = Number(new URLSearchParams(window.location.search).get("articles"));
+      return Number.isInteger(requestedPage) && requestedPage >= 1 && requestedPage <= pageCount
+        ? requestedPage
+        : 1;
+    };
+
+    let currentPage = pageFromUrl();
+
+    const showPage = (page: number, updateHistory = false) => {
+      currentPage = Math.min(pageCount, Math.max(1, page));
+      const firstArticle = (currentPage - 1) * pageSize;
+      const lastArticle = firstArticle + pageSize;
+
+      articles.forEach((article, index) => {
+        article.hidden = index < firstArticle || index >= lastArticle;
+      });
+
+      if (previous) previous.disabled = currentPage === 1;
+      if (next) next.disabled = currentPage === pageCount;
+      if (status) {
+        status.textContent = statusTemplate
+          .replace("1", String(currentPage))
+          .replace(String(pageCount), String(pageCount));
+      }
+
+      if (updateHistory) {
+        const url = new URL(window.location.href);
+        if (currentPage === 1) url.searchParams.delete("articles");
+        else url.searchParams.set("articles", String(currentPage));
+        window.history.pushState({ articlesPage: currentPage }, "", url);
+      }
+    };
+
+    previous?.addEventListener("click", () => showPage(currentPage - 1, true));
+    next?.addEventListener("click", () => showPage(currentPage + 1, true));
+    window.addEventListener("popstate", () => showPage(pageFromUrl()));
+    showPage(currentPage);
+  }
+</script>

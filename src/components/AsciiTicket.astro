@@ -4,13 +4,15 @@ interface Props {
   title: string;
   description: string;
   cta: string;
+  "data-article-index"?: number;
 }
 
-const { href, title, description, cta } = Astro.props;
+const { href, title, description, cta, "data-article-index": articleIndex } = Astro.props;
 ---
 <article
   class="ascii-ticket"
   data-ascii-ticket
+  data-article-index={articleIndex}
 >
   <div class="ascii-ticket__box">
     <span class="ascii-ticket__edge ascii-ticket__edge--top" aria-hidden="true"></span>

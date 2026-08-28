@@ -11,6 +11,11 @@ export const copy = {
     bio: "Me gusta el helado de pasas al ron, tengo cinco veces repetido el mismo par de zapatillas, pero aparte de eso me gusta mucho programar y crear empresas, principalmente solucionar problemas.",
     testimonials: "Testimonios de quienes han entrado a esta página o leído mi LinkedIn.",
     articlesIntro: "Naturalmente me aburro mucho y desinstalé todas mis redes sociales, así que en las micros o cuando no puedo dormir escribo artículos para mi blog.",
+    articlesPagination: {
+      previous: "<< Anterior",
+      next: "Siguiente >>",
+      page: "Página {current} de {total}",
+    },
     socials: "Por si algún día revivo en redes sociales y subo algo interesante y no te lo quieres perder, puedes seguirme en cualquiera de ellas... Pero si te tengo que recomendar algo, mejor desinstálalas.",
     readMore: "Leer más >>",
     back: "<< Volver al inicio",
@@ -91,6 +96,11 @@ export const copy = {
     bio: "I like rum raisin ice cream, I own the same pair of sneakers five times over, and beyond that I mostly like programming, building companies, and solving problems.",
     testimonials: "Testimonials from people who visited this page or read my LinkedIn.",
     articlesIntro: "I get bored easily and deleted all my social media, so I write blog posts on the bus or whenever I can't sleep.",
+    articlesPagination: {
+      previous: "<< Previous",
+      next: "Next >>",
+      page: "Page {current} of {total}",
+    },
     socials: "If I ever come back to social media and post something interesting you don't want to miss, you can follow me on any of these... Though if I had to recommend something, delete them instead.",
     readMore: "Read more >>",
     back: "<< Back home",
