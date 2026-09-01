@@ -94,6 +94,7 @@ const seoTitle = `${c.pageTitle} | Damián Panes`;
 </BaseLayout>
 
 <script>
+  import { track } from "@vercel/analytics";
   import {
     PptxParseError,
     hasExtractableText,
@@ -315,6 +316,7 @@ const seoTitle = `${c.pageTitle} | Damián Panes`;
         downloadElement.hidden = false;
         downloadElement.click();
         setStatus(`${message("done")} ${pdfName} (${formatSize(blob.size)})`, "ok");
+        track("pptx-to-pdf-convert", { fileName: pdfName, fileSize: blob.size, font: options.font, size: options.size, alignment: options.alignment, orientation: options.orientation });
       } catch (error: unknown) {
         console.error(error);
         fail(message("unexpected"));
