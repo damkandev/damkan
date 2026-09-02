@@ -3,6 +3,8 @@ import { getCollection, render, type CollectionEntry } from "astro:content";
 import BaseLayout from "../../../layouts/BaseLayout.astro";
 import { articlePath, copy, homePath, isLocale, type Locale } from "../../../lib/site";
 
+export const prerender = true;
+
 export async function getStaticPaths() {
   const entries = await getCollection("articles");
   return entries.map((entry) => ({

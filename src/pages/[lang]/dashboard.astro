@@ -1,0 +1,301 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { copy, homePath, isLocale, locales, type Locale } from "../../lib/site";
+
+export function getStaticPaths() {
+  return locales.map((lang) => ({ params: { lang } }));
+}
+
+if (!isLocale(Astro.params.lang)) return Astro.redirect("/es/", 302);
+const locale: Locale = Astro.params.lang;
+const c = copy[locale].dashboard;
+const seoTitle = `${c.pageTitle} | Damián Panes`;
+---
+
+<BaseLayout locale={locale} title={seoTitle} description={c.metaDescription} noindex>
+  <main class="dashboard-shell">
+    <a class="article-back" href={homePath(locale)}>{c.back}</a>
+    <h2 class="dashboard__ascii-title" aria-hidden="true">
+      <pre>{c.title.toUpperCase()}</pre>
+    </h2>
+
+    <div class="section-rule" data-ascii-rule aria-hidden="true"></div>
+
+    <div id="dash-login" class="dashboard__login" hidden>
+      <div class="ascii-ticket" data-ascii-ticket>
+        <div class="ascii-ticket__box">
+          <span class="ascii-ticket__edge ascii-ticket__edge--top" aria-hidden="true"></span>
+          <div class="ascii-ticket__middle">
+            <span class="ascii-ticket__rail" aria-hidden="true"></span>
+            <div class="ascii-ticket__content">
+              <form class="dashboard__login-form" data-dash-form>
+                <label class="dashboard__field-label" for="dash-user">{c.login.user}</label>
+                <input class="dashboard__input" id="dash-user" name="user" type="text" autocomplete="username" />
+                <label class="dashboard__field-label" for="dash-pass">{c.login.password}</label>
+                <input class="dashboard__input" id="dash-pass" name="password" type="password" autocomplete="current-password" />
+                <button class="dashboard__submit" type="submit">{c.login.submit}</button>
+              </form>
+              <p class="dashboard__error" data-dash-error hidden>{c.login.error}</p>
+            </div>
+            <span class="ascii-ticket__rail" aria-hidden="true"></span>
+          </div>
+          <span class="ascii-ticket__edge ascii-ticket__edge--bottom" aria-hidden="true"></span>
+        </div>
+      </div>
+    </div>
+
+    <div id="dash-content" class="dashboard__tickets" hidden>
+      <div class="ascii-ticket" data-ascii-ticket>
+        <div class="ascii-ticket__box">
+          <span class="ascii-ticket__edge ascii-ticket__edge--top" aria-hidden="true"></span>
+          <div class="ascii-ticket__middle">
+            <span class="ascii-ticket__rail" aria-hidden="true"></span>
+            <div class="ascii-ticket__content">
+              <h3>{c.sections.summary}</h3>
+              <div data-summary>Loading…</div>
+            </div>
+            <span class="ascii-ticket__rail" aria-hidden="true"></span>
+          </div>
+          <span class="ascii-ticket__edge ascii-ticket__edge--bottom" aria-hidden="true"></span>
+        </div>
+      </div>
+
+      <div class="ascii-ticket" data-ascii-ticket>
+        <div class="ascii-ticket__box">
+          <span class="ascii-ticket__edge ascii-ticket__edge--top" aria-hidden="true"></span>
+          <div class="ascii-ticket__middle">
+            <span class="ascii-ticket__rail" aria-hidden="true"></span>
+            <div class="ascii-ticket__content">
+              <h3>{c.sections.pages}</h3>
+              <div data-top-pages>{c.labels.noData}</div>
+            </div>
+            <span class="ascii-ticket__rail" aria-hidden="true"></span>
+          </div>
+          <span class="ascii-ticket__edge ascii-ticket__edge--bottom" aria-hidden="true"></span>
+        </div>
+      </div>
+
+      <div class="ascii-ticket" data-ascii-ticket>
+        <div class="ascii-ticket__box">
+          <span class="ascii-ticket__edge ascii-ticket__edge--top" aria-hidden="true"></span>
+          <div class="ascii-ticket__middle">
+            <span class="ascii-ticket__rail" aria-hidden="true"></span>
+            <div class="ascii-ticket__content">
+              <h3>{c.sections.countries}</h3>
+              <div data-top-countries>{c.labels.noData}</div>
+            </div>
+            <span class="ascii-ticket__rail" aria-hidden="true"></span>
+          </div>
+          <span class="ascii-ticket__edge ascii-ticket__edge--bottom" aria-hidden="true"></span>
+        </div>
+      </div>
+
+      <div class="ascii-ticket" data-ascii-ticket>
+        <div class="ascii-ticket__box">
+          <span class="ascii-ticket__edge ascii-ticket__edge--top" aria-hidden="true"></span>
+          <div class="ascii-ticket__middle">
+            <span class="ascii-ticket__rail" aria-hidden="true"></span>
+            <div class="ascii-ticket__content">
+              <h3>{c.sections.utm}</h3>
+              <div data-top-utm>{c.labels.noData}</div>
+            </div>
+            <span class="ascii-ticket__rail" aria-hidden="true"></span>
+          </div>
+          <span class="ascii-ticket__edge ascii-ticket__edge--bottom" aria-hidden="true"></span>
+        </div>
+      </div>
+
+      <div class="ascii-ticket" data-ascii-ticket>
+        <div class="ascii-ticket__box">
+          <span class="ascii-ticket__edge ascii-ticket__edge--top" aria-hidden="true"></span>
+          <div class="ascii-ticket__middle">
+            <span class="ascii-ticket__rail" aria-hidden="true"></span>
+            <div class="ascii-ticket__content">
+              <h3>{c.sections.embedded}</h3>
+              <div data-embedded>{c.labels.noData}</div>
+            </div>
+            <span class="ascii-ticket__rail" aria-hidden="true"></span>
+          </div>
+          <span class="ascii-ticket__edge ascii-ticket__edge--bottom" aria-hidden="true"></span>
+        </div>
+      </div>
+
+      <div class="ascii-ticket" data-ascii-ticket>
+        <div class="ascii-ticket__box">
+          <span class="ascii-ticket__edge ascii-ticket__edge--top" aria-hidden="true"></span>
+          <div class="ascii-ticket__middle">
+            <span class="ascii-ticket__rail" aria-hidden="true"></span>
+            <div class="ascii-ticket__content">
+              <h3>{c.sections.events}</h3>
+              <div data-events>{c.labels.noData}</div>
+            </div>
+            <span class="ascii-ticket__rail" aria-hidden="true"></span>
+          </div>
+          <span class="ascii-ticket__edge ascii-ticket__edge--bottom" aria-hidden="true"></span>
+        </div>
+      </div>
+    </div>
+  </main>
+</BaseLayout>
+
+<script define:vars={{
+  labels: { noData: c.labels.noData, pageviews7d: c.labels.pageviews7d, pageviews30d: c.labels.pageviews30d, pageviewsTotal: c.labels.pageviewsTotal, uniqueVisitors: c.labels.uniqueVisitors, by: c.labels.by, total: c.labels.total },
+}}>
+  const fmt = (n: number) => n.toLocaleString();
+
+  const bar = (count: number, max: number, width = 20) => {
+    const filled = max > 0 ? Math.round((count / max) * width) : 0;
+    const empty = width - filled;
+    return "█".repeat(filled) + "░".repeat(empty);
+  };
+
+  const loginEl = document.getElementById("dash-login")!;
+  const contentEl = document.getElementById("dash-content")!;
+  const formEl = document.querySelector<HTMLFormElement>("[data-dash-form]")!;
+  const errorEl = document.querySelector<HTMLElement>("[data-dash-error]")!;
+  const L = labels;
+
+  const tryLogin = async () => {
+    const res = await fetch("/api/analytics/data", { credentials: "include" });
+    if (res.ok) {
+      loginEl.hidden = true;
+      contentEl.hidden = false;
+      return true;
+    }
+    loginEl.hidden = false;
+    contentEl.hidden = true;
+    return false;
+  };
+
+  const renderData = async () => {
+    const res = await fetch("/api/analytics/data", { credentials: "include" });
+    if (!res.ok) {
+      await tryLogin();
+      return;
+    }
+
+    const data = await res.json();
+    const { pageviews, uniqueVisitors, topPages, topCountries, topUtmSources, embeddedBrowsers, events } = data;
+
+    const summaryEl = document.querySelector<HTMLElement>("[data-summary]");
+    const pagesEl = document.querySelector<HTMLElement>("[data-top-pages]");
+    const countriesEl = document.querySelector<HTMLElement>("[data-top-countries]");
+    const utmEl = document.querySelector<HTMLElement>("[data-top-utm]");
+    const embeddedEl = document.querySelector<HTMLElement>("[data-embedded]");
+    const eventsEl = document.querySelector<HTMLElement>("[data-events]");
+
+    if (summaryEl) {
+      summaryEl.innerHTML = `
+        <table class="dashboard__table">
+          <tr><td class="dashboard__label">pageviews</td><td class="dashboard__val"></td><td class="dashboard__val"></td><td class="dashboard__val"></td></tr>
+          <tr class="dashboard__sub"><td class="dashboard__label">${L.pageviews7d}</td><td class="dashboard__val">${fmt(pageviews.total7d)}</td><td class="dashboard__label">${L.pageviews30d}</td><td class="dashboard__val">${fmt(pageviews.total30d)}</td></tr>
+          <tr class="dashboard__sub"><td class="dashboard__label">${L.pageviewsTotal}</td><td class="dashboard__val">${fmt(pageviews.total)}</td><td class="dashboard__label">${L.uniqueVisitors}</td><td class="dashboard__val">${fmt(uniqueVisitors.total)}</td></tr>
+        </table>
+      `;
+    }
+
+    if (pagesEl) {
+      if (!topPages || topPages.length === 0) { pagesEl.textContent = L.noData; }
+      else {
+        const maxCount = topPages[0]?.count || 1;
+        pagesEl.innerHTML = `<table class="dashboard__table">${topPages.slice(0, 10).map((p: { page: string; count: number }) => `<tr><td class="dashboard__label">${p.page}</td><td class="dashboard__bar">${bar(p.count, maxCount, 14)}</td><td class="dashboard__val">${fmt(p.count)}</td></tr>`).join("")}</table>`;
+      }
+    }
+
+    if (countriesEl) {
+      if (!topCountries || topCountries.length === 0) { countriesEl.textContent = L.noData; }
+      else {
+        const maxCount = topCountries[0]?.count || 1;
+        countriesEl.innerHTML = `<table class="dashboard__table">${topCountries.slice(0, 15).map((co: { country: string; count: number }) => `<tr><td class="dashboard__label">[ ${co.country} ]</td><td class="dashboard__bar">${bar(co.count, maxCount, 14)}</td><td class="dashboard__val">${fmt(co.count)}</td></tr>`).join("")}</table>`;
+      }
+    }
+
+    if (utmEl) {
+      if (!topUtmSources || topUtmSources.length === 0) { utmEl.textContent = L.noData; }
+      else {
+        const maxCount = topUtmSources[0]?.count || 1;
+        utmEl.innerHTML = `<table class="dashboard__table">${topUtmSources.slice(0, 10).map((u: { source: string; medium: string; count: number }) => `<tr><td class="dashboard__label">${u.source} / ${u.medium}</td><td class="dashboard__bar">${bar(u.count, maxCount, 14)}</td><td class="dashboard__val">${fmt(u.count)}</td></tr>`).join("")}</table>`;
+      }
+    }
+
+    if (embeddedEl) {
+      if (!embeddedBrowsers || embeddedBrowsers.length === 0) { embeddedEl.textContent = L.noData; }
+      else {
+        const maxCount = Math.max(...embeddedBrowsers.map((b: { count: number }) => b.count), 1);
+        embeddedEl.innerHTML = `<table class="dashboard__table">${embeddedBrowsers.map((b: { browser: string; count: number }) => `<tr><td class="dashboard__label">[ in-app: ${b.browser} ]</td><td class="dashboard__bar">${bar(b.count, maxCount, 14)}</td><td class="dashboard__val">${fmt(b.count)}</td></tr>`).join("")}</table>`;
+      }
+    }
+
+    if (eventsEl) {
+      if (!events || events.length === 0) { eventsEl.textContent = L.noData; }
+      else {
+        let html = "";
+        for (const ev of events) {
+          html += `<div class="dashboard__event-block"><strong>${ev.event}</strong><br/>`;
+          html += `<span class="dashboard__event-counts">7d: ${fmt(ev.count7d)} | 30d: ${fmt(ev.count30d)} | ${L.total}: ${fmt(ev.count)}</span><br/>`;
+          if (ev.metadata && Object.keys(ev.metadata).length > 0) {
+            for (const [key, values] of Object.entries(ev.metadata) as [string, Array<{ value: string; count: number }>][]) {
+              const maxVal = Math.max(...values.map((v) => v.count), 1);
+              html += `<div class="dashboard__event-meta"><em>${L.by} ${key}:</em><br/>`;
+              for (const v of values.slice(0, 5)) {
+                html += `<span class="dashboard__event-row">${v.value} ${bar(v.count, maxVal, 12)} ${fmt(v.count)}</span><br/>`;
+              }
+              html += `</div>`;
+            }
+          }
+          html += `</div>`;
+        }
+        eventsEl.innerHTML = html;
+      }
+    }
+  };
+
+  formEl.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const formData = new FormData(formEl);
+    const res = await fetch("/api/analytics/login", { method: "POST", body: formData, credentials: "include" });
+    if (res.redirected || res.status === 302) {
+      const success = await tryLogin();
+      if (success) await renderData();
+      else errorEl.hidden = false;
+    } else {
+      errorEl.hidden = false;
+    }
+  });
+
+  const alreadyAuthed = await tryLogin();
+  if (alreadyAuthed) await renderData();
+</script>
+
+<style>
+  .dashboard-shell { width: min(100%, 520px); margin: 54px auto 0; }
+  .dashboard__ascii-title { margin: 0; font-size: clamp(5px, 1.55vw, 9.5px); line-height: 1.05; font-weight: 400; }
+  .dashboard__ascii-title pre { width: max-content; margin: 0; color: inherit; font: inherit; line-height: inherit; }
+  .dashboard__login { margin-top: 24px; }
+  .dashboard__tickets { display: grid; gap: 0; margin-top: 24px; }
+  .dashboard__table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  .dashboard__table td { padding: 2px 0; vertical-align: middle; white-space: nowrap; }
+  .dashboard__label { color: var(--muted); padding-right: 1ch; }
+  .dashboard__val { text-align: right; padding-left: 1ch; }
+  .dashboard__bar { font-size: 0.75rem; letter-spacing: -0.5px; padding: 0 1ch; color: var(--muted); }
+  .dashboard__sub .dashboard__label { color: var(--ink); font-weight: 700; }
+  .dashboard__event-block { margin-bottom: 1.32em; padding-bottom: 1.32em; border-bottom: 1px dashed var(--rule); }
+  .dashboard__event-block:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .dashboard__event-block strong { font-weight: 700; }
+  .dashboard__event-counts { color: var(--muted); font-size: 0.85rem; }
+  .dashboard__event-meta { margin-top: 4px; font-size: 0.8rem; }
+  .dashboard__event-meta em { color: var(--muted); font-style: italic; }
+  .dashboard__event-row { display: block; margin-top: 2px; font-size: 0.75rem; letter-spacing: -0.5px; }
+  .dashboard__login-form { display: grid; gap: 8px; }
+  .dashboard__field-label { color: var(--muted); }
+  .dashboard__input { font: inherit; color: inherit; background: transparent; border: 1px dashed var(--rule); padding: 6px 8px; }
+  .dashboard__input:focus { outline: 1px solid var(--ink); }
+  .dashboard__submit { font-weight: 700; margin-top: 8px; }
+  .dashboard__error { color: var(--muted); font-weight: 700; margin-top: 12px; }
+
+  @media (max-width: 699px) {
+    .dashboard-shell { margin-top: 42px; }
+    .dashboard__table { font-size: 0.78rem; }
+    .dashboard__ascii-title pre { font-size: clamp(4.5px, 2.5vw, 8px); }
+  }
+</style>

@@ -232,17 +232,135 @@ Cada artículo puede enlazar a su traducción mediante una clave compartida. Si 
 
 No deben fijarse textos visibles directamente en un componente compartido cuando formen parte del contenido localizado.
 
-## Reglas para extender el sistema
+## Dashboard de Analytics
 
-- Reutilizar `--paper`, `--ink`, `--muted` y `--rule`; no introducir colores de acento sin redefinir explícitamente la identidad visual.
-- Preferir jerarquía tipográfica, guiones, barras y espacio vertical antes que cajas gráficas nuevas.
-- Mantener una sola familia monoespaciada y la cuadrícula basada en caracteres.
-- Conservar la hoja de `720px` y la columna principal de `520px` salvo que una necesidad de lectura justifique usar el ancho completo.
-- Implementar cualquier marco ASCII con medición responsive, contenido flexible y semántica independiente de su decoración.
-- Probar cada componente en ambos temas, ambos idiomas, `320px`, el breakpoint móvil y escritorio.
-- Respetar `prefers-reduced-motion` y ofrecer fallbacks cuando canvas, shaders o JavaScript no estén disponibles.
-- Evitar radios de borde, degradados de interfaz, iconografía ornamental, múltiples sombras y tipografías de display: contradicen el lenguaje de recibo impreso.
-- Mantener el tono directo y humano. La interfaz debe sentirse escrita y construida por una persona, no como una plantilla corporativa.
+Se accede mediante ruta protegida (`/es/dashboard` y `/en/dashboard`) con verificación de `DASHBOARD_TOKEN`. Mantiene toda la estética de recibo: tickets ASCII, JetBrains Mono, paleta `--paper/--ink/--muted/--rule`, tema claro/oscuro, responsive.
+
+### Datos recolectados
+
+Cada pageview envía al endpoint `/api/analytics/track`:
+
+- **Página:** pathname, referer.
+- **País:** resuelto desde `CloudFront-Viewer-Country` (o header genérico `x-vercel-ip-country` como fallback).
+- **UTM:** `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `utm_term` extraídos de la query string si existen.
+- **Browser integrado:** detección via `User-Agent` para identificar LinkedIn (`LinkedIn`), Instagram (`Instagram`), Facebook (`FBAV` o `FBAN`), Twitter/X (`Twitter`), TikTok (`musical_ly`). Se almacena como `embedded: "linkedin" | "instagram" | "facebook" | "twitter" | "tiktok" | null`.
+- **Timestamp:** `Date.now()`.
+- **ID:** hash efímero del `navigator.userAgent + fecha` para agrupar sesiones sin cookies.
+
+### Eventos
+
+Los eventos se envían desde el cliente con la misma función `track()` que reemplaza a `@vercel/analytics`. La función envía un `POST` a `/api/analytics/track` con el payload del evento.
+
+#### API del cliente
+
+```ts
+track(eventName: string, metadata?: Record<string, string | number>)
+```
+
+Se importa como módulo regular (no `is:inline`) y se usa así:
+
+```ts
+import { track } from "../lib/analytics";
+
+track("pptx-converted", { fileSize: blob.size, font: "helvetica" });
+```
+
+#### Eventos definidos
+
+| Evento | Dónde se dispara | Metadata |
+| --- | --- | --- |
+| `pptx-converted` | `pptx-to-pdf.astro`, al generar PDF exitosamente | `fileSize` (bytes), `font`, `size`, `alignment`, `orientation` |
+| `pptx-error` | `pptx-to-pdf.astro`, al fallar la conversión | `reason` (`"notPptx"`, `"tooBig"`, `"format"`, `"empty"`, `"unexpected"`) |
+| `pptx-preview-opened` | `pptx-to-pdf.astro`, al mostrar la vista previa | `slideCount`, `needsReviewCount` |
+| `pageview` | Automático en cada carga de página | _(ya cubierto por pageview automático)_ |
+
+#### Registro de eventos en el dashboard
+
+Cada evento tiene su propio ticket ASCII con:
+
+- **Nombre del evento** en peso 700.
+- **Conteo total** (7d, 30d, todo el tiempo).
+- **Desglose por metadata:** tabla con `|` mostrando la distribución.
+
+Ejemplo para `pptx-converted`:
+
+```
+|----------------------------------------------|
+|  evento: pptx-converted                     |
+|  ------------------------------------------ |
+|  últimos 7 días:     23                     |
+|  últimos 30 días:    89                     |
+|  total:             312                     |
+|                                              |
+|  por fuente:                                  |
+|  helvetica  |  ████████████████░░  |  68%   |
+|  times      |  ████░░░░░░░░░░░░░░  |  19%   |
+|  courier    |  ██░░░░░░░░░░░░░░░░  |  13%   |
+|                                              |
+|  por tamaño:                                  |
+|  medium     |  ████████████████░░  |  54%   |
+|  small      |  ██████░░░░░░░░░░░░  |  28%   |
+|  large      |  ████░░░░░░░░░░░░░░  |  18%   |
+|----------------------------------------------|
+```
+
+Ejemplo para errores:
+
+```
+|----------------------------------------------|
+|  evento: pptx-error                          |
+|  ------------------------------------------ |
+|  últimos 7 días:      4                     |
+|  últimos 30 días:    11                     |
+|  total:              37                     |
+|                                              |
+|  por razón:                                   |
+|  notPptx    |  ████████████████░░  |  45%   |
+|  tooBig     |  ██████░░░░░░░░░░░░  |  22%   |
+|  empty      |  ████░░░░░░░░░░░░░░  |  18%   |
+|  format     |  ██░░░░░░░░░░░░░░░░  |  10%   |
+|  unexpected |  █░░░░░░░░░░░░░░░░░  |   5%   |
+|----------------------------------------------|
+```
+
+### Dashboard visual
+
+Cada métrica se presenta como un ticket ASCII:
+
+```
+|------------------------------|
+|  pageviews                  |
+|  -------------------------- |
+|  últimos 7 días: 1,234      |
+|  últimos 30 días: 4,567     |
+|------------------------------|
+```
+
+Secciones del dashboard (en orden):
+
+1. **Resumen:** pageviews totales (7d, 30d), visitantes únicos estimados.
+2. **Top páginas:** lista de pathnames más visitados con contador.
+3. **Top países:** lista de países con contador y gráfico de barras ASCII.
+4. **Top fuentes UTM:** tabla de `utm_source` + `utm_medium` con conteo.
+5. **Browsers integrados:** cuántos vienen de LinkedIn, Instagram, etc. Formato: `[ in-app: linkedin ] 87`.
+6. **Eventos:** un ticket por cada tipo de evento con conteos y desgloses (ver sección Eventos arriba).
+7. **Gráfico ASCII:** barras horizontales con caracteres `█` y `▓` proporcional al valor, para países y fuentes.
+
+### Almacenamiento
+
+- `data/analytics.json` — archivo JSON con array de entradas.
+- Cada entrada: `{ ts, page, referrer, country, utm_source, utm_medium, utm_campaign, embedded, sessionId, event?, eventData? }`.
+- Pageviews: `event` es `undefined`. Eventos: `event` es el nombre string y `eventData` es el objeto de metadata.
+- Compresión: cada 24h se puede compactar agregando counts por día y borrando entries crudas (opcional, fase 2).
+
+### Reglas específicas del dashboard
+
+- No usar gráficos de barras CSS ni librerías de charts. Todo con texto y caracteres.
+- Las tablas de datos usan pipes `|` y guiones `-` como separadores.
+- El token de acceso se verifica con `request.headers.get("cookie")` o `?token=` query param.
+- El dashboard no se indexa (`noindex`).
+- Los datos de país y browser integrado se obtienen server-side en la API route para evitar spoofing.
+- Sin cookies de tracking, sin fingerprinting invasivo. Privacidad primero.
 
 ## Checklist de revisión
 

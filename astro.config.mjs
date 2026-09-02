@@ -1,6 +1,7 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
+import vercel from '@astrojs/vercel';
 import { unified } from '@astrojs/markdown-remark';
 
 const addImageLoadingAttributes = () => (tree) => {
@@ -22,6 +23,8 @@ const addImageLoadingAttributes = () => (tree) => {
 // https://astro.build/config
 export default defineConfig({
   site: 'https://dapan.es',
+  output: 'server',
+  adapter: vercel(),
   integrations: [
     sitemap({
       filter: (page) => page !== 'https://dapan.es/' && !page.endsWith('/404.html'),

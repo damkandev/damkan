@@ -89,6 +89,35 @@ export const copy = {
         ignored: "Ignorar",
       },
     },
+    dashboard: {
+      pageTitle: "Dashboard",
+      metaDescription: "Analíticas del sitio dapan.es",
+      title: "dashboard",
+      back: "<< Volver al inicio",
+      sections: {
+        summary: "resumen",
+        pages: "top páginas",
+        countries: "países",
+        utm: "fuentes utm",
+        embedded: "browsers integrados",
+        events: "eventos",
+      },
+      labels: {
+        pageviews7d: "últimos 7 días",
+        pageviews30d: "últimos 30 días",
+        pageviewsTotal: "total",
+        uniqueVisitors: "visitantes únicos",
+        by: "por",
+        total: "total",
+        noData: "sin datos aún",
+      },
+      login: {
+        user: "usuario",
+        password: "contraseña",
+        submit: "ENTRAR >>",
+        error: "credenciales inválidas",
+      },
+    },
   },
   en: {
     title: "Damián Panes | Programmer and founder",
@@ -174,8 +203,38 @@ export const copy = {
         ignored: "Ignore",
       },
     },
+    dashboard: {
+      pageTitle: "Dashboard",
+      metaDescription: "dapan.es site analytics",
+      title: "dashboard",
+      back: "<< Back home",
+      sections: {
+        summary: "summary",
+        pages: "top pages",
+        countries: "countries",
+        utm: "utm sources",
+        embedded: "in-app browsers",
+        events: "events",
+      },
+      labels: {
+        pageviews7d: "last 7 days",
+        pageviews30d: "last 30 days",
+        pageviewsTotal: "total",
+        uniqueVisitors: "unique visitors",
+        by: "by",
+        total: "total",
+        noData: "no data yet",
+      },
+      login: {
+        user: "user",
+        password: "password",
+        submit: "ENTER >>",
+        error: "invalid credentials",
+      },
+    },
   },
 } as const;
 
 export const homePath = (locale: Locale) => `/${locale}/`;
 export const articlePath = (locale: Locale, slug: string) => `/${locale}/articles/${slug}/`;
+export const dashboardPath = (locale: Locale) => `/${locale}/dashboard/`;

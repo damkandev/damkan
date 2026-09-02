@@ -4,6 +4,8 @@ import AsciiTitle from "../../components/AsciiTitle.astro";
 import { MAX_PPTX_BYTES } from "../../lib/pptx-to-pdf";
 import { copy, homePath, isLocale, locales, type Locale } from "../../lib/site";
 
+export const prerender = true;
+
 export function getStaticPaths() {
   return locales.map((lang) => ({ params: { lang } }));
 }
@@ -94,7 +96,7 @@ const seoTitle = `${c.pageTitle} | Damián Panes`;
 </BaseLayout>
 
 <script>
-  import { track } from "@vercel/analytics";
+  import { track } from "../../lib/analytics";
   import {
     PptxParseError,
     hasExtractableText,
@@ -257,10 +259,12 @@ const seoTitle = `${c.pageTitle} | Damián Panes`;
 
       if (!/\.pptx$/i.test(file.name)) {
         fail(message("notPptx"));
+        track("pptx-error", { reason: "notPptx" });
         return;
       }
       if (file.size > maxBytes) {
         fail(message("tooBig"));
+        track("pptx-error", { reason: "tooBig" });
         return;
       }
 
@@ -270,12 +274,16 @@ const seoTitle = `${c.pageTitle} | Damián Panes`;
         if (!hasExtractableText(parsed)) throw new PptxParseError("empty");
         parsedData = parsed;
         renderPreview(parsed);
+        track("pptx-preview-opened", { slideCount: parsed.slides.length, needsReviewCount: parsed.slides.filter((s) => s.needsReview).length });
         setStatus(`${message("selected")} ${file.name} (${formatSize(file.size)})`, "ok");
       } catch (error: unknown) {
-        if (error instanceof PptxParseError) fail(message(error.reason));
-        else {
+        if (error instanceof PptxParseError) {
+          fail(message(error.reason));
+          track("pptx-error", { reason: error.reason });
+        } else {
           console.error(error);
           fail(message("unexpected"));
+          track("pptx-error", { reason: "unexpected" });
         }
       }
     });
@@ -316,10 +324,11 @@ const seoTitle = `${c.pageTitle} | Damián Panes`;
         downloadElement.hidden = false;
         downloadElement.click();
         setStatus(`${message("done")} ${pdfName} (${formatSize(blob.size)})`, "ok");
-        track("pptx-to-pdf-convert", { fileName: pdfName, fileSize: blob.size, font: options.font, size: options.size, alignment: options.alignment, orientation: options.orientation });
+        track("pptx-converted", { fileSize: blob.size, font: options.font, size: options.size, alignment: options.alignment, orientation: options.orientation });
       } catch (error: unknown) {
         console.error(error);
         fail(message("unexpected"));
+        track("pptx-error", { reason: "unexpected" });
       } finally {
         finish();
       }

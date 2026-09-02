@@ -9,6 +9,8 @@ import testimonialTwo from "../../public/2.png";
 import testimonialTwoEn from "../../public/2_en.png";
 import { articlePath, copy, isLocale, locales, type Locale } from "../../lib/site";
 
+export const prerender = true;
+
 export function getStaticPaths() {
   return locales.map((lang) => ({ params: { lang } }));
 }

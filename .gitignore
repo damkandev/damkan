@@ -16,6 +16,11 @@ pnpm-debug.log*
 # environment variables
 .env
 .env.production
+.env.local
+
+# analytics data
+data/analytics.json
+data/.analytics.lock
 
 # macOS-specific files
 .DS_Store
