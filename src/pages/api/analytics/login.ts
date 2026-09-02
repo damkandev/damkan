@@ -1,7 +1,6 @@
----
-import type { APIRoute } from "astro";
+export const prerender = false;
 
-export const POST: APIRoute = async ({ request }) => {
+export async function POST({ request }: { request: Request }) {
   const formData = await request.formData();
   const user = formData.get("user") as string;
   const pass = formData.get("password") as string;
@@ -26,5 +25,3 @@ export const POST: APIRoute = async ({ request }) => {
     },
   });
 };
-
-export const prerender = false;
