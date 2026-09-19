@@ -145,6 +145,7 @@ const structuredData = noindex
         ShaderMount,
         getShaderColorFromString,
         getShaderNoiseTexture,
+        emptyPixel,
         paperTextureFragmentShader,
       } from "@paper-design/shaders";
 
@@ -159,35 +160,39 @@ const structuredData = noindex
       });
 
       if (host) {
-        try {
-          shader = new ShaderMount(host, paperTextureFragmentShader, {
-            u_image: undefined,
-            u_noiseTexture: getShaderNoiseTexture(),
-            ...colors(),
-            u_contrast: 0.18,
-            u_roughness: 0.48,
-            u_fiber: 0.24,
-            u_fiberSize: 0.18,
-            u_crumples: 0.22,
-            u_crumpleSize: 0.42,
-            u_foldCount: 4,
-            u_folds: 0.22,
-            u_fade: 0.12,
-            u_drops: 0.08,
-            u_seed: 8.13,
-            u_fit: ShaderFitOptions.cover,
-            u_scale: 0.75,
-            u_rotation: 0,
-            u_offsetX: 0,
-            u_offsetY: 0,
-            u_originX: 0.5,
-            u_originY: 0.5,
-            u_worldWidth: 0,
-            u_worldHeight: 0,
-          }, undefined, 0, 0, 1, 2073600);
-        } catch {
-          host.dataset.failed = "true";
-        }
+        const image = new Image();
+        image.onload = () => {
+          try {
+            shader = new ShaderMount(host, paperTextureFragmentShader, {
+              u_image: image,
+              u_noiseTexture: getShaderNoiseTexture(),
+              ...colors(),
+              u_contrast: 0.22,
+              u_roughness: 0.5,
+              u_fiber: 0.28,
+              u_fiberSize: 0.18,
+              u_crumples: 0.18,
+              u_crumpleSize: 0.42,
+              u_foldCount: 4,
+              u_folds: 0.22,
+              u_fade: 0.12,
+              u_drops: 0.08,
+              u_seed: 8.13,
+              u_fit: ShaderFitOptions.cover,
+              u_scale: 0.75,
+              u_rotation: 0,
+              u_offsetX: 0,
+              u_offsetY: 0,
+              u_originX: 0.5,
+              u_originY: 0.5,
+              u_worldWidth: 0,
+              u_worldHeight: 0,
+            }, undefined, 0, 0, 1, 2073600);
+          } catch {
+            host.dataset.failed = "true";
+          }
+        };
+        image.src = emptyPixel;
       }
 
       document.querySelectorAll<HTMLButtonElement>("[data-set-theme]").forEach((button) => {
