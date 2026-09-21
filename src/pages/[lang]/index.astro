@@ -28,10 +28,16 @@ const articlesPerPage = 3;
 const articlePageCount = Math.ceil(articles.length / articlesPerPage);
 ---
 <BaseLayout locale={locale}>
-  <main class="receipt">
-    <AsciiTitle kind="logo" locale={locale} />
-    <p class="intro">{c.bio}</p>
+  <section class="hero" aria-labelledby="hero-heading">
+    <div class="aizawa" data-aizawa aria-hidden="true"><pre></pre></div>
+    <div class="hero__content">
+      <AsciiTitle kind="logo" locale={locale} />
+      <p id="hero-heading" class="intro">{c.bio}</p>
+      <p class="hero__prompt">Desliza abajo para leer más...</p>
+    </div>
+  </section>
 
+  <main class="receipt">
     <section class="testimonials" aria-labelledby="testimonials-heading">
       <div class="testimonials-grid">
         <img src={testimonials[0].src} width={testimonials[0].width} height={testimonials[0].height} alt={locale === "es" ? "Mensaje de Juan Sutil Palma elogiando la página de Damián" : "Message from Juan Sutil Palma praising Damián's website"} />
@@ -93,6 +99,129 @@ const articlePageCount = Math.ceil(articles.length / articlesPerPage);
 </BaseLayout>
 
 <script>
+  const attractor = document.querySelector<HTMLElement>("[data-aizawa]");
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const layers = 12;
+  const thickness = 2;
+  const trailLength = 800;
+  const offsetX = 0;
+  const offsetY = 0;
+  const themeDefaults = document.documentElement.dataset.theme === "dark"
+    ? { opacity: 0.35, weight: 500, size: 9 }
+    : { opacity: 0.6, weight: 500, size: 9 };
+
+  if (attractor) {
+    attractor.style.opacity = String(themeDefaults.opacity);
+    attractor.style.setProperty("--aizawa-weight", String(themeDefaults.weight));
+    attractor.style.setProperty("--aizawa-size", `${themeDefaults.size}px`);
+  }
+
+  if (attractor && !reducedMotion.matches) {
+    const output = attractor.querySelector("pre");
+    const states = Array.from({ length: 12 }, (_, index) => ({
+      x: 0.1 + (index % 4 - 1.5) * 0.025,
+      y: (Math.floor(index / 4) - 1) * 0.025,
+      z: index * 0.003,
+    }));
+    const trail: { x: number; y: number; age: number }[] = [];
+    const colors = document.documentElement.dataset.theme === "dark"
+      ? [[218, 255, 166], [216, 232, 174], [214, 207, 185], [220, 178, 205], [255, 152, 236]]
+      : [[158, 183, 122], [164, 180, 128], [174, 169, 137], [187, 145, 162], [193, 97, 175]];
+    let lastFrame = 0;
+
+    const trailColor = (age: number) => {
+      const progress = Math.min(0.999, age / (trailLength / 5) / 0.65);
+      const position = progress * (colors.length - 1);
+      const index = Math.floor(position);
+      const amount = position - index;
+      const start = colors[index];
+      const end = colors[index + 1] ?? start;
+      return start.map((channel, i) => Math.round(channel + (end[i] - channel) * amount)).join(",");
+    };
+
+    const draw = (time: number) => {
+      if (time - lastFrame < 33) {
+        requestAnimationFrame(draw);
+        return;
+      }
+      lastFrame = time;
+      const styles = getComputedStyle(attractor.querySelector("pre") ?? attractor);
+      const fontSize = parseFloat(styles.fontSize) || 8.4;
+      const characterWidth = fontSize * 0.6;
+      const lineHeight = parseFloat(styles.lineHeight) || fontSize * 1.32;
+      const width = Math.max(32, Math.floor(attractor.clientWidth / characterWidth));
+      const height = Math.max(24, Math.floor(attractor.clientHeight / lineHeight));
+      const intensity = new Float32Array(width * height);
+      const ages = new Float32Array(width * height);
+
+      for (let step = 0; step < 5; step += 1) {
+        states.slice(0, layers).forEach((state) => {
+          const dx = (state.z - 0.7) * state.x - 3.5 * state.y;
+          const dy = 3.5 * state.x + (state.z - 0.7) * state.y;
+          const dz = 0.6 + 0.95 * state.z - state.z ** 3 / 3 - (state.x ** 2 + state.y ** 2) * (1 + 0.25 * state.z) + 0.1 * state.z * state.x ** 3;
+          state.x += dx * 0.01;
+          state.y += dy * 0.01;
+          state.z += dz * 0.01;
+          trail.push({ x: state.x, y: state.y, age: 0 });
+        });
+      }
+
+      trail.forEach((point) => { point.age += 1; });
+      trail.splice(0, Math.max(0, trail.length - layers * trailLength));
+      trail.forEach((point) => {
+        const centerX = Math.round(width / 2 + point.x / 2.35 * width + offsetX / 100 * width);
+        const centerY = Math.round(height / 2 - point.y / 2.35 * height + offsetY / 100 * height);
+        const fade = Math.max(0, 1 - point.age / (trailLength / 5));
+        for (let y = -thickness; y <= thickness; y += 1) {
+          for (let x = -thickness; x <= thickness; x += 1) {
+            const distance = Math.hypot(x, y);
+            if (distance > thickness) continue;
+            const column = centerX + x;
+            const row = centerY + y;
+            if (column >= 0 && column < width && row >= 0 && row < height) {
+              const index = row * width + column;
+              const value = fade * (1 - distance / (thickness + 1));
+              if (value > intensity[index]) {
+                intensity[index] = value;
+                ages[index] = point.age;
+              }
+            }
+          }
+        }
+      });
+
+      const chars = " .:+*#";
+      if (output) {
+        const fragment = document.createDocumentFragment();
+        for (let row = 0; row < height; row += 1) {
+          let text = "";
+          for (let column = 0; column < width; column += 1) {
+            const value = intensity[row * width + column];
+            const character = chars[Math.min(chars.length - 1, Math.floor(value * chars.length))];
+            if (character === " ") {
+              text += character;
+              continue;
+            }
+            if (text) {
+              fragment.append(text);
+              text = "";
+            }
+            const span = document.createElement("span");
+            span.textContent = character;
+            span.style.color = `rgb(${trailColor(ages[row * width + column])})`;
+            fragment.append(span);
+          }
+          if (text) fragment.append(text);
+          if (row < height - 1) fragment.append("\n");
+        }
+        output.replaceChildren(fragment);
+      }
+      requestAnimationFrame(draw);
+    };
+
+    requestAnimationFrame(draw);
+  }
+
   const list = document.querySelector<HTMLElement>("[data-articles-list]");
   const pagination = document.querySelector<HTMLElement>("[data-articles-pagination]");
 
