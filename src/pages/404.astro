@@ -49,7 +49,7 @@ export const prerender = true;
 
       document.documentElement.lang = language;
       document.title = content.documentTitle;
-      document.querySelector(".site-chrome").setAttribute("aria-label", english ? "Language and theme" : "Idioma y tema");
+      document.querySelector(".site-chrome").setAttribute("aria-label", english ? "Language" : "Idioma");
       document.querySelector("[data-not-found-title]").textContent = content.title;
       document.querySelector("[data-not-found-copy]").textContent = content.copy;
       const home = document.querySelector("[data-not-found-home]");
@@ -63,8 +63,6 @@ export const prerender = true;
         if (targetLanguage === language) link.setAttribute("aria-current", "page");
         else link.removeAttribute("aria-current");
       });
-      document.querySelector('[data-set-theme="dark"]').textContent = english ? "DARK" : "OSCURO";
-      document.querySelector('[data-set-theme="light"]').textContent = english ? "LIGHT" : "CLARO";
     })();
   </script>
 </BaseLayout>

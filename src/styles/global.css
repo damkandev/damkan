@@ -1,21 +1,12 @@
 :root {
-  color-scheme: light;
-  --paper: #fffdf8;
-  --paper-texture-opacity: 0.76;
-  --ink: #181714;
-  --muted: #57534b;
-  --rule: rgba(24, 23, 20, 0.72);
-  font-family: "JetBrains Mono", monospace;
-  font-size: 17px;
-}
-
-:root[data-theme="dark"] {
   color-scheme: dark;
   --paper: #171612;
   --paper-texture-opacity: 0.62;
   --ink: #eee9df;
   --muted: #b8b1a5;
   --rule: rgba(238, 233, 223, 0.72);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 17px;
 }
 
 * { box-sizing: border-box; }

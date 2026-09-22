@@ -106,9 +106,7 @@ const articlePageCount = Math.ceil(articles.length / articlesPerPage);
   const trailLength = 800;
   const offsetX = 0;
   const offsetY = 0;
-  const themeDefaults = document.documentElement.dataset.theme === "dark"
-    ? { opacity: 0.35, weight: 500, size: 9 }
-    : { opacity: 0.6, weight: 500, size: 9 };
+  const themeDefaults = { opacity: 0.35, weight: 500, size: 9 };
 
   if (attractor) {
     attractor.style.opacity = String(themeDefaults.opacity);
@@ -124,9 +122,7 @@ const articlePageCount = Math.ceil(articles.length / articlesPerPage);
       z: index * 0.003,
     }));
     const trail: { x: number; y: number; age: number }[] = [];
-    const colors = document.documentElement.dataset.theme === "dark"
-      ? [[218, 255, 166], [216, 232, 174], [214, 207, 185], [220, 178, 205], [255, 152, 236]]
-      : [[158, 183, 122], [164, 180, 128], [174, 169, 137], [187, 145, 162], [193, 97, 175]];
+    const colors = [[218, 255, 166], [216, 232, 174], [214, 207, 185], [220, 178, 205], [255, 152, 236]];
     let lastFrame = 0;
 
     const trailColor = (age: number) => {

@@ -118,11 +118,6 @@ const structuredData = noindex
     {structuredData && <script type="application/ld+json" set:html={JSON.stringify(structuredData)}></script>}
     <script is:inline>
       (() => {
-        const stored = localStorage.getItem("theme");
-        const theme = stored === "light" || stored === "dark"
-          ? stored
-          : matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-        document.documentElement.dataset.theme = theme;
         if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
           document.documentElement.setAttribute("data-printing", "true");
           setTimeout(() => document.documentElement.removeAttribute("data-printing"), 5000);
@@ -151,12 +146,10 @@ const structuredData = noindex
 
       const host = document.querySelector<HTMLElement>("#paper-texture");
       let shader: ShaderMount | undefined;
-      const palette = () => document.documentElement.dataset.theme === "dark"
-        ? { front: "#25231f", back: "#171612" }
-        : { front: "#ebe4d7", back: "#fffdf8" };
+      const palette = { front: "#25231f", back: "#171612" };
       const colors = () => ({
-        u_colorFront: getShaderColorFromString(palette().front),
-        u_colorBack: getShaderColorFromString(palette().back),
+        u_colorFront: getShaderColorFromString(palette.front),
+        u_colorBack: getShaderColorFromString(palette.back),
       });
 
       if (host) {
@@ -194,23 +187,6 @@ const structuredData = noindex
         };
         image.src = emptyPixel;
       }
-
-      document.querySelectorAll<HTMLButtonElement>("[data-set-theme]").forEach((button) => {
-        const syncPressedState = () => {
-          button.setAttribute("aria-pressed", String(button.dataset.setTheme === document.documentElement.dataset.theme));
-        };
-        syncPressedState();
-        button.addEventListener("click", () => {
-          const theme = button.dataset.setTheme;
-          if (theme !== "light" && theme !== "dark") return;
-          document.documentElement.dataset.theme = theme;
-          localStorage.setItem("theme", theme);
-          shader?.setUniforms(colors());
-          document.querySelectorAll<HTMLButtonElement>("[data-set-theme]").forEach((candidate) => {
-            candidate.setAttribute("aria-pressed", String(candidate.dataset.setTheme === theme));
-          });
-        });
-      });
 
       const measureCharacter = (element: HTMLElement) => {
         const probe = document.createElement("span");

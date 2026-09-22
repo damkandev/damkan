@@ -19,8 +19,6 @@ export const copy = {
     socials: "Por si algún día revivo en redes sociales y subo algo interesante y no te lo quieres perder, puedes seguirme en cualquiera de ellas... Pero si te tengo que recomendar algo, mejor desinstálalas.",
     readMore: "Leer más >>",
     back: "<< Volver al inicio",
-    light: "CLARO",
-    dark: "OSCURO",
     pptxToPdf: {
       pageTitle: "PPTX a PDF",
       metaDescription:
@@ -133,8 +131,6 @@ export const copy = {
     socials: "If I ever come back to social media and post something interesting you don't want to miss, you can follow me on any of these... Though if I had to recommend something, delete them instead.",
     readMore: "Read more >>",
     back: "<< Back home",
-    light: "LIGHT",
-    dark: "DARK",
     pptxToPdf: {
       pageTitle: "PPTX to PDF",
       metaDescription:

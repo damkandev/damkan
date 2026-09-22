@@ -22,18 +22,18 @@ La estética debe sentirse deliberadamente austera, no incompleta. Cada incorpor
 
 ### Paleta
 
-La paleta se define mediante variables CSS y cambia según `data-theme` en el elemento `<html>`.
+La paleta es siempre oscura y se define mediante variables CSS.
 
-| Token | Tema claro | Tema oscuro | Uso |
-| --- | --- | --- | --- |
-| `--paper` | `#fffdf8` | `#171612` | Fondo principal de la página |
-| `--ink` | `#181714` | `#eee9df` | Texto y controles |
-| `--muted` | `#57534b` | `#b8b1a5` | Metadatos y texto secundario |
-| `--rule` | `rgba(24, 23, 20, 0.72)` | `rgba(238, 233, 223, 0.72)` | Bordes y reglas ASCII |
+| Token | Valor | Uso |
+| --- | --- | --- |
+| `--paper` | `#171612` | Fondo principal de la página |
+| `--ink` | `#eee9df` | Texto y controles |
+| `--muted` | `#b8b1a5` | Metadatos y texto secundario |
+| `--rule` | `rgba(238, 233, 223, 0.72)` | Bordes y reglas ASCII |
 
-El fondo exterior del documento permanece en `#1c1c1c` en ambos temas. En escritorio, la hoja usa una sombra `0 0 48px rgba(0, 0, 0, 0.28)`.
+El fondo exterior del documento permanece en `#1c1c1c`. En escritorio, la hoja usa una sombra `0 0 48px rgba(0, 0, 0, 0.28)`.
 
-La textura de papel se genera con `@paper-design/shaders`. En claro mezcla `#ebe4d7` con `#fffdf8`; en oscuro mezcla `#25231f` con `#171612`. La textura es ambiental: nunca debe reducir la legibilidad ni competir con el contenido.
+La textura de papel se genera con `@paper-design/shaders` y mezcla `#25231f` con `#171612`. La textura es ambiental: nunca debe reducir la legibilidad ni competir con el contenido.
 
 ### Tipografía
 
@@ -74,26 +74,20 @@ Los nuevos espacios deben alinearse con múltiplos aproximados del interlineado 
 
 ### Navegación superior
 
-`SiteChrome` muestra dos controles compactos y centrados:
+`SiteChrome` muestra un control compacto y centrado:
 
 ```text
-[ ES | EN ] [ OSCURO | CLARO ]
+[ ES | EN ]
 ```
 
 - El idioma actual se indica con `aria-current="page"` y peso 700.
-- El tema activo se indica con `aria-pressed="true"` y peso 700.
 - Los corchetes y barras son parte de la identidad tipográfica y no deben sustituirse por cajas o iconos.
-- Los enlaces y botones se subrayan al pasar el cursor, con un desplazamiento de `0.2em`.
+- Los enlaces se subrayan al pasar el cursor, con un desplazamiento de `0.2em`.
 - En móvil, la navegación usa `0.92rem` y reduce el espacio entre elementos para mantenerse en una línea.
 
 ### Tema
 
-El tema inicial se resuelve antes de pintar la página para evitar un destello incorrecto:
-
-1. Se usa el valor `light` o `dark` almacenado en `localStorage.theme`.
-2. Si no existe, se respeta `prefers-color-scheme`.
-3. Al elegir un tema, se actualizan `data-theme`, `localStorage`, los estados `aria-pressed` y los colores del shader.
-
+La página usa siempre el tema oscuro y no ofrece selector ni persistencia de tema.
 ### Bordes ASCII adaptables
 
 Los separadores y tickets calculan el ancho real de un carácter monoespaciado y generan la cantidad exacta de caracteres que cabe en su contenedor. Un `ResizeObserver` vuelve a dibujarlos cuando cambia el tamaño.
@@ -217,7 +211,6 @@ Todo efecto futuro debe proporcionar un comportamiento equivalente sin movimient
 - Las secciones de portada se conectan a sus descripciones mediante `aria-labelledby`.
 - El arte ASCII visual se oculta con `aria-hidden="true"`; su encabezado conserva una etiqueta textual comprensible.
 - Las reglas y rieles decorativos no se anuncian a tecnologías de asistencia.
-- Los controles de tema son botones reales y exponen su estado con `aria-pressed`.
 - El idioma activo usa `aria-current` y el documento declara el atributo `lang` correcto.
 - Las imágenes significativas requieren alternativas localizadas; las decorativas deben marcarse como tales.
 - Los enlaces externos usan `rel="noopener noreferrer"`.
@@ -234,7 +227,7 @@ No deben fijarse textos visibles directamente en un componente compartido cuando
 
 ## Dashboard de Analytics
 
-Se accede mediante ruta protegida (`/es/dashboard` y `/en/dashboard`) con verificación de `DASHBOARD_TOKEN`. Mantiene toda la estética de recibo: tickets ASCII, JetBrains Mono, paleta `--paper/--ink/--muted/--rule`, tema claro/oscuro, responsive.
+Se accede mediante ruta protegida (`/es/dashboard` y `/en/dashboard`) con verificación de `DASHBOARD_TOKEN`. Mantiene toda la estética de recibo: tickets ASCII, JetBrains Mono, paleta `--paper/--ink/--muted/--rule`, tema oscuro, responsive.
 
 ### Datos recolectados
 
@@ -368,8 +361,7 @@ Antes de publicar un cambio visual, comprobar:
 
 - La página no presenta overflow horizontal desde `320px`.
 - Los bordes ASCII permanecen cerrados y alineados después de redimensionar.
-- El contenido es legible en claro y oscuro.
-- El estado de tema persiste y coincide con `aria-pressed`.
+- El contenido permanece legible en modo oscuro.
 - Español e inglés tienen contenido y rutas coherentes.
 - La página funciona con movimiento reducido y sin shader.
 - Títulos, secciones y controles mantienen semántica de HTML correcta.
