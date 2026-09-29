@@ -30,7 +30,7 @@ export default defineConfig({
       filter: (page) =>
         page !== 'https://dapan.es/' &&
         !page.endsWith('/404.html') &&
-        decodeURIComponent(new URL(page).pathname) !== '/toñi/',
+        decodeURIComponent(new URL(page).pathname) !== '/toni/',
     }),
   ],
   markdown: {
