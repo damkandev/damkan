@@ -49,6 +49,22 @@ html[data-printing] .page-shell { clip-path: inset(0 0 100% 0); box-shadow: none
 }
 .aizawa { --aizawa-size: 9px; --aizawa-weight: 500; position: absolute; top: 0; right: 0; left: 0; z-index: 0; height: 100vh; overflow: hidden; color: var(--muted); opacity: 0; transition: opacity 1.1s ease-out 0.1s; pointer-events: none; }
 .aizawa canvas { display: block; width: 100%; height: 100%; }
+/* Scroll parallax. Driven by a scroll-linked animation so it runs on the
+   compositor and stays glued to the scroll position: writing the transform
+   from JS ties it to the render loop's ~30fps tick, which is invisible when
+   scrolling slowly but steps badly during a fast flick. JS falls back to
+   writing the transform itself where this isn't supported. */
+@keyframes aizawa-parallax {
+  to { transform: translateY(var(--aizawa-parallax-distance, 0px)); }
+}
+@supports (animation-timeline: scroll()) {
+  .aizawa {
+    animation-name: aizawa-parallax;
+    animation-timing-function: linear;
+    animation-fill-mode: both;
+    animation-timeline: scroll(root block);
+  }
+}
 .ascii-title { margin: 0; overflow: hidden; font-size: 6.76px; line-height: 1.05; font-weight: 400; }
 .ascii-title pre { width: max-content; margin: 0; color: inherit; font: inherit; line-height: inherit; }
 .ascii-title--logo { margin-bottom: 20px; }

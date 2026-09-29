@@ -177,6 +177,10 @@ const articlePageCount = Math.ceil(articles.length / articlesPerPage);
     let pointerTiltY = 0;
     const hoverRadius = 70;
     const hoverRadiusSquared = hoverRadius * hoverRadius;
+    const parallaxFactor = 0.15;
+    // Where supported the parallax is a scroll-linked CSS animation running on
+    // the compositor, so JS must not fight it by writing `transform` itself.
+    const compositedParallax = CSS.supports("animation-timeline", "scroll()");
     let hasPointer = false;
     let pointerClientX = 0;
     let pointerClientY = 0;
@@ -282,14 +286,38 @@ const articlePageCount = Math.ceil(articles.length / articlesPerPage);
       attractor.style.transform = previousTransform;
     };
 
+    // The CSS animation maps the whole scroll range onto a translation, so it
+    // needs the total distance in pixels. Page height changes rarely (fonts,
+    // resize, paginating the article list), so it's recomputed on those rather
+    // than per frame.
+    const updateParallaxDistance = () => {
+      const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+      attractor.style.setProperty("--aizawa-parallax-distance", `${maxScroll * parallaxFactor}px`);
+    };
+
     measure();
-    document.fonts?.ready?.then(measure);
-    window.addEventListener("resize", measure, { passive: true });
+    updateParallaxDistance();
+    document.fonts?.ready?.then(() => {
+      measure();
+      updateParallaxDistance();
+    });
+    window.addEventListener("resize", () => {
+      measure();
+      updateParallaxDistance();
+    }, { passive: true });
+    new ResizeObserver(updateParallaxDistance).observe(document.body);
 
     const draw = (time: number) => {
       if (!onScreen) {
         looping = false;
         return;
+      }
+      const scrollY = window.scrollY;
+      const parallaxOffset = scrollY * parallaxFactor;
+      if (!compositedParallax) {
+        // Fallback path: update the parallax every animation frame rather than
+        // on the throttled simulation tick, so a fast scroll doesn't step.
+        attractor.style.transform = `translateY(${parallaxOffset}px)`;
       }
       if (time - lastFrame < 33) {
         requestAnimationFrame(draw);
@@ -322,7 +350,6 @@ const articlePageCount = Math.ceil(articles.length / articlesPerPage);
       autoAngle += autoRotationSpeed;
       pointerTiltX += (pointerTiltTargetX - pointerTiltX) * 0.06;
       pointerTiltY += (pointerTiltTargetY - pointerTiltY) * 0.06;
-      const scrollY = window.scrollY;
       const scrollProgress = Math.min(1, Math.max(0, scrollY / window.innerHeight));
       const yaw = autoAngle + pointerTiltY + scrollProgress * 1;
       const pitch = pointerTiltX;
@@ -330,8 +357,6 @@ const articlePageCount = Math.ceil(articles.length / articlesPerPage);
       const sinYaw = Math.sin(yaw);
       const cosPitch = Math.cos(pitch);
       const sinPitch = Math.sin(pitch);
-      const parallaxOffset = scrollY * 0.15;
-      attractor.style.transform = `translateY(${parallaxOffset}px)`;
       const currentRectTop = baseRectTop - scrollY + parallaxOffset;
       const pointerColumn = (pointerClientX - baseRectLeft) / characterWidth;
       const pointerRow = (pointerClientY - currentRectTop) / lineHeight;
