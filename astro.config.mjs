@@ -27,7 +27,10 @@ export default defineConfig({
   adapter: vercel(),
   integrations: [
     sitemap({
-      filter: (page) => page !== 'https://dapan.es/' && !page.endsWith('/404.html'),
+      filter: (page) =>
+        page !== 'https://dapan.es/' &&
+        !page.endsWith('/404.html') &&
+        decodeURIComponent(new URL(page).pathname) !== '/toñi/',
     }),
   ],
   markdown: {

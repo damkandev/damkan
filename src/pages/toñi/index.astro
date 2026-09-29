@@ -1,0 +1,29 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+export const prerender = true;
+---
+<BaseLayout
+  locale="es"
+  title="Toñi | Damián Panes"
+  description="Directorio de herramientas de Damián Panes."
+  noindex
+>
+  <main class="tool toni-index">
+    <a class="article-back" href="/es/">&lt;&lt; Volver al inicio</a>
+    <h1>Toñi</h1>
+    <p>Herramientas</p>
+
+    <div class="section-rule" data-ascii-rule aria-hidden="true"></div>
+
+    <ul class="toni-index__list">
+      <li><a href="/es/pptx-to-pdf/">PPTX a PDF</a></li>
+      <li><a href="/es/toni-cobro/">Toñi Cobro</a></li>
+    </ul>
+  </main>
+</BaseLayout>
+
+<style>
+  .toni-index h1 { margin: 28px 0 14px; font-size: 1.35rem; }
+  .toni-index__list { display: grid; gap: 12px; margin: 0; padding-left: 1.4em; }
+</style>
