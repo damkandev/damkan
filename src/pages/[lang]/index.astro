@@ -29,7 +29,7 @@ const articlePageCount = Math.ceil(articles.length / articlesPerPage);
 ---
 <BaseLayout locale={locale}>
   <section class="hero" aria-labelledby="hero-heading">
-    <div class="aizawa" data-aizawa aria-hidden="true"><pre></pre></div>
+    <div class="aizawa" data-aizawa aria-hidden="true"><canvas></canvas></div>
     <div class="hero__content">
       <AsciiTitle kind="logo" locale={locale} />
       <p id="hero-heading" class="intro">{c.bio}</p>
@@ -100,6 +100,8 @@ const articlePageCount = Math.ceil(articles.length / articlesPerPage);
 
 <script>
   const attractor = document.querySelector<HTMLElement>("[data-aizawa]");
+  const canvas = attractor?.querySelector("canvas") ?? null;
+  const context = canvas?.getContext("2d") ?? null;
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const layers = 12;
   const thickness = 2;
@@ -118,40 +120,49 @@ const articlePageCount = Math.ceil(articles.length / articlesPerPage);
     });
   }
 
-  if (attractor && !reducedMotion.matches) {
-    const output = attractor.querySelector("pre");
+  if (attractor && canvas && context && !reducedMotion.matches) {
     const states = Array.from({ length: 12 }, (_, index) => ({
       x: 0.1 + (index % 4 - 1.5) * 0.025,
       y: (Math.floor(index / 4) - 1) * 0.025,
       z: index * 0.003,
     }));
     const colors = [[218, 255, 166], [216, 232, 174], [214, 207, 185], [220, 178, 205], [255, 152, 236]];
+    const chars = " .:+*#";
+    // A cell renders a glyph once its intensity reaches the first character
+    // bucket; below that it is blank and can be skipped entirely.
+    const charThreshold = 1 / chars.length;
+    const fadeScale = 5 / trailLength;
+    const maxAge = Math.ceil(trailLength / 5) + 1;
+    const hoverSteps = 16;
     let lastFrame = 0;
+    let frameCounter = 0;
 
-    // Trail-point age is always a whole number of frames (0, 1, 2, ...) and
-    // points stop being stamped once they're faded out (age > trailLength/5,
-    // see the `fade <= 0` check below), so the age -> color gradient only
-    // ever needs to be evaluated for a small, known range of integers. Doing
-    // that once into a lookup table avoids allocating an array (`.map()`)
-    // and joining a string on every one of the ~thousands of visible-cell
-    // color lookups every single frame.
-    const trailColorTable = (() => {
-      const maxAge = Math.ceil(trailLength / 5) + 1;
-      const table: string[] = new Array(maxAge);
-      for (let age = 0; age < maxAge; age += 1) {
-        const progress = Math.min(0.999, age / (trailLength / 5) / 0.65);
-        const position = progress * (colors.length - 1);
-        const index = Math.floor(position);
-        const amount = position - index;
-        const start = colors[index];
-        const end = colors[index + 1] ?? start;
-        const r = Math.round(start[0] + (end[0] - start[0]) * amount);
-        const g = Math.round(start[1] + (end[1] - start[1]) * amount);
-        const b = Math.round(start[2] + (end[2] - start[2]) * amount);
-        table[age] = `${r},${g},${b}`;
+    // Every colour the renderer can produce, built once. Trail-point age is a
+    // whole number of frames and faded-out points are never drawn, so the
+    // age -> colour gradient covers a small known range of integers; the hover
+    // glow is quantised into `hoverSteps` levels. The hot path only indexes
+    // these tables, so it never builds a string (the previous version built
+    // two per visible character per frame, ~228k short-lived strings a second,
+    // which showed up as periodic GC stutter).
+    const baseColors: string[] = new Array(maxAge);
+    const hoverColors: string[] = new Array(maxAge * hoverSteps);
+    for (let age = 0; age < maxAge; age += 1) {
+      const progress = Math.min(0.999, (age * fadeScale) / 0.65);
+      const position = progress * (colors.length - 1);
+      const index = Math.floor(position);
+      const amount = position - index;
+      const start = colors[index];
+      const end = colors[index + 1] ?? start;
+      const r = Math.round(start[0] + (end[0] - start[0]) * amount);
+      const g = Math.round(start[1] + (end[1] - start[1]) * amount);
+      const b = Math.round(start[2] + (end[2] - start[2]) * amount);
+      baseColors[age] = `rgba(${r},${g},${b},${themeDefaults.opacity})`;
+      for (let step = 0; step < hoverSteps; step += 1) {
+        const boost = step / (hoverSteps - 1);
+        const alpha = themeDefaults.opacity + (1 - themeDefaults.opacity) * boost;
+        hoverColors[age * hoverSteps + step] = `rgba(${r},${g},${b},${alpha.toFixed(3)})`;
       }
-      return table;
-    })();
+    }
 
     // Aizawa's z ranges roughly 0-2 (not zero-centered), so recenter before
     // rotating or the whole shape swings off-axis instead of spinning in place.
@@ -166,35 +177,47 @@ const articlePageCount = Math.ceil(articles.length / articlesPerPage);
     let pointerTiltY = 0;
     const hoverRadius = 70;
     const hoverRadiusSquared = hoverRadius * hoverRadius;
-    let pointerClientX = -Infinity;
-    let pointerClientY = -Infinity;
+    let hasPointer = false;
+    let pointerClientX = 0;
+    let pointerClientY = 0;
     window.addEventListener("pointermove", (event) => {
       pointerTiltTargetY = ((event.clientX / window.innerWidth) * 2 - 1) * pointerTiltMax;
       pointerTiltTargetX = ((event.clientY / window.innerHeight) * 2 - 1) * pointerTiltMax;
       pointerClientX = event.clientX;
       pointerClientY = event.clientY;
+      hasPointer = true;
     }, { passive: true });
 
     // The thickness=2 stamp falloff is identical for every trail point every
     // frame, so precompute it once instead of calling Math.hypot per cell
     // per point (up to ~240k sqrt calls/frame otherwise).
-    const stampOffsets: { dx: number; dy: number; weight: number }[] = [];
+    const stampX: number[] = [];
+    const stampY: number[] = [];
+    const stampW: number[] = [];
     for (let sy = -thickness; sy <= thickness; sy += 1) {
       for (let sx = -thickness; sx <= thickness; sx += 1) {
         const distance = Math.hypot(sx, sy);
         if (distance > thickness) continue;
-        stampOffsets.push({ dx: sx, dy: sy, weight: 1 - distance / (thickness + 1) });
+        stampX.push(sx);
+        stampY.push(sy);
+        stampW.push(1 - distance / (thickness + 1));
       }
     }
+    const stampCount = stampX.length;
+    const stampOffsetX = Int32Array.from(stampX);
+    const stampOffsetY = Int32Array.from(stampY);
+    const stampWeight = Float32Array.from(stampW);
 
     // Ring buffer for trail points: fixed-size typed arrays instead of an
     // array of objects, so advancing the trail allocates nothing per frame
     // and dropping old points is an O(1) overwrite instead of an O(n) splice.
+    // Points record the frame they were born on rather than an age that has to
+    // be incremented across the whole buffer every frame.
     const trailCapacity = layers * trailLength;
     const trailX = new Float32Array(trailCapacity);
     const trailY = new Float32Array(trailCapacity);
     const trailZ = new Float32Array(trailCapacity);
-    const trailAge = new Float32Array(trailCapacity);
+    const trailBirth = new Int32Array(trailCapacity);
     let trailWriteIndex = 0;
     let trailFilled = 0;
 
@@ -202,54 +225,54 @@ const articlePageCount = Math.ceil(articles.length / articlesPerPage);
     // measured outside draw(). Reading layout (getBoundingClientRect, clientWidth,
     // getComputedStyle) every frame right after writing `transform` forces a
     // synchronous layout flush ~30x/sec, which is a major source of jank.
-    let characterWidth = 8.4 * 0.6;
-    let lineHeight = 8.4 * 1.32;
+    let characterWidth = themeDefaults.size * 0.6;
+    let lineHeight = themeDefaults.size * 1.32;
     let width = 32;
     let height = 24;
     let baseRectTop = 0;
     let baseRectLeft = 0;
+    let cssWidth = 0;
+    let cssHeight = 0;
 
     // Reused per-cell buffers, only reallocated in measure() when the grid
     // size actually changes (not every frame).
     let intensity = new Float32Array(width * height);
-    let ages = new Float32Array(width * height);
-    let cellSpans: HTMLSpanElement[] = [];
-    let previousCharIndex = new Uint8Array(width * height);
-    const chars = " .:+*#";
-
-    // Build a fixed pool of <span> elements once per grid size instead of
-    // recreating them every frame; draw() only ever mutates these in place.
-    const buildPool = () => {
-      if (!output) return;
-      const fragment = document.createDocumentFragment();
-      cellSpans = new Array(width * height);
-      previousCharIndex = new Uint8Array(width * height);
-      for (let row = 0; row < height; row += 1) {
-        for (let column = 0; column < width; column += 1) {
-          const span = document.createElement("span");
-          span.textContent = " ";
-          cellSpans[row * width + column] = span;
-          fragment.append(span);
-        }
-        if (row < height - 1) fragment.append("\n");
-      }
-      output.replaceChildren(fragment);
-    };
+    let ages = new Int32Array(width * height);
+    let centerClaim = new Int32Array(width * height);
+    let scratchCells = new Int32Array(width * height);
+    let sortedCells = new Int32Array(width * height);
+    const bucketCounts = new Int32Array(maxAge);
+    const bucketCursor = new Int32Array(maxAge);
 
     const measure = () => {
-      const styles = getComputedStyle(attractor.querySelector("pre") ?? attractor);
-      const fontSize = parseFloat(styles.fontSize) || 8.4;
-      characterWidth = fontSize * 0.6;
-      lineHeight = parseFloat(styles.lineHeight) || fontSize * 1.32;
-      const nextWidth = Math.max(32, Math.floor(attractor.clientWidth / characterWidth));
-      const nextHeight = Math.max(24, Math.floor(attractor.clientHeight / lineHeight));
-      const sizeChanged = nextWidth !== width || nextHeight !== height || cellSpans.length === 0;
-      width = nextWidth;
-      height = nextHeight;
-      if (sizeChanged) {
-        intensity = new Float32Array(width * height);
-        ages = new Float32Array(width * height);
-        buildPool();
+      const rootStyles = getComputedStyle(attractor);
+      const fontSize = parseFloat(rootStyles.getPropertyValue("--aizawa-size")) || themeDefaults.size;
+      const fontWeight = rootStyles.getPropertyValue("--aizawa-weight").trim() || String(themeDefaults.weight);
+
+      cssWidth = attractor.clientWidth;
+      cssHeight = attractor.clientHeight;
+      // Assigning width/height resets every context property, so the font,
+      // baseline and DPR transform have to be (re)applied right here.
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(cssWidth * ratio);
+      canvas.height = Math.round(cssHeight * ratio);
+      context.setTransform(ratio, 0, 0, ratio, 0, 0);
+      context.font = `${fontWeight} ${fontSize}px "JetBrains Mono", monospace`;
+      context.textBaseline = "top";
+
+      characterWidth = context.measureText("0").width || fontSize * 0.6;
+      lineHeight = fontSize * 1.32;
+      const nextWidth = Math.max(32, Math.floor(cssWidth / characterWidth));
+      const nextHeight = Math.max(24, Math.floor(cssHeight / lineHeight));
+      if (nextWidth !== width || nextHeight !== height) {
+        width = nextWidth;
+        height = nextHeight;
+        const cells = width * height;
+        intensity = new Float32Array(cells);
+        ages = new Int32Array(cells);
+        centerClaim = new Int32Array(cells);
+        scratchCells = new Int32Array(cells);
+        sortedCells = new Int32Array(cells);
       }
       const previousTransform = attractor.style.transform;
       attractor.style.transform = "";
@@ -264,16 +287,22 @@ const articlePageCount = Math.ceil(articles.length / articlesPerPage);
     window.addEventListener("resize", measure, { passive: true });
 
     const draw = (time: number) => {
+      if (!onScreen) {
+        looping = false;
+        return;
+      }
       if (time - lastFrame < 33) {
         requestAnimationFrame(draw);
         return;
       }
       lastFrame = time;
+      // `ages` deliberately isn't cleared: it is only ever read for cells that
+      // won an intensity write this frame, which always writes both.
       intensity.fill(0);
-      ages.fill(0);
 
       for (let step = 0; step < 5; step += 1) {
-        states.slice(0, layers).forEach((state) => {
+        for (let layer = 0; layer < layers; layer += 1) {
+          const state = states[layer];
           const dx = (state.z - 0.7) * state.x - 3.5 * state.y;
           const dy = 3.5 * state.x + (state.z - 0.7) * state.y;
           const dz = 0.6 + 0.95 * state.z - state.z ** 3 / 3 - (state.x ** 2 + state.y ** 2) * (1 + 0.25 * state.z) + 0.1 * state.z * state.x ** 3;
@@ -283,13 +312,12 @@ const articlePageCount = Math.ceil(articles.length / articlesPerPage);
           trailX[trailWriteIndex] = state.x;
           trailY[trailWriteIndex] = state.y;
           trailZ[trailWriteIndex] = state.z;
-          trailAge[trailWriteIndex] = 0;
+          trailBirth[trailWriteIndex] = frameCounter;
           trailWriteIndex = (trailWriteIndex + 1) % trailCapacity;
           if (trailFilled < trailCapacity) trailFilled += 1;
-        });
+        }
       }
-
-      for (let i = 0; i < trailFilled; i += 1) trailAge[i] += 1;
+      frameCounter += 1;
 
       autoAngle += autoRotationSpeed;
       pointerTiltX += (pointerTiltTargetX - pointerTiltX) * 0.06;
@@ -308,9 +336,21 @@ const articlePageCount = Math.ceil(articles.length / articlesPerPage);
       const pointerColumn = (pointerClientX - baseRectLeft) / characterWidth;
       const pointerRow = (pointerClientY - currentRectTop) / lineHeight;
 
-      for (let i = 0; i < trailFilled; i += 1) {
-        const fade = Math.max(0, 1 - trailAge[i] / (trailLength / 5));
-        if (fade <= 0) continue;
+      // Walk the ring buffer newest -> oldest so `fade` is non-increasing.
+      // That makes two things exact rather than heuristic: the loop can stop at
+      // the first faded-out point, and any point whose centre cell was already
+      // claimed this frame can be skipped outright -- the earlier (newer) point
+      // stamped the same offsets with the same weights at a higher-or-equal
+      // fade, and intensity only updates on a strictly greater value, so the
+      // skipped point could not have changed either buffer.
+      let cursor = trailWriteIndex - 1;
+      if (cursor < 0) cursor = trailCapacity - 1;
+      for (let n = 0; n < trailFilled; n += 1) {
+        const i = cursor;
+        cursor = cursor === 0 ? trailCapacity - 1 : cursor - 1;
+        const age = frameCounter - trailBirth[i];
+        const fade = 1 - age * fadeScale;
+        if (fade <= 0) break;
         const centeredZ = trailZ[i] - zCenter;
         const pointX = trailX[i];
         const rotatedX = pointX * cosYaw + centeredZ * sinYaw;
@@ -318,50 +358,127 @@ const articlePageCount = Math.ceil(articles.length / articlesPerPage);
         const rotatedY = trailY[i] * cosPitch - rotatedDepth * sinPitch;
         const centerX = Math.round(width / 2 + rotatedX / 2.35 * width + offsetX / 100 * width);
         const centerY = Math.round(height / 2 - rotatedY / 2.35 * height + offsetY / 100 * height);
-        for (let k = 0; k < stampOffsets.length; k += 1) {
-          const offset = stampOffsets[k];
-          const column = centerX + offset.dx;
-          const row = centerY + offset.dy;
+        if (centerX >= 0 && centerX < width && centerY >= 0 && centerY < height) {
+          const centerIndex = centerY * width + centerX;
+          if (centerClaim[centerIndex] === frameCounter) continue;
+          centerClaim[centerIndex] = frameCounter;
+        }
+        for (let k = 0; k < stampCount; k += 1) {
+          const column = centerX + stampOffsetX[k];
+          const row = centerY + stampOffsetY[k];
           if (column < 0 || column >= width || row < 0 || row >= height) continue;
           const index = row * width + column;
-          const value = fade * offset.weight;
+          const value = fade * stampWeight[k];
           if (value > intensity[index]) {
             intensity[index] = value;
-            ages[index] = trailAge[i];
+            ages[index] = age < maxAge ? age : maxAge - 1;
           }
         }
       }
 
-      if (output) {
-        for (let row = 0; row < height; row += 1) {
-          for (let column = 0; column < width; column += 1) {
-            const index = row * width + column;
-            const charIndex = Math.min(chars.length - 1, Math.floor(intensity[index] * chars.length));
-            const span = cellSpans[index];
-            if (charIndex !== previousCharIndex[index]) {
-              span.textContent = chars[charIndex];
-              previousCharIndex[index] = charIndex;
-            }
-            if (charIndex === 0) continue;
-            const dxPixels = (column - pointerColumn) * characterWidth;
-            const dyPixels = (row - pointerRow) * lineHeight;
-            // Squared-distance falloff instead of Math.hypot: avoids a sqrt
-            // on every visible cell (thousands/frame) for a glow shape that
-            // reads the same (soft circle, full radius at the same distance).
-            const distanceSquared = dxPixels * dxPixels + dyPixels * dyPixels;
-            const hoverBoost = distanceSquared < hoverRadiusSquared
-              ? (1 - distanceSquared / hoverRadiusSquared) ** 2
-              : 0;
-            const alpha = themeDefaults.opacity + (1 - themeDefaults.opacity) * hoverBoost;
-            const age = Math.min(trailColorTable.length - 1, ages[index] | 0);
-            span.style.color = `rgba(${trailColorTable[age]}, ${alpha.toFixed(3)})`;
-          }
+      // Only cells within hoverRadius of the cursor can have a non-zero glow,
+      // so the falloff is evaluated over that box alone instead of the whole
+      // grid, and those cells are drawn in their own pass below.
+      let hoverColumnMin = 0;
+      let hoverColumnMax = -1;
+      let hoverRowMin = 0;
+      let hoverRowMax = -1;
+      if (hasPointer) {
+        const columnRadius = Math.ceil(hoverRadius / characterWidth);
+        const rowRadius = Math.ceil(hoverRadius / lineHeight);
+        const column = Math.round(pointerColumn);
+        const row = Math.round(pointerRow);
+        hoverColumnMin = Math.max(0, column - columnRadius);
+        hoverColumnMax = Math.min(width - 1, column + columnRadius);
+        hoverRowMin = Math.max(0, row - rowRadius);
+        hoverRowMax = Math.min(height - 1, row + rowRadius);
+      }
+
+      // Counting-sort the plain (non-hover) visible cells by age so the canvas
+      // needs one fillStyle change per distinct colour rather than per cell.
+      bucketCounts.fill(0);
+      let visibleCount = 0;
+      for (let row = 0; row < height; row += 1) {
+        const rowOffset = row * width;
+        const rowInHover = row >= hoverRowMin && row <= hoverRowMax;
+        for (let column = 0; column < width; column += 1) {
+          const index = rowOffset + column;
+          if (intensity[index] < charThreshold) continue;
+          if (rowInHover && column >= hoverColumnMin && column <= hoverColumnMax) continue;
+          scratchCells[visibleCount] = index;
+          visibleCount += 1;
+          bucketCounts[ages[index]] += 1;
         }
       }
+      let running = 0;
+      for (let bucket = 0; bucket < maxAge; bucket += 1) {
+        bucketCursor[bucket] = running;
+        running += bucketCounts[bucket];
+      }
+      for (let n = 0; n < visibleCount; n += 1) {
+        const index = scratchCells[n];
+        const slot = bucketCursor[ages[index]];
+        bucketCursor[ages[index]] = slot + 1;
+        sortedCells[slot] = index;
+      }
+
+      context.clearRect(0, 0, cssWidth, cssHeight);
+      let drawn = 0;
+      for (let bucket = 0; bucket < maxAge; bucket += 1) {
+        const count = bucketCounts[bucket];
+        if (count === 0) continue;
+        context.fillStyle = baseColors[bucket];
+        const end = drawn + count;
+        for (let n = drawn; n < end; n += 1) {
+          const index = sortedCells[n];
+          const row = (index / width) | 0;
+          const column = index - row * width;
+          const charIndex = Math.min(chars.length - 1, (intensity[index] * chars.length) | 0);
+          context.fillText(chars[charIndex], column * characterWidth, row * lineHeight);
+        }
+        drawn = end;
+      }
+
+      for (let row = hoverRowMin; row <= hoverRowMax; row += 1) {
+        const rowOffset = row * width;
+        const dyPixels = (row - pointerRow) * lineHeight;
+        const dySquared = dyPixels * dyPixels;
+        for (let column = hoverColumnMin; column <= hoverColumnMax; column += 1) {
+          const index = rowOffset + column;
+          const value = intensity[index];
+          if (value < charThreshold) continue;
+          const dxPixels = (column - pointerColumn) * characterWidth;
+          const distanceSquared = dxPixels * dxPixels + dySquared;
+          const boost = distanceSquared < hoverRadiusSquared
+            ? (1 - distanceSquared / hoverRadiusSquared) ** 2
+            : 0;
+          const step = (boost * (hoverSteps - 1) + 0.5) | 0;
+          context.fillStyle = hoverColors[ages[index] * hoverSteps + step];
+          const charIndex = Math.min(chars.length - 1, (value * chars.length) | 0);
+          context.fillText(chars[charIndex], column * characterWidth, row * lineHeight);
+        }
+      }
+
       requestAnimationFrame(draw);
     };
 
-    requestAnimationFrame(draw);
+    // Rendering a background nobody can see is pure waste, so the loop stops
+    // once the hero scrolls away and restarts just before it comes back.
+    let onScreen = true;
+    let looping = false;
+    const startLoop = () => {
+      if (looping) return;
+      looping = true;
+      lastFrame = 0;
+      requestAnimationFrame(draw);
+    };
+
+    new IntersectionObserver((entries) => {
+      onScreen = entries[entries.length - 1].isIntersecting;
+      if (onScreen) startLoop();
+    }, { rootMargin: "200px" }).observe(attractor);
+
+    startLoop();
   }
 
   const list = document.querySelector<HTMLElement>("[data-articles-list]");
