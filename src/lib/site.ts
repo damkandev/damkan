@@ -19,6 +19,15 @@ export const copy = {
     socials: "Por si algún día revivo en redes sociales y subo algo interesante y no te lo quieres perder, puedes seguirme en cualquiera de ellas... Pero si te tengo que recomendar algo, mejor desinstálalas.",
     readMore: "Leer más >>",
     back: "<< Volver al inicio",
+    toniCobro: {
+      pageTitle: "Toñi Cobro",
+      metaDescription: "Calcula cuánto cobrar en una boleta de honorarios para recibir el monto líquido que quieres ganar.",
+      intro: "Escribe cuánto quieres recibir líquido y calcula cuánto cobrar en tu boleta de honorarios.",
+      amountLabel: "Quiero recibir líquido",
+      grossLabel: "Tienes que cobrar",
+      taxLabel: "Retención (15,25%)",
+      rateNote: "Tasa de retención vigente para 2026.",
+    },
     pptxToPdf: {
       pageTitle: "PPTX a PDF",
       metaDescription:
@@ -131,6 +140,15 @@ export const copy = {
     socials: "If I ever come back to social media and post something interesting you don't want to miss, you can follow me on any of these... Though if I had to recommend something, delete them instead.",
     readMore: "Read more >>",
     back: "<< Back home",
+    toniCobro: {
+      pageTitle: "Toñi Cobro",
+      metaDescription: "Calculate how much to charge on a Chilean honorarium invoice to receive your desired net amount.",
+      intro: "Enter the net amount you want to receive and calculate how much to charge on your honorarium invoice.",
+      amountLabel: "I want to receive",
+      grossLabel: "You should charge",
+      taxLabel: "Withholding (15.25%)",
+      rateNote: "Withholding rate in effect for 2026.",
+    },
     pptxToPdf: {
       pageTitle: "PPTX to PDF",
       metaDescription:

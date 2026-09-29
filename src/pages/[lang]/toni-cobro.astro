@@ -1,0 +1,74 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { copy, homePath, isLocale, locales, type Locale } from "../../lib/site";
+
+export const prerender = true;
+
+export function getStaticPaths() {
+  return locales.map((lang) => ({ params: { lang } }));
+}
+
+if (!isLocale(Astro.params.lang)) return Astro.redirect("/es/", 302);
+const locale: Locale = Astro.params.lang;
+const c = copy[locale].toniCobro;
+---
+<BaseLayout locale={locale} title={`${c.pageTitle} | Damián Panes`} description={c.metaDescription}>
+  <main class="tool">
+    <a class="article-back" href={homePath(locale)}>{copy[locale].back}</a>
+    <h1 class="toni-cobro__title">{c.pageTitle}</h1>
+    <p class="intro">{c.intro}</p>
+
+    <div class="section-rule" data-ascii-rule aria-hidden="true"></div>
+
+    <div class="toni-cobro">
+      <label class="converter__label" for="net-amount">{c.amountLabel} (CLP)</label>
+      <div class="toni-cobro__input-wrap">
+        <span aria-hidden="true">$</span>
+        <input class="toni-cobro__input" id="net-amount" name="amount" type="number" min="0" step="1" value="100000" inputmode="numeric" />
+      </div>
+
+      <div class="toni-cobro__result" aria-live="polite" aria-atomic="true">
+        <p class="toni-cobro__result-label">{c.grossLabel}</p>
+        <output class="toni-cobro__gross" data-gross for="net-amount">$117.994</output>
+        <p class="toni-cobro__tax">{c.taxLabel}: <output data-tax>$17.994</output></p>
+      </div>
+      <p class="toni-cobro__note">{c.rateNote} <span>($ líquido ÷ 0,8475)</span></p>
+      <p class="converter__dedication">D &lt;3 A</p>
+    </div>
+  </main>
+</BaseLayout>
+
+<style>
+  .toni-cobro { margin-top: 24px; }
+  .toni-cobro__title { margin: 28px 0 14px; font-size: 1.35rem; }
+  .toni-cobro__input-wrap { display: flex; align-items: center; gap: 8px; width: min(100%, 280px); margin-top: 8px; padding: 8px 0; border-bottom: 1px solid var(--rule); font-size: 1.1rem; }
+  .toni-cobro__input { width: 100%; border: 0; outline: 0; background: transparent; color: inherit; font: inherit; font-variant-numeric: tabular-nums; }
+  .toni-cobro__result { margin-top: 28px; padding: 18px 0; border-top: 1px dashed var(--rule); border-bottom: 1px dashed var(--rule); }
+  .toni-cobro__result-label, .toni-cobro__tax { margin: 0; }
+  .toni-cobro__gross { display: block; margin: 4px 0 12px; font-size: clamp(1.8rem, 8vw, 2.5rem); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .toni-cobro__tax, .toni-cobro__note { color: var(--muted); }
+  .toni-cobro__note { margin: 14px 0 0; font-size: 0.9rem; }
+</style>
+
+<script>
+  const input = document.querySelector<HTMLInputElement>("#net-amount");
+  const grossOutput = document.querySelector<HTMLOutputElement>("[data-gross]");
+  const taxOutput = document.querySelector<HTMLOutputElement>("[data-tax]");
+  const currency = new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 });
+  const rate = 0.1525;
+
+  const update = () => {
+    if (!input || !grossOutput || !taxOutput) return;
+    const net = Number(input.value);
+    if (!Number.isFinite(net) || net < 0 || input.value === "") {
+      grossOutput.textContent = "—";
+      taxOutput.textContent = "—";
+      return;
+    }
+    const gross = Math.round(net / (1 - rate));
+    grossOutput.textContent = currency.format(gross);
+    taxOutput.textContent = currency.format(gross - net);
+  };
+
+  input?.addEventListener("input", update);
+</script>
