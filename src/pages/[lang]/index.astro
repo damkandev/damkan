@@ -109,9 +109,13 @@ const articlePageCount = Math.ceil(articles.length / articlesPerPage);
   const themeDefaults = { opacity: 0.35, weight: 500, size: 9 };
 
   if (attractor) {
-    attractor.style.opacity = String(themeDefaults.opacity);
     attractor.style.setProperty("--aizawa-weight", String(themeDefaults.weight));
     attractor.style.setProperty("--aizawa-size", `${themeDefaults.size}px`);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        attractor.style.opacity = "1";
+      });
+    });
   }
 
   if (attractor && !reducedMotion.matches) {
@@ -121,19 +125,143 @@ const articlePageCount = Math.ceil(articles.length / articlesPerPage);
       y: (Math.floor(index / 4) - 1) * 0.025,
       z: index * 0.003,
     }));
-    const trail: { x: number; y: number; age: number }[] = [];
     const colors = [[218, 255, 166], [216, 232, 174], [214, 207, 185], [220, 178, 205], [255, 152, 236]];
     let lastFrame = 0;
 
-    const trailColor = (age: number) => {
-      const progress = Math.min(0.999, age / (trailLength / 5) / 0.65);
-      const position = progress * (colors.length - 1);
-      const index = Math.floor(position);
-      const amount = position - index;
-      const start = colors[index];
-      const end = colors[index + 1] ?? start;
-      return start.map((channel, i) => Math.round(channel + (end[i] - channel) * amount)).join(",");
+    // Trail-point age is always a whole number of frames (0, 1, 2, ...) and
+    // points stop being stamped once they're faded out (age > trailLength/5,
+    // see the `fade <= 0` check below), so the age -> color gradient only
+    // ever needs to be evaluated for a small, known range of integers. Doing
+    // that once into a lookup table avoids allocating an array (`.map()`)
+    // and joining a string on every one of the ~thousands of visible-cell
+    // color lookups every single frame.
+    const trailColorTable = (() => {
+      const maxAge = Math.ceil(trailLength / 5) + 1;
+      const table: string[] = new Array(maxAge);
+      for (let age = 0; age < maxAge; age += 1) {
+        const progress = Math.min(0.999, age / (trailLength / 5) / 0.65);
+        const position = progress * (colors.length - 1);
+        const index = Math.floor(position);
+        const amount = position - index;
+        const start = colors[index];
+        const end = colors[index + 1] ?? start;
+        const r = Math.round(start[0] + (end[0] - start[0]) * amount);
+        const g = Math.round(start[1] + (end[1] - start[1]) * amount);
+        const b = Math.round(start[2] + (end[2] - start[2]) * amount);
+        table[age] = `${r},${g},${b}`;
+      }
+      return table;
+    })();
+
+    // Aizawa's z ranges roughly 0-2 (not zero-centered), so recenter before
+    // rotating or the whole shape swings off-axis instead of spinning in place.
+    const zCenter = 1;
+    const autoRotationSpeed = (Math.PI * 2) / (60 * 30); // ~one revolution per 60s at ~30fps draw ticks
+    let autoAngle = 0;
+
+    const pointerTiltMax = 0.32;
+    let pointerTiltTargetX = 0;
+    let pointerTiltTargetY = 0;
+    let pointerTiltX = 0;
+    let pointerTiltY = 0;
+    const hoverRadius = 70;
+    const hoverRadiusSquared = hoverRadius * hoverRadius;
+    let pointerClientX = -Infinity;
+    let pointerClientY = -Infinity;
+    window.addEventListener("pointermove", (event) => {
+      pointerTiltTargetY = ((event.clientX / window.innerWidth) * 2 - 1) * pointerTiltMax;
+      pointerTiltTargetX = ((event.clientY / window.innerHeight) * 2 - 1) * pointerTiltMax;
+      pointerClientX = event.clientX;
+      pointerClientY = event.clientY;
+    }, { passive: true });
+
+    // The thickness=2 stamp falloff is identical for every trail point every
+    // frame, so precompute it once instead of calling Math.hypot per cell
+    // per point (up to ~240k sqrt calls/frame otherwise).
+    const stampOffsets: { dx: number; dy: number; weight: number }[] = [];
+    for (let sy = -thickness; sy <= thickness; sy += 1) {
+      for (let sx = -thickness; sx <= thickness; sx += 1) {
+        const distance = Math.hypot(sx, sy);
+        if (distance > thickness) continue;
+        stampOffsets.push({ dx: sx, dy: sy, weight: 1 - distance / (thickness + 1) });
+      }
+    }
+
+    // Ring buffer for trail points: fixed-size typed arrays instead of an
+    // array of objects, so advancing the trail allocates nothing per frame
+    // and dropping old points is an O(1) overwrite instead of an O(n) splice.
+    const trailCapacity = layers * trailLength;
+    const trailX = new Float32Array(trailCapacity);
+    const trailY = new Float32Array(trailCapacity);
+    const trailZ = new Float32Array(trailCapacity);
+    const trailAge = new Float32Array(trailCapacity);
+    let trailWriteIndex = 0;
+    let trailFilled = 0;
+
+    // Layout metrics only change on resize/font-load, not every frame, so they're
+    // measured outside draw(). Reading layout (getBoundingClientRect, clientWidth,
+    // getComputedStyle) every frame right after writing `transform` forces a
+    // synchronous layout flush ~30x/sec, which is a major source of jank.
+    let characterWidth = 8.4 * 0.6;
+    let lineHeight = 8.4 * 1.32;
+    let width = 32;
+    let height = 24;
+    let baseRectTop = 0;
+    let baseRectLeft = 0;
+
+    // Reused per-cell buffers, only reallocated in measure() when the grid
+    // size actually changes (not every frame).
+    let intensity = new Float32Array(width * height);
+    let ages = new Float32Array(width * height);
+    let cellSpans: HTMLSpanElement[] = [];
+    let previousCharIndex = new Uint8Array(width * height);
+    const chars = " .:+*#";
+
+    // Build a fixed pool of <span> elements once per grid size instead of
+    // recreating them every frame; draw() only ever mutates these in place.
+    const buildPool = () => {
+      if (!output) return;
+      const fragment = document.createDocumentFragment();
+      cellSpans = new Array(width * height);
+      previousCharIndex = new Uint8Array(width * height);
+      for (let row = 0; row < height; row += 1) {
+        for (let column = 0; column < width; column += 1) {
+          const span = document.createElement("span");
+          span.textContent = " ";
+          cellSpans[row * width + column] = span;
+          fragment.append(span);
+        }
+        if (row < height - 1) fragment.append("\n");
+      }
+      output.replaceChildren(fragment);
     };
+
+    const measure = () => {
+      const styles = getComputedStyle(attractor.querySelector("pre") ?? attractor);
+      const fontSize = parseFloat(styles.fontSize) || 8.4;
+      characterWidth = fontSize * 0.6;
+      lineHeight = parseFloat(styles.lineHeight) || fontSize * 1.32;
+      const nextWidth = Math.max(32, Math.floor(attractor.clientWidth / characterWidth));
+      const nextHeight = Math.max(24, Math.floor(attractor.clientHeight / lineHeight));
+      const sizeChanged = nextWidth !== width || nextHeight !== height || cellSpans.length === 0;
+      width = nextWidth;
+      height = nextHeight;
+      if (sizeChanged) {
+        intensity = new Float32Array(width * height);
+        ages = new Float32Array(width * height);
+        buildPool();
+      }
+      const previousTransform = attractor.style.transform;
+      attractor.style.transform = "";
+      const rect = attractor.getBoundingClientRect();
+      baseRectTop = rect.top + window.scrollY;
+      baseRectLeft = rect.left;
+      attractor.style.transform = previousTransform;
+    };
+
+    measure();
+    document.fonts?.ready?.then(measure);
+    window.addEventListener("resize", measure, { passive: true });
 
     const draw = (time: number) => {
       if (time - lastFrame < 33) {
@@ -141,14 +269,8 @@ const articlePageCount = Math.ceil(articles.length / articlesPerPage);
         return;
       }
       lastFrame = time;
-      const styles = getComputedStyle(attractor.querySelector("pre") ?? attractor);
-      const fontSize = parseFloat(styles.fontSize) || 8.4;
-      const characterWidth = fontSize * 0.6;
-      const lineHeight = parseFloat(styles.lineHeight) || fontSize * 1.32;
-      const width = Math.max(32, Math.floor(attractor.clientWidth / characterWidth));
-      const height = Math.max(24, Math.floor(attractor.clientHeight / lineHeight));
-      const intensity = new Float32Array(width * height);
-      const ages = new Float32Array(width * height);
+      intensity.fill(0);
+      ages.fill(0);
 
       for (let step = 0; step < 5; step += 1) {
         states.slice(0, layers).forEach((state) => {
@@ -158,59 +280,83 @@ const articlePageCount = Math.ceil(articles.length / articlesPerPage);
           state.x += dx * 0.01;
           state.y += dy * 0.01;
           state.z += dz * 0.01;
-          trail.push({ x: state.x, y: state.y, age: 0 });
+          trailX[trailWriteIndex] = state.x;
+          trailY[trailWriteIndex] = state.y;
+          trailZ[trailWriteIndex] = state.z;
+          trailAge[trailWriteIndex] = 0;
+          trailWriteIndex = (trailWriteIndex + 1) % trailCapacity;
+          if (trailFilled < trailCapacity) trailFilled += 1;
         });
       }
 
-      trail.forEach((point) => { point.age += 1; });
-      trail.splice(0, Math.max(0, trail.length - layers * trailLength));
-      trail.forEach((point) => {
-        const centerX = Math.round(width / 2 + point.x / 2.35 * width + offsetX / 100 * width);
-        const centerY = Math.round(height / 2 - point.y / 2.35 * height + offsetY / 100 * height);
-        const fade = Math.max(0, 1 - point.age / (trailLength / 5));
-        for (let y = -thickness; y <= thickness; y += 1) {
-          for (let x = -thickness; x <= thickness; x += 1) {
-            const distance = Math.hypot(x, y);
-            if (distance > thickness) continue;
-            const column = centerX + x;
-            const row = centerY + y;
-            if (column >= 0 && column < width && row >= 0 && row < height) {
-              const index = row * width + column;
-              const value = fade * (1 - distance / (thickness + 1));
-              if (value > intensity[index]) {
-                intensity[index] = value;
-                ages[index] = point.age;
-              }
-            }
-          }
-        }
-      });
+      for (let i = 0; i < trailFilled; i += 1) trailAge[i] += 1;
 
-      const chars = " .:+*#";
-      if (output) {
-        const fragment = document.createDocumentFragment();
-        for (let row = 0; row < height; row += 1) {
-          let text = "";
-          for (let column = 0; column < width; column += 1) {
-            const value = intensity[row * width + column];
-            const character = chars[Math.min(chars.length - 1, Math.floor(value * chars.length))];
-            if (character === " ") {
-              text += character;
-              continue;
-            }
-            if (text) {
-              fragment.append(text);
-              text = "";
-            }
-            const span = document.createElement("span");
-            span.textContent = character;
-            span.style.color = `rgb(${trailColor(ages[row * width + column])})`;
-            fragment.append(span);
+      autoAngle += autoRotationSpeed;
+      pointerTiltX += (pointerTiltTargetX - pointerTiltX) * 0.06;
+      pointerTiltY += (pointerTiltTargetY - pointerTiltY) * 0.06;
+      const scrollY = window.scrollY;
+      const scrollProgress = Math.min(1, Math.max(0, scrollY / window.innerHeight));
+      const yaw = autoAngle + pointerTiltY + scrollProgress * 1;
+      const pitch = pointerTiltX;
+      const cosYaw = Math.cos(yaw);
+      const sinYaw = Math.sin(yaw);
+      const cosPitch = Math.cos(pitch);
+      const sinPitch = Math.sin(pitch);
+      const parallaxOffset = scrollY * 0.15;
+      attractor.style.transform = `translateY(${parallaxOffset}px)`;
+      const currentRectTop = baseRectTop - scrollY + parallaxOffset;
+      const pointerColumn = (pointerClientX - baseRectLeft) / characterWidth;
+      const pointerRow = (pointerClientY - currentRectTop) / lineHeight;
+
+      for (let i = 0; i < trailFilled; i += 1) {
+        const fade = Math.max(0, 1 - trailAge[i] / (trailLength / 5));
+        if (fade <= 0) continue;
+        const centeredZ = trailZ[i] - zCenter;
+        const pointX = trailX[i];
+        const rotatedX = pointX * cosYaw + centeredZ * sinYaw;
+        const rotatedDepth = -pointX * sinYaw + centeredZ * cosYaw;
+        const rotatedY = trailY[i] * cosPitch - rotatedDepth * sinPitch;
+        const centerX = Math.round(width / 2 + rotatedX / 2.35 * width + offsetX / 100 * width);
+        const centerY = Math.round(height / 2 - rotatedY / 2.35 * height + offsetY / 100 * height);
+        for (let k = 0; k < stampOffsets.length; k += 1) {
+          const offset = stampOffsets[k];
+          const column = centerX + offset.dx;
+          const row = centerY + offset.dy;
+          if (column < 0 || column >= width || row < 0 || row >= height) continue;
+          const index = row * width + column;
+          const value = fade * offset.weight;
+          if (value > intensity[index]) {
+            intensity[index] = value;
+            ages[index] = trailAge[i];
           }
-          if (text) fragment.append(text);
-          if (row < height - 1) fragment.append("\n");
         }
-        output.replaceChildren(fragment);
+      }
+
+      if (output) {
+        for (let row = 0; row < height; row += 1) {
+          for (let column = 0; column < width; column += 1) {
+            const index = row * width + column;
+            const charIndex = Math.min(chars.length - 1, Math.floor(intensity[index] * chars.length));
+            const span = cellSpans[index];
+            if (charIndex !== previousCharIndex[index]) {
+              span.textContent = chars[charIndex];
+              previousCharIndex[index] = charIndex;
+            }
+            if (charIndex === 0) continue;
+            const dxPixels = (column - pointerColumn) * characterWidth;
+            const dyPixels = (row - pointerRow) * lineHeight;
+            // Squared-distance falloff instead of Math.hypot: avoids a sqrt
+            // on every visible cell (thousands/frame) for a glow shape that
+            // reads the same (soft circle, full radius at the same distance).
+            const distanceSquared = dxPixels * dxPixels + dyPixels * dyPixels;
+            const hoverBoost = distanceSquared < hoverRadiusSquared
+              ? (1 - distanceSquared / hoverRadiusSquared) ** 2
+              : 0;
+            const alpha = themeDefaults.opacity + (1 - themeDefaults.opacity) * hoverBoost;
+            const age = Math.min(trailColorTable.length - 1, ages[index] | 0);
+            span.style.color = `rgba(${trailColorTable[age]}, ${alpha.toFixed(3)})`;
+          }
+        }
       }
       requestAnimationFrame(draw);
     };
