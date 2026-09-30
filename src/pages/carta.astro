@@ -1,0 +1,2088 @@
+---
+export const prerender = true;
+
+// The clock is sketched rather than plotted: every outline comes out of a seeded
+// wobble, so it reads as pencil on paper yet stays identical between builds. The
+// day grid at the end of the letter is laid out in the browser, so the wobble
+// lives in its own module and both sides use the same one.
+import {
+  curveThrough,
+  dayMarks,
+  sketchBallot,
+  sketchBan,
+  sketchHeadphones,
+  round,
+  seeded,
+  sketchHeart,
+  sketchLips,
+  sketchLipsShape,
+  sketchMustache,
+  sketchMustacheShape,
+  sketchPlus,
+  sketchSquare,
+} from "../lib/sketch";
+
+// A drawn ring: the radius drifts, the centre sits a hair off, and the stroke
+// overshoots where it closes the loop.
+const sketchRing = ({ radius, seed, wobble, from, to, drift = 0 }) => {
+  const random = seeded(seed);
+  const steps = 22;
+  const points = [];
+  for (let index = 0; index <= steps; index += 1) {
+    const angle = from + ((to - from) * index) / steps;
+    const distance = radius + (random() - 0.5) * wobble;
+    points.push([
+      100 + Math.cos(angle) * distance + drift,
+      100 + Math.sin(angle) * distance - drift * 0.6,
+    ]);
+  }
+  return curveThrough(points);
+};
+
+// Hands are filled slivers instead of strokes: a pencil leaves a tapered mark,
+// and the bow along each side keeps them from looking ruled.
+const sketchHand = ({ length, tail, width, bow, seed }) => {
+  const random = seeded(seed);
+  const tip = 100 + (random() - 0.5) * 2;
+  const lean = (random() - 0.5) * 1.6;
+  const base = 100 + tail;
+  const left = 100 - width / 2;
+  const right = 100 + width / 2;
+  return [
+    `M${round(left)} ${round(base)}`,
+    `Q${round(100 - bow + lean)} ${round(100 - length * 0.45)} ${round(tip)} ${round(100 - length)}`,
+    `Q${round(100 + bow + lean)} ${round(100 - length * 0.5)} ${round(right)} ${round(base)}`,
+    `Q100 ${round(base + 1.6)} ${round(left)} ${round(base)}`,
+    "Z",
+  ].join(" ");
+};
+
+const TAU = Math.PI * 2;
+const dialPath = sketchRing({ radius: 92, seed: 8, wobble: 2.6, from: -0.16, to: TAU + 0.24 });
+const dialGhostPath = sketchRing({ radius: 89.8, seed: 41, wobble: 3.4, from: 0.52, to: TAU + 0.1, drift: 1 });
+const hourPath = sketchHand({ length: 50, tail: 11, width: 6.6, bow: 1.5, seed: 12 });
+const minutePath = sketchHand({ length: 71, tail: 13, width: 4.8, bow: 1.2, seed: 27 });
+const secondPath = curveThrough([
+  [100.4, 121],
+  [99.3, 92],
+  [100.7, 58],
+  [99.8, 30],
+  [100.2, 21],
+]);
+
+// The chat thread is sketched the same way as the clock: seeded jitter pushed
+// through curveThrough, so every bubble is a pencil line that stays identical
+// between builds.
+const bubbleOutline = ({ width, height, seed }) => {
+  const random = seeded(seed);
+  const shake = (amount = 1.7) => (random() - 0.5) * amount;
+  const radius = Math.min(16, height / 2.6, width / 3);
+  const points = [];
+  const edge = (x1, y1, x2, y2, steps) => {
+    for (let index = 0; index < steps; index += 1) {
+      const t = index / steps;
+      points.push([x1 + (x2 - x1) * t + shake(), y1 + (y2 - y1) * t + shake()]);
+    }
+  };
+  const corner = (cx, cy, from, to) => {
+    for (let index = 0; index <= 3; index += 1) {
+      const angle = from + ((to - from) * index) / 3;
+      points.push([cx + Math.cos(angle) * radius + shake(1.2), cy + Math.sin(angle) * radius + shake(1.2)]);
+    }
+  };
+  edge(radius, 0, width - radius, 0, 4);
+  corner(width - radius, radius, -Math.PI / 2, 0);
+  edge(width, radius, width, height - radius, 3);
+  corner(width - radius, height - radius, 0, Math.PI / 2);
+  edge(width - radius, height, radius, height, 4);
+  corner(radius, height - radius, Math.PI / 2, Math.PI);
+  edge(0, height - radius, 0, radius, 3);
+  corner(radius, radius, Math.PI, Math.PI * 1.5);
+  // Overshoot past the start, the way a hand closes a box it drew in one go.
+  points.push([radius + 4 + shake(), 0.3 + shake()]);
+  return curveThrough(points);
+};
+
+// The tail leaves the bottom edge, dips to a point and comes back up.
+const bubbleTail = ({ width, height, seed, side }) => {
+  const random = seeded(seed);
+  const shake = (amount = 1.1) => (random() - 0.5) * amount;
+  const root = side === "left" ? 17 : width - 17;
+  const direction = side === "left" ? -1 : 1;
+  return curveThrough([
+    [root + shake(), height - 1.5 + shake()],
+    [root + direction * 7 + shake(), height + 5 + shake()],
+    [root + direction * 12 + shake(), height + 12 + shake()],
+    [root + direction * 3 + shake(), height + 3 + shake()],
+    [root - direction * 9 + shake(), height - 2 + shake()],
+  ]);
+};
+
+// Illegible handwriting: a wave with noise on top, the shape a line of text
+// takes when you only see it out of the corner of your eye.
+const sketchScribble = ({ x, y, length, seed }) => {
+  const random = seeded(seed);
+  const steps = Math.max(7, Math.round(length / 9));
+  const points = [];
+  for (let index = 0; index <= steps; index += 1) {
+    points.push([
+      x + (length * index) / steps,
+      y + Math.sin(index * 1.75) * 2.1 + (random() - 0.5) * 1.5,
+    ]);
+  }
+  return curveThrough(points);
+};
+
+// "ja ja ja" written rather than typed: only two glyphs are needed, so each one
+// is a couple of strokes that can be drawn on in order.
+const sketchJaja = ({ x, y, seed }) => {
+  const random = seeded(seed);
+  const shake = (amount = 0.85) => (random() - 0.5) * amount;
+  const strokes = [];
+  const glyphJ = (gx) => {
+    strokes.push(
+      curveThrough([
+        [gx + 5.6 + shake(), y - 9 + shake()],
+        [gx + 5.2 + shake(), y - 3.5 + shake()],
+        [gx + 5.4 + shake(), y + 1.5 + shake()],
+        [gx + 3.9 + shake(), y + 4.8 + shake()],
+        [gx + 0.7 + shake(), y + 4.2 + shake()],
+      ]),
+    );
+    strokes.push(
+      curveThrough([
+        [gx + 4.8 + shake(0.5), y - 13.4 + shake(0.5)],
+        [gx + 6.3 + shake(0.5), y - 12.9 + shake(0.5)],
+      ]),
+    );
+    return 8.6;
+  };
+  const glyphA = (gx) => {
+    const cx = gx + 4.6;
+    const cy = y - 3.4;
+    const bowl = [];
+    for (let index = 0; index <= 14; index += 1) {
+      const angle = -0.45 + (Math.PI * 2 * index) / 14;
+      bowl.push([cx + Math.cos(angle) * (4 + shake(0.7)), cy + Math.sin(angle) * (4.3 + shake(0.7))]);
+    }
+    strokes.push(curveThrough(bowl));
+    strokes.push(
+      curveThrough([
+        [cx + 4.2 + shake(0.5), cy - 4.4 + shake()],
+        [cx + 4.7 + shake(0.5), cy + 0.6 + shake()],
+        [cx + 5.5 + shake(0.5), cy + 4.6 + shake()],
+      ]),
+    );
+    return 11.4;
+  };
+  let cursor = x;
+  "ja ja ja".split("").forEach((char) => {
+    if (char === " ") {
+      cursor += 6.4;
+      return;
+    }
+    cursor += char === "j" ? glyphJ(cursor) : glyphA(cursor);
+  });
+  return strokes;
+};
+
+const CHAT_NAMES = { left: "Bute", right: "Honey" };
+
+const buildMessage = (message, index) => {
+  const seed = 1200 + index * 137;
+  const random = seeded(seed + 7);
+  const marks = [];
+  let width = message.width ?? 170;
+  let height = 44;
+  if (message.kind === "jaja") {
+    width = 102;
+    height = 38;
+    sketchJaja({ x: 13, y: 24, seed }).forEach((d) => marks.push({ d, tone: "ink" }));
+  } else if (message.kind === "heart") {
+    const count = message.count ?? 2;
+    width = 38 + (count - 1) * 28;
+    height = 40;
+    for (let i = 0; i < count; i += 1) {
+      marks.push({ d: sketchHeart({ x: 19 + i * 28, y: 8, size: 22, seed: seed + i * 53 }), tone: "heart" });
+    }
+  } else {
+    const lines = message.lines ?? 2;
+    height = 30 + (lines - 1) * 14;
+    for (let i = 0; i < lines; i += 1) {
+      const last = i === lines - 1;
+      marks.push({
+        d: sketchScribble({
+          x: 14,
+          y: 16 + i * 14,
+          length: (width - 28) * (last ? 0.5 + random() * 0.3 : 1),
+          seed: seed + i * 31,
+        }),
+        tone: "ink",
+      });
+    }
+  }
+  return {
+    side: message.side,
+    burst: message.burst === true,
+    name: CHAT_NAMES[message.side],
+    width,
+    height,
+    tilt: round((random() - 0.5) * 4.4),
+    outline: bubbleOutline({ width, height, seed }),
+    tail: bubbleTail({ width, height, seed: seed + 5, side: message.side }),
+    marks,
+    boxWidth: width + 10,
+    boxHeight: height + 20,
+  };
+};
+
+// Left is her, right is me. In the middle I send ten in a row, which is exactly
+// how it goes, and then the back and forth picks up again.
+const chatThread = [
+  { side: "left", kind: "scribble", width: 214, lines: 3 },
+  { side: "right", kind: "scribble", width: 168, lines: 2 },
+  { side: "left", kind: "jaja" },
+  { side: "right", kind: "scribble", width: 228, lines: 3 },
+  { side: "left", kind: "heart", count: 2 },
+  { side: "right", kind: "scribble", width: 146, lines: 2 },
+  { side: "right", kind: "scribble", width: 132, lines: 1, burst: true },
+  { side: "right", kind: "scribble", width: 176, lines: 2, burst: true },
+  { side: "right", kind: "jaja", burst: true },
+  { side: "right", kind: "scribble", width: 108, lines: 1, burst: true },
+  { side: "right", kind: "heart", count: 3, burst: true },
+  { side: "right", kind: "scribble", width: 194, lines: 2, burst: true },
+  { side: "right", kind: "scribble", width: 124, lines: 1, burst: true },
+  { side: "right", kind: "jaja", burst: true },
+  { side: "right", kind: "heart", count: 1, burst: true },
+  { side: "right", kind: "scribble", width: 158, lines: 2, burst: true },
+  { side: "left", kind: "scribble", width: 116, lines: 1 },
+  { side: "left", kind: "jaja" },
+  { side: "right", kind: "jaja" },
+  { side: "left", kind: "scribble", width: 186, lines: 2 },
+  { side: "right", kind: "heart", count: 1 },
+].map(buildMessage);
+
+// The squares of the day grid are sketched in the browser, since there is one
+// more of them every morning. Only the four keys under it are drawn here.
+const dayLegend = [
+  { kind: "talk", label: "un día hablando" },
+  { kind: "call", label: "una llamada" },
+  { kind: "meet", label: "nos vimos" },
+  { kind: "moment", label: "un momento" },
+].map((entry, index) => ({
+  ...entry,
+  box: sketchSquare(7700 + index * 53),
+  marks: dayMarks(entry.kind, 7700 + index * 53),
+}));
+
+// El bigote y los labios de "buena combinación". No cambian nunca, así que se
+// dibujan aquí y viajan en la página, como el reloj.
+const mustache = sketchMustache(2400);
+const mustacheShape = sketchMustacheShape(2400);
+const plusStrokes = sketchPlus(880);
+const lips = sketchLips(6100);
+const lipsShape = sketchLipsShape(6100);
+
+// Las dos señales del final. Cada una lleva su propia semilla para que los dos
+// aros no salgan calcados uno del otro.
+const headphones = sketchHeadphones(3300);
+const headphonesBan = sketchBan(3300);
+const ballot = sketchBallot(4900);
+const ballotBan = sketchBan(4900);
+---
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow,noarchive" />
+    <title></title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Handlee&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: "Handlee", cursive;
+        background: #f4f1eb;
+        color: #292820;
+        font-synthesis: none;
+      }
+
+      * { box-sizing: border-box; }
+      html, body { min-width: 320px; min-height: 100%; margin: 0; }
+      body { min-height: 100vh; }
+      main { min-height: 100vh; }
+      body:has(.gate:not([hidden])) { overflow: hidden; }
+      .gate {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: #f4f1eb;
+      }
+      .gate[hidden] { display: none; }
+      form { display: flex; align-items: center; gap: clamp(7px, 2.5vw, 14px); }
+      input {
+        width: 2.4ch;
+        padding: 8px 0;
+        border: 0;
+        border-bottom: 1px solid #aaa69d;
+        border-radius: 0;
+        outline: none;
+        background: transparent;
+        color: inherit;
+        font: 400 19px/1.2 "Handlee", cursive;
+        text-align: center;
+      }
+      input:focus { border-color: #292820; }
+      input::placeholder { color: #a7a39a; opacity: 1; }
+      #month { width: 6.5ch; text-align: left; }
+      #year { width: 4.5ch; }
+      .slash { color: #aaa69d; font-size: 17px; }
+      button {
+        width: 30px;
+        height: 34px;
+        margin-left: 4px;
+        border: 0;
+        background: transparent;
+        color: #6f6b62;
+        font: 20px "Handlee", cursive;
+        cursor: pointer;
+      }
+      button:hover, button:focus-visible { color: #292820; }
+      .error {
+        position: absolute;
+        top: calc(50% + 37px);
+        left: 0;
+        width: 100%;
+        margin: 0;
+        color: #817d74;
+        font: 12px/1.4 "Handlee", cursive;
+        text-align: center;
+      }
+      @media (max-width: 380px) {
+        form { gap: 7px; }
+        input { font-size: 17px; }
+      }
+
+      .letter-section {
+        min-height: 300vh;
+        padding: 0 22px;
+      }
+      .letter-stage {
+        position: sticky;
+        top: 0;
+        display: grid;
+        min-height: 100svh;
+        align-items: center;
+        padding: 12vh 0 10vh;
+      }
+      .letter-writing {
+        width: min(100%, 620px);
+        margin: 0 auto;
+        font-size: clamp(1.65rem, 8.3vw, 2.4rem);
+        line-height: 1.42;
+        letter-spacing: -0.035em;
+      }
+      .letter-writing p { margin: 0; }
+      .letter-writing p + p { margin-top: 1.1em; }
+      .word, .counter {
+        display: inline-block;
+        opacity: 0;
+        transform: translate3d(0, 0.38em, 0);
+        filter: blur(7px);
+      }
+      .counter {
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+
+      .letter-clock {
+        display: grid;
+        justify-items: center;
+        margin: clamp(26px, 6vh, 54px) 0 0;
+        opacity: 0;
+      }
+      .letter-clock figcaption {
+        max-width: 36ch;
+        margin-top: clamp(14px, 2.4vh, 22px);
+        color: #817d74;
+        font-size: clamp(0.78rem, 2.7vw, 0.9rem);
+        line-height: 1.55;
+        text-align: center;
+        text-wrap: pretty;
+      }
+      .letter-clock svg {
+        width: clamp(244px, 64vw, 368px);
+        max-width: 100%;
+        height: auto;
+        overflow: visible;
+      }
+      .dial {
+        fill: none;
+        stroke: #8f8a81;
+        stroke-width: 1.7;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      /* A second, lighter pass over the ring: the line a hand lays down twice. */
+      .dial--ghost {
+        stroke-width: 1.1;
+        opacity: 0.45;
+      }
+      .hand {
+        fill: #292820;
+        stroke: #292820;
+        stroke-width: 0.9;
+        stroke-linejoin: round;
+      }
+      .hand--second {
+        fill: none;
+        stroke: #a2553c;
+        stroke-width: 1.6;
+        stroke-linecap: round;
+      }
+      .pivot { fill: #292820; }
+      .pivot--second { fill: #a2553c; }
+      .letter-memory {
+        padding: clamp(56px, 12vw, 96px) 22px 16vh;
+      }
+      .letter-memory__inner {
+        width: min(100%, 620px);
+        margin: 0 auto;
+      }
+      .letter-memory__copy {
+        font-size: clamp(1.45rem, 7.2vw, 2.15rem);
+        line-height: 1.48;
+        letter-spacing: -0.025em;
+      }
+      .letter-memory__copy p { margin: 0; }
+      .letter-memory__copy p + p { margin-top: 1.2em; }
+      .memory-word { display: inline-block; }
+      .memory-gallery {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        align-items: center;
+        gap: clamp(4px, 1.8vw, 14px);
+        margin: clamp(40px, 10vw, 76px) 0 0;
+      }
+      .memory-snapshot {
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        aspect-ratio: 1;
+        margin: 0;
+        transform-origin: center;
+      }
+      .memory-snapshot:nth-child(1) { z-index: 1; transform: translateY(7px) rotate(-7deg); }
+      .memory-snapshot:nth-child(2) { z-index: 3; transform: translateY(-11px) rotate(5deg); }
+      .memory-snapshot:nth-child(3) { z-index: 2; transform: translateY(9px) rotate(-4deg); }
+      .memory-snapshot__frame {
+        display: block;
+        width: 100%;
+        height: 100%;
+        padding: clamp(4px, 1vw, 7px);
+        background: #fffdf8;
+        box-shadow: 0 12px 28px rgb(41 40 32 / 16%);
+        transform-origin: center;
+      }
+      .memory-snapshot img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .memory-snapshot:nth-child(3) img { object-position: 50% 68%; }
+      .memory-gallery--meet .memory-snapshot:nth-child(1) img { object-position: 50% 47%; }
+      .memory-gallery--meet .memory-snapshot:nth-child(2) img { object-position: 50% 23%; }
+      .memory-gallery--meet .memory-snapshot:nth-child(3) img { object-position: 50% 38%; }
+      .letter-memory__after {
+        margin-top: clamp(64px, 14vw, 112px);
+        font-size: clamp(1.45rem, 7.2vw, 2.15rem);
+        line-height: 1.48;
+        letter-spacing: -0.025em;
+      }
+      .letter-memory__after p { margin: 0; }
+      .letter-memory__after p + p { margin-top: 1.2em; }
+      .letter-memory__closing {
+        margin-top: clamp(64px, 14vw, 112px);
+        font-size: clamp(1.45rem, 7.2vw, 2.15rem);
+        line-height: 1.48;
+        letter-spacing: -0.025em;
+      }
+      .letter-memory__closing p { margin: 0; }
+      .letter-memory__closing p + p { margin-top: 1.2em; }
+      /* The thread plays inside a window instead of running down the page:
+         the track slides up under a fixed frame, so you watch the
+         conversation arrive rather than scroll past a transcript. */
+      .letter-chat {
+        position: relative;
+        margin-top: clamp(52px, 12vw, 92px);
+      }
+      .letter-chat.is-live {
+        height: clamp(330px, 58svh, 470px);
+        overflow: hidden;
+        -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 11%, #000 89%, transparent 100%);
+        mask-image: linear-gradient(to bottom, transparent 0%, #000 11%, #000 89%, transparent 100%);
+      }
+      .letter-chat__sparks {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+      .letter-chat__track {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: clamp(5px, 1.4vw, 9px);
+        padding-inline: 5px;
+      }
+      .letter-chat__after {
+        margin-top: clamp(52px, 12vw, 92px);
+        font-size: clamp(1.45rem, 7.2vw, 2.15rem);
+        line-height: 1.48;
+        letter-spacing: -0.025em;
+      }
+      .letter-chat__after p { margin: 0; }
+      .letter-chat__after p + p { margin-top: 1.2em; }
+      /* The day grid. The squares themselves are built by the script and
+         carry their ink as presentation attributes, because nodes created by
+         hand never get the scoping attribute this stylesheet matches on — the
+         same reason the clock's tick marks are drawn that way. What is left
+         here is the frame around them and the four keys underneath. */
+      .letter-days {
+        margin: clamp(64px, 14vw, 112px) 0 0;
+      }
+      .letter-days__heart {
+        display: block;
+        width: 100%;
+        height: auto;
+        overflow: visible;
+      }
+      .letter-days__caption {
+        margin-top: clamp(26px, 7vw, 40px);
+        font-size: clamp(1.05rem, 4.6vw, 1.25rem);
+        line-height: 1.5;
+        letter-spacing: -0.015em;
+        color: #817d74;
+      }
+      .letter-days__caption p { margin: 0; }
+      .letter-days__caption p + p { margin-top: 0.7em; }
+      .letter-days__after {
+        margin-top: clamp(48px, 11vw, 84px);
+        font-size: clamp(1.45rem, 7.2vw, 2.15rem);
+        line-height: 1.48;
+        letter-spacing: -0.025em;
+      }
+      .letter-days__after p { margin: 0; }
+      .letter-combo {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: clamp(6px, 2.8vw, 20px);
+        margin: clamp(30px, 7vw, 52px) 0 0;
+        opacity: 0;
+      }
+      .letter-combo__piece--mustache { width: clamp(126px, 34vw, 190px); }
+      .letter-combo__piece--lips { width: clamp(80px, 22vw, 120px); }
+      .letter-combo__piece, .letter-combo__plus { height: auto; overflow: visible; }
+      .letter-combo__plus { width: clamp(26px, 6.8vw, 38px); }
+      .combo-ink {
+        fill: none;
+        stroke: #292820;
+        stroke-width: 0.85;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      /* Trazo ancho: unas pocas pasadas bastan para dejar la forma maciza. */
+      .combo-fill {
+        fill: none;
+        stroke: #292820;
+        stroke-width: 2.9;
+        stroke-linecap: round;
+      }
+      /* Ancho de barra de labios: siete pasadas bastan para cubrir la boca. */
+      .combo-paint {
+        fill: none;
+        stroke: #b81f2d;
+        stroke-width: 2.6;
+        stroke-linecap: round;
+      }
+      /* Las dos señales de las reglas. Van al mismo tamaño y separadas lo
+         justo para que se lean como un par y no como dos dibujos sueltos. */
+      .letter-rules {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: clamp(20px, 8vw, 60px);
+        margin: clamp(38px, 9vw, 64px) 0 0;
+        opacity: 0;
+      }
+      .letter-rules__sign {
+        width: clamp(98px, 28vw, 142px);
+        height: auto;
+        overflow: visible;
+      }
+      .rules-ink {
+        fill: none;
+        stroke: #292820;
+        stroke-width: 1;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      /* El aro y la barra van en rojo y más gruesos: es la parte que prohíbe,
+         y con el mismo rojo del pintalabios de arriba. */
+      .rules-ban {
+        fill: none;
+        stroke: #b81f2d;
+        stroke-width: 1.55;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .rules-ban--slash { stroke-width: 1.75; }
+      .letter-days__legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 18px;
+        margin: clamp(18px, 5vw, 26px) 0 0;
+        padding: 0;
+        list-style: none;
+      }
+      .day-key {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .day-key__icon {
+        flex: none;
+        width: 21px;
+        height: 21px;
+        overflow: visible;
+      }
+      .day-key__box {
+        fill: none;
+        stroke: #8f8a81;
+        stroke-width: 0.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .day-key__mark {
+        fill: none;
+        stroke: #292820;
+        stroke-width: 0.75;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .day-key--meet .day-key__mark {
+        fill: #a2553c;
+        stroke: #a2553c;
+      }
+      .letter-chat__defs {
+        position: absolute;
+        width: 0;
+        height: 0;
+      }
+      /* Popping from the outer edge keeps the overshoot pointing inward, so
+         a bubble never grows past the window and gets clipped. */
+      .chat-msg { max-width: 88%; transform-origin: 0 50%; }
+      .chat-msg--right { align-self: flex-end; transform-origin: 100% 50%; }
+      /* The burst arrives faster than a conversation does, so those bubbles
+         sit closer together than the ones around them. */
+      .chat-msg[data-burst] { margin-top: -7px; }
+      .chat-name {
+        display: block;
+        margin: 0 8px 1px;
+        color: #a09b92;
+        font-size: clamp(0.62rem, 2.1vw, 0.72rem);
+        letter-spacing: 0.09em;
+      }
+      .chat-msg--right .chat-name { text-align: right; }
+      .chat-bubble {
+        display: block;
+        max-width: 100%;
+        height: auto;
+        overflow: visible;
+        transform: rotate(var(--tilt, 0deg));
+      }
+      .chat-msg--right .chat-bubble { margin-left: auto; }
+      .chat-line {
+        fill: none;
+        stroke: #8f8a81;
+        stroke-width: 1.6;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .chat-mark {
+        fill: none;
+        stroke: #6f6b62;
+        stroke-width: 1.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .chat-mark--ink { stroke: #292820; }
+      .chat-mark--heart { stroke: #a2553c; stroke-width: 1.8; }
+      @media (min-width: 600px) {
+        .memory-gallery { gap: clamp(12px, 2.4vw, 24px); }
+        .memory-snapshot { max-width: 205px; }
+        .memory-snapshot__frame { padding: 9px; }
+        .letter-memory__after { font-size: clamp(2rem, 4vw, 2.6rem); }
+        .letter-memory__closing { font-size: clamp(2rem, 4vw, 2.6rem); }
+      }
+      @media (min-width: 600px) {
+        .letter-section { padding-inline: 9vw; }
+        .letter-writing { font-size: clamp(2.1rem, 5vw, 3.5rem); }
+        .letter-memory { padding-inline: 9vw; }
+        .letter-memory__copy { font-size: clamp(2rem, 4vw, 2.6rem); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .word, .counter, .letter-clock {
+          opacity: 1 !important;
+          transform: none !important;
+          filter: none !important;
+        }
+        .chat-msg {
+          opacity: 1 !important;
+          visibility: visible !important;
+          transform: none !important;
+        }
+        .letter-combo, .letter-rules { opacity: 1 !important; }
+        .letter-chat.is-live { height: auto; overflow: visible; mask-image: none; }
+        /* The second pass only exists to make the loop seamless; standing
+           still, it would just repeat the conversation. */
+        .chat-msg[data-pass="2"] { display: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="letter-section" id="letter-section" aria-label="Carta">
+        <div class="letter-stage">
+          <div class="letter-writing" id="letter-writing" aria-live="off">
+            <p>Empezamos a hablar el 30 de Junio a las 6:11 P.M.</p>
+            <p>Desde entonces han pasado <span class="counter" data-unit="days">0</span> días, <span class="counter" data-unit="hours">0</span> horas, <span class="counter" data-unit="minutes">0</span> minutos y <span class="counter" data-unit="seconds">0</span> segundos.</p>
+          </div>
+          <figure class="letter-clock" id="letter-clock">
+            <svg viewBox="0 0 200 200" role="presentation" focusable="false" aria-hidden="true">
+              <defs>
+                <!-- Nudges every edge along a noise field, which is what turns
+                     the generated paths into a pencil line rather than vector
+                     ones: the shake is fixed in the page, so a turning hand
+                     wobbles differently at each hour. -->
+                <filter id="pencil" x="-15%" y="-15%" width="130%" height="130%" color-interpolation-filters="sRGB">
+                  <feTurbulence type="fractalNoise" baseFrequency="0.042 0.058" numOctaves="2" seed="7" result="grain" />
+                  <feDisplacementMap in="SourceGraphic" in2="grain" scale="2.4" xChannelSelector="R" yChannelSelector="G" />
+                </filter>
+              </defs>
+              <g filter="url(#pencil)">
+                <path class="dial dial--ghost" d={dialGhostPath} />
+                <path class="dial" id="clock-dial" d={dialPath} />
+                <g id="clock-ticks"></g>
+                <path class="hand hand--hour" id="hand-hour" d={hourPath} />
+                <path class="hand hand--minute" id="hand-minute" d={minutePath} />
+                <path class="hand hand--second" id="hand-second" d={secondPath} />
+                <circle class="pivot" cx="100" cy="100" r="3.4" />
+                <circle class="pivot--second" cx="100" cy="100" r="1.5" />
+              </g>
+            </svg>
+            <figcaption>
+              Este reloj no está roto, no se equivoca de hora: lo puse en cero el 30 de junio a las
+              6:11 p.&nbsp;m. La aguja roja da una vuelta por minuto, la larga una por hora y la
+              corta una cada doce, así que no marca la hora que es, marca la que llevamos juntos.
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+      <section class="letter-memory" aria-label="Recuerdos">
+        <div class="letter-memory__inner">
+          <div class="letter-memory__copy">
+            <p>Hemos hablado mucho, quizá demasiado.</p>
+            <p>Te hablaba por Instagram a pesar de que yo no lo tenía instalado, era importante para mí conocerte más.</p>
+            <p>Cuando fuimos a WhatsApp hablamos de libros y te di mi primer regalo, luego de haber hablado de la plaza de Chillán Viejo.</p>
+          </div>
+          <div class="memory-gallery">
+            <figure class="memory-snapshot">
+              <div class="memory-snapshot__frame" data-popup>
+                <img src="/WhatsApp%20Image%202026-09-29%20at%2011.38.51%20PM.jpeg" alt="Un arbusto florecido en la plaza" loading="lazy" decoding="async" />
+              </div>
+            </figure>
+            <figure class="memory-snapshot">
+              <div class="memory-snapshot__frame" data-popup>
+                <img src="/WhatsApp%20Image%202026-09-29%20at%2011.38.52%20PM%20(1).jpeg" alt="Monumento ecuestre en la plaza de Chillán Viejo" loading="lazy" decoding="async" />
+              </div>
+            </figure>
+            <figure class="memory-snapshot">
+              <div class="memory-snapshot__frame" data-popup>
+                <img src="/WhatsApp%20Image%202026-09-29%20at%2011.38.52%20PM.jpeg" alt="Una paloma con un pequeño chaleco en la plaza" loading="lazy" decoding="async" />
+              </div>
+            </figure>
+          </div>
+          <div class="letter-memory__after">
+            <p>Muy pocos días después nos vimos en persona para comer ramen e ir a los columpios. Fue la primera vez que te vi en persona.</p>
+            <p>Y fue uno de los días más memorables que he tenido en mi vida. Pensé por un momento que no teníamos fotos de ese día, pero sí: teníamos un paparazzi.</p>
+          </div>
+          <div class="memory-gallery memory-gallery--meet" aria-label="Fotos de nuestro primer encuentro">
+            <figure class="memory-snapshot">
+              <div class="memory-snapshot__frame" data-popup>
+                <img src="/carta-encuentro-1.jpeg" alt="Dos personas en los columpios de la plaza" loading="lazy" decoding="async" />
+              </div>
+            </figure>
+            <figure class="memory-snapshot">
+              <div class="memory-snapshot__frame" data-popup>
+                <img src="/carta-encuentro-2.jpeg" alt="Una pareja caminando de la mano por la calle" loading="lazy" decoding="async" />
+              </div>
+            </figure>
+            <figure class="memory-snapshot">
+              <div class="memory-snapshot__frame" data-popup>
+                <img src="/carta-encuentro-3.jpeg" alt="Una pareja en el mostrador del local de ramen" loading="lazy" decoding="async" />
+              </div>
+            </figure>
+          </div>
+          <div class="letter-memory__closing">
+            <p>Fuiste contándome de tu familia, de tus rutinas y esas cosas que te gustaban pero que yo aún no sabía del todo.</p>
+            <p>De quién eras, quién eres y quién querías ser.</p>
+            <p>Pero sobre todo, aprendimos que los dos éramos muy buenos para cahuinear.</p>
+          </div>
+          <div class="letter-chat" aria-label="Nuestras conversaciones">
+            <svg class="letter-chat__defs" aria-hidden="true" focusable="false">
+              <defs>
+                <!-- Same displacement trick as the clock, dialled down: these
+                     strokes are thinner, and too much shake unravels them. -->
+                <filter id="pencil-chat" x="-18%" y="-18%" width="136%" height="136%" color-interpolation-filters="sRGB">
+                  <feTurbulence type="fractalNoise" baseFrequency="0.05 0.062" numOctaves="2" seed="21" result="grain" />
+                  <feDisplacementMap in="SourceGraphic" in2="grain" scale="1.7" xChannelSelector="R" yChannelSelector="G" />
+                </filter>
+              </defs>
+            </svg>
+            <canvas class="letter-chat__sparks" aria-hidden="true"></canvas>
+            <div class="letter-chat__track">
+              {/* Two identical passes of the same thread. The feed never
+                  stops: when the second pass has played out it looks exactly
+                  like the first pass did at its end, so the loop jumps back a
+                  pass and keeps scrolling with no seam. */}
+              {[1, 2].map((pass) => chatThread.map((message) => (
+                <div
+                  class={`chat-msg chat-msg--${message.side}`}
+                  data-pass={pass}
+                  data-burst={message.burst || undefined}
+                  aria-hidden={pass === 2 ? "true" : undefined}
+                >
+                  <span class="chat-name">{message.name}</span>
+                  <svg
+                    class="chat-bubble"
+                    style={`--tilt:${message.tilt}deg`}
+                    width={round(message.boxWidth * 1.24)}
+                    height={round(message.boxHeight * 1.24)}
+                    viewBox={`-5 -5 ${message.boxWidth} ${message.boxHeight}`}
+                    role="presentation"
+                    focusable="false"
+                    aria-hidden="true"
+                  >
+                    <g filter="url(#pencil-chat)">
+                      <path class="chat-line" d={message.outline} />
+                      <path class="chat-line" d={message.tail} />
+                      {message.marks.map((mark) => (
+                        <path class={`chat-mark chat-mark--${mark.tone}`} d={mark.d} />
+                      ))}
+                    </g>
+                  </svg>
+                </div>
+              )))}
+            </div>
+          </div>
+          <div class="letter-chat__after">
+            <p>También cada día me iba dando cuenta de lo linda que eras.</p>
+            <p>Pero aún no tenía idea de lo increíble que serías en mi vida, la persona que más me ha entendido y espero que así tú también lo sientas.</p>
+          </div>
+          {/* One square per day. The grid is laid out in the browser, because
+              tomorrow there is one more of them, and the squares are dealt into
+              the outline of a heart in the order the days happened. */}
+          <figure class="letter-days">
+            <svg
+              class="letter-days__heart"
+              viewBox="0 0 100 100"
+              role="img"
+              aria-label="Un corazón formado por un cuadrado por cada día que llevamos juntos"
+            >
+              <defs>
+                {/* The same displacement trick as the clock and the bubbles,
+                    but a square here is only a few units across, so the grain
+                    has to be far finer and the shake far smaller than theirs. */}
+                <filter id="pencil-days" x="-12%" y="-12%" width="124%" height="124%" color-interpolation-filters="sRGB">
+                  <feTurbulence type="fractalNoise" baseFrequency="0.3 0.36" numOctaves="2" seed="33" result="grain" />
+                  <feDisplacementMap in="SourceGraphic" in2="grain" scale="0.3" xChannelSelector="R" yChannelSelector="G" />
+                </filter>
+              </defs>
+              {/* Filled in by the script: one square per day, and there is a
+                  new one every morning. */}
+              <g class="letter-days__ink" filter="url(#pencil-days)"></g>
+            </svg>
+            <figcaption class="letter-days__caption">
+              <p>
+                Cada cuadrado es un día: los <span data-day-count="days">90</span> días que
+                llevamos juntos. Días de hablarnos hasta tarde, de llamadas, de vernos,
+                de cosas que se quedaron guardadas.
+              </p>
+              <p>Sueltos no eran nada. Juntos son esto.</p>
+              <ul class="letter-days__legend">
+                {dayLegend.map((entry) => (
+                  <li class={`day-key day-key--${entry.kind}`}>
+                    <svg class="day-key__icon" viewBox="-7 -7 14 14" aria-hidden="true" focusable="false">
+                      <g transform="scale(0.92)">
+                        <path class="day-key__box" d={entry.box} />
+                        {entry.marks.map((mark) => (
+                          <path class="day-key__mark" d={mark} />
+                        ))}
+                      </g>
+                    </svg>
+                    <span>{entry.label}</span>
+                  </li>
+                ))}
+              </ul>
+            </figcaption>
+          </figure>
+          <div class="letter-days__after">
+            <p>De repente el bigote y el pintalabios sí parecían hacer una buena combinación. El humor literal y algunos momentos de hiperactividad por tu parte fueron importantes.</p>
+          </div>
+          <figure class="letter-combo" role="img" aria-label="Un bigote más unos labios pintados de rojo">
+            <svg class="letter-combo__piece letter-combo__piece--mustache" viewBox="-25 -9 50 17" aria-hidden="true" focusable="false">
+              <defs>
+                <!-- Un temblor más fino que el del reloj: a este tamaño el mismo
+                     desplazamiento convertiría el rizo de la punta en un borrón. -->
+                <filter id="pencil-combo" x="-14%" y="-14%" width="128%" height="128%" color-interpolation-filters="sRGB">
+                  <feTurbulence type="fractalNoise" baseFrequency="0.06 0.072" numOctaves="2" seed="52" result="grain" />
+                  <feDisplacementMap in="SourceGraphic" in2="grain" scale="0.9" xChannelSelector="R" yChannelSelector="G" />
+                </filter>
+                <clipPath id="mustache-clip">
+                  <path d={mustacheShape} />
+                </clipPath>
+                <clipPath id="lips-clip">
+                  <path d={lipsShape} />
+                </clipPath>
+              </defs>
+              <g filter="url(#pencil-combo)">
+                {/* El negro va primero y recortado por la silueta, igual que el
+                    rojo de los labios: la línea queda por encima del relleno. */}
+                <g clip-path="url(#mustache-clip)">
+                  {mustache.fill.map((stroke) => <path class="combo-fill" d={stroke} />)}
+                </g>
+                {mustache.outline.map((stroke) => <path class="combo-ink" d={stroke} />)}
+              </g>
+            </svg>
+            <svg class="letter-combo__plus" viewBox="-7 -7 14 14" aria-hidden="true" focusable="false">
+              <g filter="url(#pencil-combo)">
+                {plusStrokes.map((stroke) => <path class="combo-ink" d={stroke} />)}
+              </g>
+            </svg>
+            <svg class="letter-combo__piece letter-combo__piece--lips" viewBox="-13.5 -6.4 27 16" aria-hidden="true" focusable="false">
+              <g filter="url(#pencil-combo)">
+                {/* El color va primero y recortado por la silueta: así la línea
+                    del labio queda por encima y nada se sale del contorno. */}
+                <g clip-path="url(#lips-clip)">
+                  {lips.fill.map((stroke) => <path class="combo-paint" d={stroke} />)}
+                </g>
+                {lips.outline.map((stroke) => <path class="combo-ink" d={stroke} />)}
+              </g>
+            </svg>
+          </figure>
+          <div class="letter-memory__closing">
+            <p>Si hay una regla, bueno dos.</p>
+            <p>Tu no hablas de tecnología y yo no hablo de política, aun que digas que si puedo. Se que no.</p>
+            <p>Pero es gracioso, a ti te duele cuando yo lo hago y a mi cuando dices que los audífonos con cable son buenos.</p>
+          </div>
+          <figure class="letter-rules" role="img" aria-label="Dos señales de prohibido: unos audífonos con cable y una urna de voto">
+            <svg class="letter-rules__sign" viewBox="-20 -20 40 40" aria-hidden="true" focusable="false">
+              <defs>
+                <!-- El mismo temblor fino que el del bigote: a este tamaño un
+                     desplazamiento mayor se comería la clavija del cable. -->
+                <filter id="pencil-rules" x="-14%" y="-14%" width="128%" height="128%" color-interpolation-filters="sRGB">
+                  <feTurbulence type="fractalNoise" baseFrequency="0.058 0.07" numOctaves="2" seed="71" result="grain" />
+                  <feDisplacementMap in="SourceGraphic" in2="grain" scale="0.9" xChannelSelector="R" yChannelSelector="G" />
+                </filter>
+              </defs>
+              <g filter="url(#pencil-rules)">
+                {/* Primero lo que se prohíbe y después el aro encima, que es el
+                    orden en que se tacha algo ya dibujado. */}
+                {headphones.map((stroke) => <path class="rules-ink" d={stroke} />)}
+                <path class="rules-ban" d={headphonesBan.ring} />
+                <path class="rules-ban rules-ban--slash" d={headphonesBan.slash} />
+              </g>
+            </svg>
+            <svg class="letter-rules__sign" viewBox="-20 -20 40 40" aria-hidden="true" focusable="false">
+              <g filter="url(#pencil-rules)">
+                {ballot.map((stroke) => <path class="rules-ink" d={stroke} />)}
+                <path class="rules-ban" d={ballotBan.ring} />
+                <path class="rules-ban rules-ban--slash" d={ballotBan.slash} />
+              </g>
+            </svg>
+          </figure>
+          <div class="letter-memory__closing">
+            <p>Lo cierto es que estamos aun construyendo nuestra historia, cada día nos conocemos aun más y se que tengo una compañera a mi lado que al igual que yo estaba ahí siempre.</p>
+          </div>
+          <div class="memory-gallery" aria-label="Fotos juntos">
+            <figure class="memory-snapshot">
+              <div class="memory-snapshot__frame" data-popup>
+                <img src="/WhatsApp%20Image%202026-09-30%20at%201.46.29%20AM%20(2).jpeg" alt="Ella sonríe frente a unas figuras verdes iluminadas de noche" loading="lazy" decoding="async" />
+              </div>
+            </figure>
+            <figure class="memory-snapshot">
+              <div class="memory-snapshot__frame" data-popup>
+                <img src="/WhatsApp%20Image%202026-09-30%20at%201.46.29%20AM.jpeg" alt="Una selfie juntos en una biblioteca" loading="lazy" decoding="async" />
+              </div>
+            </figure>
+            <figure class="memory-snapshot">
+              <div class="memory-snapshot__frame" data-popup>
+                <img src="/WhatsApp%20Image%202026-09-30%20at%201.46.29%20AM%20(1).jpeg" alt="Un primer plano de su bigote dibujado" loading="lazy" decoding="async" />
+              </div>
+            </figure>
+          </div>
+          <div class="letter-memory__closing">
+            <p>El 28 de agosto te pedi pololeo de la forma más especial que pude, por que creo que eres alguien que merece mucho amor y cariño.</p>
+            <p>Eres la persona con la que me quiero casar, vivir, viajar y hablar cada día de mi vida.</p>
+            <p>Te amo mucho.</p>
+            <p>Damián.</p>
+            <p>hecho hasta las 2AM el 30 de septiembre</p>
+          </div>
+          <div class="memory-gallery" aria-label="Más fotos juntos">
+            <figure class="memory-snapshot">
+              <div class="memory-snapshot__frame" data-popup>
+                <img src="/WhatsApp%20Image%202026-09-30%20at%201.53.04%20AM.jpeg" alt="Una selfie juntos, abrazados frente a una pared turquesa" loading="lazy" decoding="async" />
+              </div>
+            </figure>
+            <figure class="memory-snapshot">
+              <div class="memory-snapshot__frame" data-popup>
+                <img src="/WhatsApp%20Image%202026-09-30%20at%201.52.46%20AM.jpeg" alt="Una selfie juntos en un restaurante" loading="lazy" decoding="async" />
+              </div>
+            </figure>
+            <figure class="memory-snapshot">
+              <div class="memory-snapshot__frame" data-popup>
+                <img src="/WhatsApp%20Image%202026-09-30%20at%201.52.04%20AM.jpeg" alt="Una selfie juntos junto al río" loading="lazy" decoding="async" />
+              </div>
+            </figure>
+          </div>
+        </div>
+      </section>
+      <section class="gate" id="gate" role="dialog" aria-modal="true" aria-label="Introduce la fecha del aniversario">
+        <form id="date-form" autocomplete="off">
+          <input id="day" name="day" type="text" inputmode="numeric" maxlength="2" placeholder="día" aria-label="Día" autofocus />
+          <span class="slash" aria-hidden="true">/</span>
+          <input id="month" name="month" type="text" maxlength="9" placeholder="mes" aria-label="Mes" />
+          <span class="slash" aria-hidden="true">/</span>
+          <input id="year" name="year" type="text" inputmode="numeric" maxlength="4" placeholder="año" aria-label="Año" />
+          <button type="submit" aria-label="Continuar">↵</button>
+        </form>
+        <p class="error" id="error" role="status" hidden></p>
+      </section>
+    </main>
+    <script>
+      import gsap from "gsap";
+      import { DAY_BOX, dayKinds, dayMarks, daySeed, sketchSquare } from "../lib/sketch";
+
+      // The letter always starts from the top. Left to itself the browser
+      // restores the last scroll position on reload, which dropped the reader
+      // halfway down the page with the opening lines never written.
+      if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+      window.scrollTo(0, 0);
+
+      const form = document.querySelector("#date-form");
+      const gate = document.querySelector("#gate");
+      const error = document.querySelector("#error");
+      const day = document.querySelector("#day");
+      const month = document.querySelector("#month");
+      const year = document.querySelector("#year");
+      const letterSection = document.querySelector("#letter-section");
+      const writing = document.querySelector("#letter-writing");
+      const writtenItems = [];
+      const normalize = (value) => value.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+      const walker = document.createTreeWalker(writing, NodeFilter.SHOW_TEXT);
+      const textNodes = [];
+      while (walker.nextNode()) textNodes.push(walker.currentNode);
+      textNodes.forEach((node) => {
+        if (node.parentElement?.closest(".counter")) return;
+        const fragment = document.createDocumentFragment();
+        node.textContent.split(/(\s+)/).forEach((part) => {
+          if (!part) return;
+          if (/^\s+$/.test(part)) fragment.append(document.createTextNode(part));
+          else {
+            const word = document.createElement("span");
+            word.className = "word";
+            word.textContent = part;
+            fragment.append(word);
+            writtenItems.push(word);
+          }
+        });
+        node.replaceWith(fragment);
+      });
+      writing.querySelectorAll(".counter").forEach((counter) => writtenItems.push(counter));
+      writtenItems.sort((a, b) => {
+        const position = a.compareDocumentPosition(b);
+        return position & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+      });
+
+      // The start date is June 30, 2026, at 6:11 p.m. in Santiago (UTC−4).
+      const startAt = new Date("2026-06-30T18:11:00-04:00");
+      let counterTimer;
+
+      const elapsedSeconds = () => Math.max(0, (Date.now() - startAt.getTime()) / 1000);
+
+      const updateCounter = () => {
+        const totalSeconds = Math.floor(elapsedSeconds());
+        const values = {
+          days: Math.floor(totalSeconds / 86400),
+          hours: Math.floor((totalSeconds % 86400) / 3600),
+          minutes: Math.floor((totalSeconds % 3600) / 60),
+          seconds: totalSeconds % 60,
+        };
+        writing.querySelectorAll("[data-unit]").forEach((counter) => {
+          counter.textContent = values[counter.dataset.unit].toLocaleString("es-CL");
+        });
+      };
+
+      // The clock mirrors the counter: its hands carry the hours, minutes and
+      // seconds left over once the whole days are taken out.
+      const clock = document.querySelector("#letter-clock");
+      const dials = document.querySelectorAll(".dial");
+      const stillClock = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const memoryLines = document.querySelectorAll(
+        ".letter-memory__copy p, .letter-memory__after p, .letter-memory__closing p, .letter-chat__after p, .letter-days__after p",
+      );
+      memoryLines.forEach((line) => {
+        const walker = document.createTreeWalker(line, NodeFilter.SHOW_TEXT);
+        const nodes = [];
+        while (walker.nextNode()) nodes.push(walker.currentNode);
+        nodes.forEach((node) => {
+          const fragment = document.createDocumentFragment();
+          node.textContent.split(/(\s+)/).forEach((part) => {
+            if (!part) return;
+            if (/^\s+$/.test(part)) fragment.append(document.createTextNode(part));
+            else {
+              const word = document.createElement("span");
+              word.className = "memory-word";
+              word.textContent = part;
+              fragment.append(word);
+            }
+          });
+          node.replaceWith(fragment);
+        });
+      });
+      // Paragraphs and photos come in through one queue, in reading order.
+      // Each used to have its own observer, which is what made them go off
+      // out of turn: three paragraphs on screen wrote themselves at once, and
+      // anything a fast scroll jumped over never intersected at all, so it
+      // stayed blank. Now the scroll position decides what is due, everything
+      // above a due block is due as well, and they play one after another.
+      const revealBlocks = [
+        ...memoryLines,
+        ...document.querySelectorAll(".memory-snapshot"),
+      ].sort((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));
+      const inkOf = (block) =>
+        block.matches(".memory-snapshot")
+          ? { photo: block.querySelector("[data-popup]") }
+          : { words: block.querySelectorAll(".memory-word") };
+
+      const showNow = (block) => {
+        const { photo, words } = inkOf(block);
+        gsap.set(photo ?? words, { autoAlpha: 1, clearProps: "transform,filter,willChange" });
+        if (photo) gsap.set(photo.querySelector("img"), { clearProps: "filter" });
+      };
+
+      // How long after a block starts the next one may begin: a paragraph
+      // gets far enough along to be read in order, a photo only a beat.
+      const playBlock = (block, delay) => {
+        const { photo, words } = inkOf(block);
+        if (photo) {
+          gsap.fromTo(
+            photo,
+            { autoAlpha: 0, scale: 0.72, y: 52, rotation: -3 },
+            { autoAlpha: 1, scale: 1, y: 0, rotation: 0, duration: 0.82, delay, ease: "back.out(1.65)", clearProps: "willChange" },
+          );
+          // The print develops after it lands: washed out first, then its
+          // real colour, like a photo coming out of the instant camera.
+          gsap.fromTo(
+            photo.querySelector("img"),
+            { filter: "sepia(0.55) brightness(1.35) contrast(0.75) saturate(0.6)" },
+            { filter: "sepia(0) brightness(1) contrast(1) saturate(1)", duration: 1.8, delay: delay + 0.25, ease: "power1.out", clearProps: "filter" },
+          );
+          return 0.14;
+        }
+        const spread = Math.min(1.2, (words.length - 1) * 0.035);
+        gsap.fromTo(
+          words,
+          { autoAlpha: 0, y: "0.35em", filter: "blur(6px)" },
+          {
+            autoAlpha: 1,
+            y: 0,
+            filter: "blur(0px)",
+            duration: 0.5,
+            delay,
+            stagger: { amount: spread },
+            ease: "power2.out",
+            // A settled word keeps no blur, so it costs nothing to repaint.
+            clearProps: "transform,filter",
+          },
+        );
+        return Math.min(0.55, 0.2 + spread * 0.4);
+      };
+
+      let revealed = 0;
+      let queueFreeAt = 0;
+      const revealDue = () => {
+        if (!gate.hidden || revealed >= revealBlocks.length) return;
+        // A block is due once its top crosses a line low on the screen.
+        const line = window.innerHeight * 0.86;
+        let due = revealed - 1;
+        for (let index = revealBlocks.length - 1; index >= revealed; index -= 1) {
+          if (revealBlocks[index].getBoundingClientRect().top < line) {
+            due = index;
+            break;
+          }
+        }
+        const now = gsap.ticker.time;
+        for (; revealed <= due; revealed += 1) {
+          const block = revealBlocks[revealed];
+          // Scrolled past before its turn: nobody is there to watch it
+          // write, so it is simply already written when they come back.
+          if (block.getBoundingClientRect().bottom < 0) {
+            showNow(block);
+            continue;
+          }
+          // A long backlog never makes the reader wait more than a moment.
+          const delay = Math.min(0.9, Math.max(0, queueFreeAt - now));
+          queueFreeAt = now + delay + playBlock(block, delay);
+        }
+      };
+
+      if (stillClock) {
+        revealBlocks.forEach(showNow);
+        revealed = revealBlocks.length;
+      } else {
+        // Hidden from the start: hiding them only once they came due let
+        // the words flash in fully inked for a frame before being taken back.
+        revealBlocks.forEach((block) => {
+          const { photo, words } = inkOf(block);
+          gsap.set(photo ?? words, { autoAlpha: 0 });
+        });
+        let revealPending = false;
+        const scheduleReveal = () => {
+          if (revealPending) return;
+          revealPending = true;
+          requestAnimationFrame(() => {
+            revealPending = false;
+            revealDue();
+          });
+        };
+        window.addEventListener("scroll", scheduleReveal, { passive: true });
+        window.addEventListener("resize", scheduleReveal);
+        // Photos load lazily and push the paragraphs under them down, so the
+        // line is checked again whenever one arrives.
+        document.querySelectorAll(".memory-snapshot img").forEach((img) => img.addEventListener("load", scheduleReveal));
+      }
+      // The thread plays inside its window: each message is revealed and the
+      // track slides up just enough to keep the newest one off the bottom
+      // edge, so older ones climb out of the frame the way a chat does.
+      // An ordinary message is drawn — the outline runs its own length, then
+      // the scribbles and hearts follow it. The ten in the middle are not
+      // drawn at all, they are thrown in already inked, one every few frames.
+      const chatWindow = document.querySelector(".letter-chat");
+      const chatTrack = document.querySelector(".letter-chat__track");
+      const chatMessages = Array.from(document.querySelectorAll(".chat-msg"));
+      if (chatWindow && (stillClock || !("IntersectionObserver" in window))) {
+        gsap.set(chatMessages, { autoAlpha: 1 });
+        gsap.set(chatMessages.filter((message) => message.dataset.pass === "2"), { display: "none" });
+      } else if (chatWindow) {
+        chatWindow.classList.add("is-live");
+        gsap.set(chatMessages, { autoAlpha: 0 });
+        const dashFrom = { strokeDasharray: (i, t) => t.getTotalLength(), strokeDashoffset: (i, t) => t.getTotalLength() };
+        // Where the track has to sit for this message to land just above the
+        // bottom edge. Never positive: the first few play without moving.
+        const restAt = (message) =>
+          Math.min(0, chatWindow.clientHeight - (message.offsetTop + message.offsetHeight) - 26);
+        // Ten messages landing at once throw embers. They are drawn as short
+        // tapered strokes rather than glowing dots, so they read as the same
+        // hand that drew the bubbles rather than as a particle system bolted
+        // onto the paper.
+        const sparkCanvas = chatWindow.querySelector(".letter-chat__sparks");
+        const sparkCtx = sparkCanvas.getContext("2d");
+        const SPARK_INKS = ["#9c3f22", "#c2551f", "#d97706", "#e8a317"];
+        let sparks = [];
+        let sparkAt = 0;
+        let sparkFrame = 0;
+        const sizeSparks = () => {
+          const ratio = Math.min(2, window.devicePixelRatio || 1);
+          sparkCanvas.width = Math.round(chatWindow.clientWidth * ratio);
+          sparkCanvas.height = Math.round(chatWindow.clientHeight * ratio);
+          sparkCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        };
+        const burnSparks = (now) => {
+          const delta = Math.min(0.05, (now - sparkAt) / 1000);
+          sparkAt = now;
+          sparkCtx.clearRect(0, 0, chatWindow.clientWidth, chatWindow.clientHeight);
+          sparkCtx.lineCap = "round";
+          sparks = sparks.filter((spark) => {
+            spark.life += delta / spark.span;
+            if (spark.life >= 1) return false;
+            // Embers rise and wander instead of falling.
+            spark.vy -= 64 * delta;
+            spark.vx += Math.sin((spark.life + spark.drift) * 8) * 52 * delta;
+            spark.x += spark.vx * delta;
+            spark.y += spark.vy * delta;
+            const fade = 1 - spark.life;
+            sparkCtx.globalAlpha = Math.min(1, fade * 1.9);
+            sparkCtx.strokeStyle = spark.ink;
+            sparkCtx.lineWidth = spark.weight * (0.35 + fade * 0.65);
+            sparkCtx.beginPath();
+            sparkCtx.moveTo(spark.x, spark.y);
+            sparkCtx.lineTo(spark.x - spark.vx * 0.055, spark.y - spark.vy * 0.055);
+            sparkCtx.stroke();
+            // A blunt head on the trail: an ember, not a scratch.
+            sparkCtx.fillStyle = spark.ink;
+            sparkCtx.beginPath();
+            sparkCtx.arc(spark.x, spark.y, sparkCtx.lineWidth * 0.62, 0, Math.PI * 2);
+            sparkCtx.fill();
+            return true;
+          });
+          sparkCtx.globalAlpha = 1;
+          sparkFrame = requestAnimationFrame(burnSparks);
+        };
+        // The canvas is painted for as long as the window is on screen, even
+        // with nothing alight. Starting and stopping on the last ember is what
+        // left a frame of frozen sparks stranded on the paper.
+        const startSparks = () => {
+          if (sparkFrame) return;
+          sparkAt = performance.now();
+          sparkFrame = requestAnimationFrame(burnSparks);
+        };
+        const stopSparks = () => {
+          if (sparkFrame) cancelAnimationFrame(sparkFrame);
+          sparkFrame = 0;
+          sparks = [];
+          sparkCtx.clearRect(0, 0, chatWindow.clientWidth, chatWindow.clientHeight);
+        };
+        const emitSparks = (message) => {
+          const frame = chatWindow.getBoundingClientRect();
+          const box = message.getBoundingClientRect();
+          const originY = box.top - frame.top + box.height * 0.6;
+          for (let index = 0; index < 30; index += 1) {
+            const angle = -Math.PI / 2 + (Math.random() - 0.5) * 2.3;
+            const speed = 52 + Math.random() * 132;
+            sparks.push({
+              x: box.left - frame.left + box.width * (0.25 + Math.random() * 0.7),
+              y: originY + (Math.random() - 0.5) * box.height * 0.7,
+              vx: Math.cos(angle) * speed,
+              vy: Math.sin(angle) * speed,
+              life: 0,
+              span: 0.85 + Math.random() * 0.95,
+              weight: 2.2 + Math.random() * 3.4,
+              drift: Math.random() * 6,
+              ink: SPARK_INKS[Math.floor(Math.random() * SPARK_INKS.length)],
+            });
+          }
+        };
+        sizeSparks();
+        window.addEventListener("resize", sizeSparks);
+        document.addEventListener("visibilitychange", () => {
+          if (document.hidden) stopSparks();
+        });
+
+        // One pass of the thread, scheduled onto a timeline. The ten in the
+        // middle go in as a block: ten overlapping track tweens fight each
+        // other, which is what made the burst stall and then snap down.
+        const schedulePass = (timeline, pass) => {
+          let at = 0;
+          let index = 0;
+          while (index < pass.length) {
+            const message = pass[index];
+            if (!message.hasAttribute("data-burst")) {
+              timeline
+                .fromTo(
+                  message,
+                  { autoAlpha: 0, y: 18, scale: 0.94 },
+                  { autoAlpha: 1, y: 0, scale: 1, duration: 0.46, ease: "power3.out" },
+                  at,
+                )
+                .fromTo(
+                  message.querySelectorAll(".chat-line"),
+                  dashFrom,
+                  { strokeDashoffset: 0, duration: 0.56, ease: "power2.inOut", stagger: 0.08, clearProps: "strokeDasharray,strokeDashoffset" },
+                  at,
+                )
+                .fromTo(
+                  message.querySelectorAll(".chat-mark"),
+                  dashFrom,
+                  { strokeDashoffset: 0, duration: 0.4, ease: "power2.out", stagger: 0.07, clearProps: "strokeDasharray,strokeDashoffset" },
+                  at + 0.3,
+                )
+                .to(chatTrack, { y: restAt(message), duration: 0.55, ease: "power2.out" }, at);
+              at += 0.78;
+              index += 1;
+              continue;
+            }
+            const run = [];
+            while (index < pass.length && pass[index].hasAttribute("data-burst")) {
+              run.push(pass[index]);
+              index += 1;
+            }
+            const step = 0.1;
+            run.forEach((burstMessage, order) => {
+              timeline.fromTo(
+                burstMessage,
+                { autoAlpha: 0, scale: 0.3, y: 26, rotation: order % 2 ? 8 : -8 },
+                {
+                  autoAlpha: 1,
+                  scale: 1,
+                  y: 0,
+                  rotation: 0,
+                  duration: 0.34,
+                  ease: "back.out(3.2)",
+                  onStart: () => emitSparks(burstMessage),
+                },
+                at + order * step,
+              );
+            });
+            timeline.to(
+              chatTrack,
+              { y: restAt(run[run.length - 1]), duration: run.length * step + 0.42, ease: "power1.inOut" },
+              at,
+            );
+            at += run.length * step + 0.5;
+          }
+          return at;
+        };
+
+        // The first pass plays once, from an empty frame. After that the
+        // second pass runs on repeat: at the end of it the window shows the
+        // same bubbles in the same places as the end of the first pass did,
+        // so rewinding to that point is invisible and the feed keeps
+        // scrolling forever.
+        let thread;
+        const buildThread = () => {
+          const passOne = chatMessages.filter((message) => message.dataset.pass === "1");
+          const passTwo = chatMessages.filter((message) => message.dataset.pass === "2");
+          const intro = gsap.timeline({ paused: true });
+          const loop = gsap.timeline({ paused: true, repeat: -1 });
+          schedulePass(intro, passOne);
+          schedulePass(loop, passTwo);
+          intro.eventCallback("onComplete", () => loop.play());
+          return { play: () => (intro.progress() < 1 ? intro.play() : loop.play()), pause: () => { intro.pause(); loop.pause(); } };
+        };
+        const chatObserver = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              thread = thread ?? buildThread();
+              thread.play();
+              startSparks();
+            } else {
+              thread?.pause();
+              stopSparks();
+            }
+          });
+        }, { threshold: 0.35 });
+        chatObserver.observe(chatWindow);
+      }
+
+      // The day grid: one square for every day we have been together. Both the
+      // count and the layout belong here rather than in the page, because
+      // tomorrow there is one more square and the whole lattice tightens to fit
+      // it. They come in scattered, the way the days actually arrived, and then
+      // walk into the outline of a heart.
+      const daysFigure = document.querySelector(".letter-days");
+      if (daysFigure) {
+        const CENTRE = 50;
+        // The classic implicit heart. Negative inside, and the further from zero
+        // the deeper in, which is what decides who gets dropped from the rim
+        // when the lattice hands back more squares than we have days.
+        const heartAt = (x, y) => {
+          const ring = x * x + y * y - 1;
+          return ring * ring * ring - x * x * y * y * y;
+        };
+        const lattice = (step) => {
+          const reach = Math.ceil(1.45 / step);
+          const held = [];
+          const spare = [];
+          for (let row = -reach; row <= reach; row += 1) {
+            for (let column = -reach; column <= reach; column += 1) {
+              const x = column * step;
+              const y = row * step;
+              const depth = heartAt(x, y);
+              (depth <= 0 ? held : spare).push({ x, y, depth });
+            }
+          }
+          return { held, spare };
+        };
+
+        const total = Math.max(1, Math.floor((Date.now() - startAt.getTime()) / 86400000) + 1);
+        daysFigure.querySelectorAll("[data-day-count]").forEach((slot) => {
+          slot.textContent = total.toLocaleString("es-CL");
+        });
+
+        // Loosen the lattice until it holds about as many squares as we have
+        // days. Finer steps only ever fit more, so once we are well past the
+        // count there is nothing left to find.
+        let best = null;
+        for (let step = 0.34; step > 0.035; step -= 0.002) {
+          const candidate = lattice(step);
+          const gap = Math.abs(candidate.held.length - total);
+          if (!best || gap < best.gap) best = { gap, step, ...candidate };
+          if (candidate.held.length > total * 1.5) break;
+        }
+
+        const spots = best.held.slice();
+        if (spots.length > total) {
+          // Deepest first, so the ones trimmed are the ones on the outline.
+          spots.sort((a, b) => a.depth - b.depth).length = total;
+        } else if (spots.length < total) {
+          // Not quite enough: borrow the ones that only just miss the edge.
+          spots.push(...best.spare.sort((a, b) => a.depth - b.depth).slice(0, total - spots.length));
+        }
+        // Reading order, so the days land in the heart in the order they
+        // happened rather than scattered through it.
+        spots.sort((a, b) => b.y - a.y || a.x - b.x);
+
+        // Fit whatever the lattice handed back into the box. The reach of the
+        // shape depends on which points the step happened to land on, so it is
+        // measured rather than assumed — the lobes overshoot the top otherwise.
+        const spanOf = (axis) => {
+          const values = spots.map((spot) => spot[axis]);
+          const low = Math.min(...values);
+          const high = Math.max(...values);
+          return { mid: (low + high) / 2, span: high - low };
+        };
+        const across = spanOf("x");
+        const down = spanOf("y");
+        // Room for the squares themselves. The wobble pushes a corner out past
+        // the nominal box and the resting tilt pushes it out again, so a cell
+        // reaches about half a step beyond its own centre on every side.
+        const PAD = best.step * 1.15;
+        const SCALE = Math.min(96 / (across.span + PAD), 96 / (down.span + PAD));
+        const cellScale = (best.step * SCALE * 0.72) / DAY_BOX;
+        const place = spots.map((spot) => ({
+          x: CENTRE + (spot.x - across.mid) * SCALE,
+          y: CENTRE - (spot.y - down.mid) * SCALE,
+          // Nothing sits square: a pencil never lands a box straight.
+          rest: (Math.random() - 0.5) * 9,
+        }));
+        const scatter = place.map((spot) => {
+          const angle = Math.random() * Math.PI * 2;
+          const reach = 15 + Math.random() * 17;
+          return {
+            x: spot.x + Math.cos(angle) * reach,
+            y: spot.y + Math.sin(angle) * reach,
+            rotation: (Math.random() - 0.5) * 72,
+          };
+        });
+
+        // The squares shrink as the days pile up, so the pencil weight is taken
+        // as a fraction of a square and then divided back out of the scale —
+        // otherwise a fixed stroke swallows the smaller boxes whole.
+        const inkWidth = Math.max(0.3, DAY_BOX * cellScale * 0.085) / cellScale;
+        // Now draw them. One group per day, ink set as attributes because a node
+        // built here never carries the scoping attribute the stylesheet needs.
+        const ink = daysFigure.querySelector(".letter-days__ink");
+        const svgNode = (name) => document.createElementNS("http://www.w3.org/2000/svg", name);
+        const kinds = dayKinds(total);
+        const grid = kinds.map((kind, index) => {
+          const cell = svgNode("g");
+          cell.setAttribute("class", `day-cell day-kind--${kind}`);
+          cell.dataset.day = String(index + 1);
+          const seed = daySeed(index);
+          const box = svgNode("path");
+          box.setAttribute("class", "day-cell__box");
+          box.setAttribute("d", sketchSquare(seed));
+          box.setAttribute("fill", "none");
+          box.setAttribute("stroke", "#8f8a81");
+          box.setAttribute("stroke-width", String(Math.round(inkWidth * 100) / 100));
+          box.setAttribute("stroke-linecap", "round");
+          box.setAttribute("stroke-linejoin", "round");
+          cell.append(box);
+          dayMarks(kind, seed).forEach((shape) => {
+            const mark = svgNode("path");
+            mark.setAttribute("d", shape);
+            mark.setAttribute("fill", kind === "meet" ? "#a2553c" : "none");
+            mark.setAttribute("stroke", kind === "meet" ? "#a2553c" : "#292820");
+            mark.setAttribute("stroke-width", String(Math.round(inkWidth * 92) / 100));
+            mark.setAttribute("stroke-linecap", "round");
+            mark.setAttribute("stroke-linejoin", "round");
+            cell.append(mark);
+          });
+          ink.append(cell);
+          return cell;
+        });
+
+        // Put them where they start before a frame gets painted, otherwise all
+        // of them flash stacked on the corner of the box on the way in.
+        gsap.set(grid, {
+          x: (index) => scatter[index].x,
+          y: (index) => scatter[index].y,
+          rotation: (index) => scatter[index].rotation,
+          scale: cellScale * 0.92,
+          autoAlpha: 0,
+        });
+
+        if (stillClock || !("IntersectionObserver" in window)) {
+          gsap.set(grid, {
+            x: (index) => place[index].x,
+            y: (index) => place[index].y,
+            rotation: (index) => place[index].rest,
+            scale: cellScale,
+            autoAlpha: 1,
+          });
+        } else {
+          const daysObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach((entry) => {
+              if (!entry.isIntersecting) return;
+              observer.unobserve(entry.target);
+              const boxes = ink.querySelectorAll(".day-cell__box");
+              const timeline = gsap.timeline();
+              timeline
+                .to(grid, {
+                  autoAlpha: 1,
+                  duration: 0.42,
+                  ease: "power2.out",
+                  // A fixed total rather than a fixed step: there is one more
+                  // square every day, and the entrance should not grow with them.
+                  stagger: { amount: 1.1, from: "random" },
+                })
+                .fromTo(
+                  boxes,
+                  {
+                    strokeDasharray: (index, target) => target.getTotalLength(),
+                    strokeDashoffset: (index, target) => target.getTotalLength(),
+                  },
+                  {
+                    strokeDashoffset: 0,
+                    duration: 0.5,
+                    ease: "power2.inOut",
+                    stagger: { amount: 1.1, from: "random" },
+                    clearProps: "strokeDasharray,strokeDashoffset",
+                  },
+                  0,
+                )
+                .to(
+                  grid,
+                  {
+                    x: (index) => place[index].x,
+                    y: (index) => place[index].y,
+                    rotation: (index) => place[index].rest,
+                    scale: cellScale,
+                    duration: 1.15,
+                    ease: "power3.inOut",
+                    stagger: { amount: 0.9, from: "center" },
+                  },
+                  ">-0.2",
+                )
+                .to(
+                  ink,
+                  // An SVG group scales from its corner unless told otherwise,
+                  // which made the heart lurch up and left instead of beating.
+                  { scale: 1.03, svgOrigin: "50 50", duration: 0.22, yoyo: true, repeat: 3, ease: "sine.inOut" },
+                  ">-0.15",
+                );
+            });
+          }, { threshold: 0.25, rootMargin: "0px 0px -8% 0px" });
+          daysObserver.observe(daysFigure);
+        }
+      }
+
+      // El bigote y los labios se arman solos cuando la frase que los nombra
+      // llega a pantalla: primero el lápiz, y el rojo al final, como quien se
+      // pinta después de dibujarse la boca.
+      const combo = document.querySelector(".letter-combo");
+      if (combo) {
+        const dashFrom = {
+          strokeDasharray: (index, target) => target.getTotalLength(),
+          strokeDashoffset: (index, target) => target.getTotalLength(),
+        };
+        const clearDash = "strokeDasharray,strokeDashoffset";
+        const mustacheLine = combo.querySelectorAll(".letter-combo__piece--mustache .combo-ink");
+        const mustacheFill = combo.querySelectorAll(".combo-fill");
+        const plus = combo.querySelectorAll(".letter-combo__plus .combo-ink");
+        const lipsLine = combo.querySelectorAll(".letter-combo__piece--lips .combo-ink");
+        const lipsPaint = combo.querySelectorAll(".combo-paint");
+        const lipsPiece = combo.querySelector(".letter-combo__piece--lips");
+
+        if (stillClock || !("IntersectionObserver" in window)) {
+          gsap.set(combo, { opacity: 1 });
+        } else {
+          const comboObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach((entry) => {
+              if (!entry.isIntersecting) return;
+              observer.unobserve(entry.target);
+              gsap
+                .timeline()
+                .to(combo, { opacity: 1, duration: 0.3, ease: "power2.out" })
+                .fromTo(
+                  mustacheLine,
+                  dashFrom,
+                  {
+                    strokeDashoffset: 0,
+                    duration: 0.5,
+                    ease: "power2.inOut",
+                    stagger: 0.14,
+                    clearProps: clearDash,
+                  },
+                  0,
+                )
+                // El pelo se rellena cuando ya está el contorno, igual que el
+                // rojo entra después de la línea del labio.
+                .fromTo(
+                  mustacheFill,
+                  dashFrom,
+                  {
+                    strokeDashoffset: 0,
+                    duration: 0.24,
+                    ease: "power1.out",
+                    stagger: 0.055,
+                    clearProps: clearDash,
+                  },
+                  ">-0.25",
+                )
+                .fromTo(
+                  plus,
+                  dashFrom,
+                  {
+                    strokeDashoffset: 0,
+                    duration: 0.22,
+                    ease: "power2.out",
+                    stagger: 0.08,
+                    clearProps: clearDash,
+                  },
+                  ">-0.15",
+                )
+                .fromTo(
+                  lipsLine,
+                  dashFrom,
+                  {
+                    strokeDashoffset: 0,
+                    duration: 0.5,
+                    ease: "power2.inOut",
+                    stagger: 0.1,
+                    clearProps: clearDash,
+                  },
+                  ">-0.05",
+                )
+                // El color entra antes de que el contorno termine, para que se
+                // lea como un solo gesto y no como dos pasos.
+                .fromTo(
+                  lipsPaint,
+                  dashFrom,
+                  {
+                    strokeDashoffset: 0,
+                    duration: 0.26,
+                    ease: "power1.out",
+                    stagger: 0.075,
+                    clearProps: clearDash,
+                  },
+                  ">-0.2",
+                )
+                .to(
+                  lipsPiece,
+                  { scale: 1.03, duration: 0.2, yoyo: true, repeat: 1, ease: "sine.inOut" },
+                  ">-0.05",
+                );
+            });
+          }, { threshold: 0.25, rootMargin: "0px 0px -8% 0px" });
+          comboObserver.observe(combo);
+        }
+      }
+
+      // Las dos señales se dibujan igual que el bigote: primero el lápiz de lo
+      // que se prohíbe, después el aro alrededor y la barra al final, que es el
+      // trazo con el que uno tacha algo. La segunda espera a la primera, para
+      // que se lean como dos reglas y no como una ilustración.
+      const rules = document.querySelector(".letter-rules");
+      if (rules) {
+        const signs = [...rules.querySelectorAll(".letter-rules__sign")];
+        if (stillClock || !("IntersectionObserver" in window)) {
+          gsap.set(rules, { opacity: 1 });
+        } else {
+          const dashFrom = {
+            strokeDasharray: (index, target) => target.getTotalLength(),
+            strokeDashoffset: (index, target) => target.getTotalLength(),
+          };
+          const clearDash = "strokeDasharray,strokeDashoffset";
+          const rulesObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach((entry) => {
+              if (!entry.isIntersecting) return;
+              observer.unobserve(entry.target);
+              const timeline = gsap.timeline();
+              timeline.to(rules, { opacity: 1, duration: 0.3, ease: "power2.out" }, 0);
+              signs.forEach((sign, index) => {
+                const at = index === 0 ? 0 : ">-0.1";
+                timeline
+                  .fromTo(
+                    sign.querySelectorAll(".rules-ink"),
+                    dashFrom,
+                    {
+                      strokeDashoffset: 0,
+                      duration: 0.42,
+                      ease: "power2.inOut",
+                      stagger: 0.12,
+                      clearProps: clearDash,
+                    },
+                    at,
+                  )
+                  .fromTo(
+                    sign.querySelector(".rules-ban"),
+                    dashFrom,
+                    {
+                      strokeDashoffset: 0,
+                      duration: 0.5,
+                      ease: "power2.inOut",
+                      clearProps: clearDash,
+                    },
+                    ">-0.12",
+                  )
+                  // La barra cae de golpe, más rápida que el aro.
+                  .fromTo(
+                    sign.querySelector(".rules-ban--slash"),
+                    dashFrom,
+                    {
+                      strokeDashoffset: 0,
+                      duration: 0.2,
+                      ease: "power3.out",
+                      clearProps: clearDash,
+                    },
+                    ">-0.06",
+                  )
+                  .to(sign, { scale: 1.04, duration: 0.18, yoyo: true, repeat: 1, ease: "sine.inOut" }, ">-0.04");
+              });
+            });
+          }, { threshold: 0.25, rootMargin: "0px 0px -8% 0px" });
+          rulesObserver.observe(rules);
+        }
+      }
+
+      const hands = {
+        hours: { el: document.querySelector("#hand-hour"), cycle: 43200 },
+        minutes: { el: document.querySelector("#hand-minute"), cycle: 3600 },
+        seconds: { el: document.querySelector("#hand-second"), cycle: 60 },
+      };
+      let clockRevealed = false;
+
+      const ticks = document.querySelector("#clock-ticks");
+      // Same seeded wobble as the dial, so the marks sit slightly off the grid
+      // and off each other's length, the way a hand places them.
+      let tickSeed = 99;
+      const wobble = (amount) => {
+        tickSeed = (tickSeed * 1664525 + 1013904223) % 4294967296;
+        return (tickSeed / 4294967296 - 0.5) * amount;
+      };
+      for (let index = 0; index < 60; index += 1) {
+        const onHour = index % 5 === 0;
+        const tick = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        // Nodes built here never get Astro's scoping attribute, so the stroke
+        // travels as presentation attributes rather than as CSS.
+        tick.setAttribute("x1", (100 + wobble(1.8)).toFixed(2));
+        tick.setAttribute("y1", (13.5 + wobble(2)).toFixed(2));
+        tick.setAttribute("x2", (100 + wobble(2.2)).toFixed(2));
+        tick.setAttribute("y2", ((onHour ? 26.5 : 20.5) + wobble(2.4)).toFixed(2));
+        tick.setAttribute("stroke", onHour ? "#292820" : "#a09b92");
+        tick.setAttribute("stroke-width", onHour ? (2 + wobble(0.5)).toFixed(2) : (1.3 + wobble(0.4)).toFixed(2));
+        tick.setAttribute("stroke-linecap", "round");
+        tick.setAttribute("transform", `rotate(${(index * 6 + wobble(1.8)).toFixed(2)} 100 100)`);
+        ticks.append(tick);
+      }
+
+      // Each hand is driven through its own angle proxy and written out as an
+      // SVG rotation about the dial centre, which keeps the pivot exact.
+      const drawHand = (hand) => {
+        hand.el.setAttribute("transform", `rotate(${hand.angle} 100 100)`);
+      };
+
+      const handAngle = (hand, seconds = elapsedSeconds()) => ((seconds % hand.cycle) / hand.cycle) * 360;
+
+      const setHands = () => {
+        const seconds = elapsedSeconds();
+        Object.values(hands).forEach((hand) => {
+          hand.angle = handAngle(hand, seconds);
+          drawHand(hand);
+        });
+      };
+
+      const spinHands = () => {
+        Object.values(hands).forEach((hand) => {
+          hand.angle = 0;
+          hand.spin = gsap.to(hand, {
+            angle: 360,
+            duration: hand.cycle,
+            ease: "none",
+            repeat: -1,
+            onUpdate: () => drawHand(hand),
+          });
+        });
+      };
+
+      // Background tabs throttle the ticker, so the hands are pinned back to the
+      // real elapsed time on every counter tick.
+      const syncHands = () => {
+        const seconds = elapsedSeconds();
+        Object.values(hands).forEach((hand) => hand.spin?.totalTime(seconds % hand.cycle));
+      };
+
+      const revealClock = () => {
+        if (clockRevealed) return;
+        clockRevealed = true;
+        setHands();
+        if (stillClock) return;
+        const sweep = Object.values(hands).map((hand) => hand.angle);
+        gsap
+          .timeline({ onComplete: () => { spinHands(); syncHands(); } })
+          .to(clock, { opacity: 1, duration: 0.8, ease: "power2.out" })
+          .from(clock, { y: 26, duration: 1.1, ease: "power3.out" }, 0)
+          .fromTo(
+            dials,
+            {
+              strokeDasharray: (index, target) => target.getTotalLength(),
+              strokeDashoffset: (index, target) => target.getTotalLength(),
+            },
+            { strokeDashoffset: 0, duration: 1.4, ease: "power2.inOut", stagger: 0.16 },
+            0.1,
+          )
+          .fromTo(
+            Object.values(hands),
+            { angle: (index) => sweep[index] - 120 },
+            {
+              angle: (index) => sweep[index],
+              duration: 1.3,
+              ease: "power3.out",
+              stagger: 0.12,
+              onUpdate() {
+                this.targets().forEach(drawHand);
+              },
+            },
+            0.25,
+          );
+      };
+
+      // Scroll sets a target; the painted progress chases it a frame at a time,
+      // so a flick of the wheel still lands as a soft glide instead of a jump.
+      // Ink already laid down is never taken back, hence the monotonic target.
+      const clamp01 = (value) => (value < 0 ? 0 : value > 1 ? 1 : value);
+      const easeOut = (t) => 1 - (1 - t) ** 3;
+      // How many words sit mid-fade at once: the letter reads as a hand moving
+      // across the line rather than as words switching on one by one.
+      const OVERLAP = 4.5;
+      const WRITING_END = 0.62;
+      const CLOCK_AT = 0.86;
+
+      let target = 0;
+      let painted = 0;
+      let running = false;
+
+      const paint = () => {
+        const written = clamp01(painted / WRITING_END) * (writtenItems.length + OVERLAP);
+        writtenItems.forEach((item, index) => {
+          const t = easeOut(clamp01((written - index) / OVERLAP));
+          item.style.opacity = String(t);
+          // Settling the last hundredth of the way costs a filter repaint on
+          // every word, so finished words drop their transform and blur.
+          if (t === 1) {
+            item.style.transform = "none";
+            item.style.filter = "none";
+          } else {
+            item.style.transform = `translate3d(0, ${(1 - t) * 0.38}em, 0)`;
+            item.style.filter = `blur(${(1 - t) * 7}px)`;
+          }
+        });
+        if (painted >= CLOCK_AT) revealClock();
+      };
+
+      const frame = () => {
+        painted += (target - painted) * 0.14;
+        if (target - painted < 0.0004) painted = target;
+        paint();
+        running = painted !== target;
+        if (running) requestAnimationFrame(frame);
+      };
+
+      const raiseTarget = (value) => {
+        if (value <= target) return;
+        target = value;
+        if (!running) {
+          running = true;
+          requestAnimationFrame(frame);
+        }
+      };
+
+      // Right after the gate opens the page sat almost blank until the first
+      // scroll. The opening line now writes itself, at a hand's pace, and
+      // scrolling carries on from wherever it has got to.
+      const writeOpening = () => {
+        const opening = writing.querySelector("p").querySelectorAll(".word, .counter").length;
+        const reach = ((opening - 1 + OVERLAP) / (writtenItems.length + OVERLAP)) * WRITING_END;
+        if (stillClock) return raiseTarget(reach);
+        const pen = { at: 0 };
+        gsap.to(pen, { at: reach, duration: 2.2, delay: 0.35, ease: "power1.inOut", onUpdate: () => raiseTarget(pen.at) });
+      };
+
+      const revealOnScroll = () => {
+        if (gate.hidden === false) return;
+        const travel = Math.max(1, letterSection.offsetHeight - window.innerHeight);
+        const progress = clamp01((window.scrollY - letterSection.offsetTop + window.innerHeight * 0.04) / travel);
+        raiseTarget(progress);
+      };
+
+      window.addEventListener("scroll", revealOnScroll, { passive: true });
+      window.addEventListener("resize", revealOnScroll);
+
+      day.addEventListener("input", () => {
+        day.value = day.value.replace(/\D/g, "").slice(0, 2);
+        if (day.value.length === 2) month.focus();
+      });
+      month.addEventListener("input", () => {
+        month.value = month.value.replace(/[^a-záéíóúüñ]/gi, "").slice(0, 9);
+        if (normalize(month.value) === "agosto") year.focus();
+      });
+      year.addEventListener("input", () => {
+        year.value = year.value.replace(/\D/g, "").slice(0, 4);
+      });
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const correct = day.value === "28" && normalize(month.value) === "agosto" && year.value === "2026";
+        if (correct) {
+          [day, month, year].forEach((input) => input.blur());
+          window.scrollTo(0, 0);
+          const openGate = () => {
+            gate.hidden = true;
+            gsap.set(gate, { clearProps: "opacity,visibility" });
+            window.scrollTo(0, 0);
+          };
+          if (stillClock) openGate();
+          else gsap.to(gate, { autoAlpha: 0, duration: 0.7, ease: "power2.inOut", onComplete: openGate });
+          writeOpening();
+          updateCounter();
+          setHands();
+          counterTimer = window.setInterval(() => {
+            updateCounter();
+            if (stillClock) setHands();
+            else syncHands();
+          }, 1000);
+          return;
+        }
+        error.textContent = "Esa fecha no coincide.";
+        error.hidden = false;
+        [day, month, year].forEach((input) => input.setAttribute("aria-invalid", "true"));
+        // A head shake: the form says no before the message does.
+        if (!stillClock) {
+          gsap.fromTo(form, { x: 0 }, { keyframes: { x: [0, -9, 8, -6, 4, -2, 0] }, duration: 0.45, ease: "power1.out" });
+          gsap.fromTo(error, { autoAlpha: 0, y: -4 }, { autoAlpha: 1, y: 0, duration: 0.3, ease: "power2.out" });
+        }
+        day.focus();
+      });
+
+      [day, month, year].forEach((input) => {
+        input.addEventListener("input", () => {
+          input.removeAttribute("aria-invalid");
+          error.hidden = true;
+        });
+      });
+    </script>
+  </body>
+</html>
