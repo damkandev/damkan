@@ -16,6 +16,7 @@ interface Props {
   pageType?: "website" | "article";
   publishedAt?: Date;
   noindex?: boolean;
+  instant?: boolean;
 }
 
 const {
@@ -27,6 +28,7 @@ const {
   pageType = "website",
   publishedAt,
   noindex = false,
+  instant = false,
 } = Astro.props;
 const otherLocale: Locale = locale === "es" ? "en" : "es";
 const otherPath = alternatePath ?? homePath(otherLocale);
@@ -116,14 +118,14 @@ const structuredData = noindex
     <meta name="twitter:image" content={ogImageUrl} />
     <meta name="twitter:image:alt" content={locale === "es" ? "dapan.es, sitio personal de Damián Panes" : "dapan.es, Damián Panes' personal website"} />
     {structuredData && <script type="application/ld+json" set:html={JSON.stringify(structuredData)}></script>}
-    <script is:inline>
+    {!instant && <script is:inline>
       (() => {
         if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
           document.documentElement.setAttribute("data-printing", "true");
           setTimeout(() => document.documentElement.removeAttribute("data-printing"), 5000);
         }
       })();
-    </script>
+    </script>}
   </head>
   <body>
     <div class="page-shell">
