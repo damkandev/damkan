@@ -1,0 +1,62 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { homePath } from "../lib/site";
+
+export const prerender = true;
+
+// El workflow Release de Seabell sube cada versión con estos nombres fijos.
+const release = "https://github.com/damkandev/seabell/releases";
+const downloads = [
+  { label: "Descargar para Mac", detail: "Apple Silicon e Intel · macOS 11 o superior · .dmg", href: `${release}/latest/download/Seabell-macOS.dmg` },
+  { label: "Descargar para Windows", detail: "Windows 10 y 11 · .exe", href: `${release}/latest/download/Seabell-Windows.exe` },
+];
+---
+<BaseLayout locale="es" title="Seabell | Damián Panes" description="Seabell: lector de PDFs para procuradores. Descárgalo para Mac o Windows." instant>
+  <main class="tool">
+    <a class="article-back" href={homePath("es")}>&lt;&lt; Volver al inicio</a>
+    <img class="seabell__icon" src="/seabell/icon.png" width="72" height="72" alt="" />
+    <h1 class="seabell__title">Seabell</h1>
+    <p class="seabell__lead">Lector de PDFs para procuradores. Abre varios documentos lado a lado, resalta, anota y busca en todo el expediente. Funciona sin conexión: tus documentos no salen de tu computador.</p>
+    <div class="section-rule" data-ascii-rule aria-hidden="true"></div>
+    <ul class="seabell__downloads">
+      {downloads.map(({ label, detail, href }) => (
+        <li><a class="seabell__button" href={href}><span><strong>{label}</strong><small>{detail}</small></span><span aria-hidden="true">&darr;</span></a></li>
+      ))}
+    </ul>
+
+    <section class="seabell__help">
+      <h2>La primera vez que la abres</h2>
+      <p>Seabell todavía no está firmada por Apple ni Microsoft, así que el sistema te va a pedir confirmación una vez.</p>
+      <h3>Mac</h3>
+      <ol>
+        <li>Abre el <code>.dmg</code> y arrastra Seabell a Aplicaciones.</li>
+        <li>Ábrela. Si macOS dice que no puede verificar al desarrollador, ve a Ajustes del Sistema › Privacidad y seguridad y pulsa «Abrir igualmente».</li>
+      </ol>
+      <h3>Windows</h3>
+      <ol>
+        <li>Ejecuta el <code>.exe</code>.</li>
+        <li>Si aparece «Windows protegió su PC», pulsa «Más información» y luego «Ejecutar de todas formas».</li>
+      </ol>
+    </section>
+
+    <p class="seabell__more"><a href={release}>Todas las versiones</a> · <a href="https://github.com/damkandev/seabell">Código fuente</a></p>
+  </main>
+</BaseLayout>
+
+<style>
+  .seabell__icon { display: block; margin-top: 8px; }
+  .seabell__title { margin: 18px 0 10px; font-size: 1.35rem; }
+  .seabell__lead { margin: 0; color: var(--muted); }
+  .seabell__downloads { display: grid; gap: 16px; margin: 0; padding: 0; list-style: none; }
+  .seabell__button { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 24px; border: 2px solid var(--ink); background: var(--ink); color: var(--paper); text-decoration: none; transition: transform 0.12s, background 0.12s, color 0.12s; }
+  .seabell__button strong { display: block; font-size: 1.15rem; }
+  .seabell__button small { display: block; margin-top: 4px; font-size: 0.8rem; opacity: 0.75; }
+  .seabell__button:hover, .seabell__button:focus-visible { background: transparent; color: var(--ink); transform: translate(-3px, -3px); box-shadow: 6px 6px 0 var(--ink); }
+  .seabell__help { margin-top: 44px; border-top: 1px dashed var(--rule); padding-top: 24px; }
+  .seabell__help h2 { margin: 0 0 10px; font-size: 1.05rem; }
+  .seabell__help h3 { margin: 22px 0 6px; font-size: 0.95rem; }
+  .seabell__help p, .seabell__help ol { margin: 0; color: var(--muted); }
+  .seabell__help ol { padding-left: 1.4em; }
+  .seabell__help li + li { margin-top: 6px; }
+  .seabell__more { margin-top: 36px; font-size: 0.9rem; }
+</style>
