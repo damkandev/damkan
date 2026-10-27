@@ -1,0 +1,306 @@
+---
+// Sobre mí: la bio y dados que no paran de caer sobre el tablero, con lo que me gusta en sus caras
+import Tejido from "./Tejido.astro";
+import { copy, type Locale } from "../../lib/site";
+
+interface Props { locale: Locale }
+const { locale } = Astro.props;
+const c = copy[locale];
+
+// caras del dado, en el mismo orden que FACES del script: +x, -x, +y, -y, +z, -z
+const caras = {
+  es: ["helado de pasas al ron", "cinco veces las mismas zapatillas", "programar", "crear empresas", "solucionar problemas", "un uno, como en cualquier dado"],
+  en: ["rum raisin ice cream", "the same sneakers, five times", "programming", "building companies", "solving problems", "a one, like any die"],
+}[locale];
+const alt = locale === "en"
+  ? "Dice falling onto a chessboard, bouncing and rolling off it. Their faces: " + caras.join(", ") + "."
+  : "Dados que caen sobre un tablero de ajedrez, rebotan y siguen de largo. Sus caras: " + caras.join(", ") + ".";
+---
+<section class="sobre" aria-labelledby="sobre-mi">
+  <Tejido />
+  <div class="fila">
+    <!-- el texto va por encima: los dados cruzan toda la sección y pasan por detrás -->
+    <div class="texto">
+      <h2 id="sobre-mi" class="tejido-titulo">{c.tejido.aboutTitle}</h2>
+      <p class="tejido-bajada">{c.bio}</p>
+    </div>
+    <!-- dados infinitos: cruzan la sección, rebotan en el tablero y siguen de largo; cada cara es algo que me gusta -->
+    <!-- el lienzo se estira a toda la sección que lo contiene: los dados entran y salen sin cortarse; el tablero queda en este cuadro -->
+    <div class="dado" data-dado>
+      <canvas role="img" aria-label={alt}></canvas>
+    </div>
+  </div>
+</section>
+
+<style>
+  /* overflow: el lienzo redondea a puntadas enteras y puede pasarse unos px del borde */
+  .sobre { position: relative; padding: 140px 32px 200px; overflow: hidden; }
+  .fila { position: relative; max-width: 1376px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 56px; align-items: center; }
+  .texto { position: relative; z-index: 1; flex: 1 1 520px; min-width: 0; padding-left: 64px; }
+  .texto h2 { margin-bottom: 28px; }
+  .dado { position: relative; flex: 0 1 680px; min-width: 0; height: 680px; }
+  .dado canvas { position: absolute; left: 0; top: 0; display: block; pointer-events: none; }
+
+  /* teléfonos: el texto arriba y el tablero cuadrado debajo, a lo más 420px */
+  @media (max-width: 720px) {
+    .sobre { padding: 96px 16px 120px; }
+    .fila { gap: 40px; }
+    .texto { padding-left: 0; }
+    .dado { flex: 1 1 100%; max-width: 420px; height: auto; aspect-ratio: 1; margin: 0 auto; }
+  }
+</style>
+
+<script>
+  // dados que no paran de caer: rebotan en el tablero, siguen de largo y se van; cada cara es algo que me gusta
+  // trazado de rayos a resolución de puntada, como el hero: tablero (plano) + cubos girados + sus sombras
+  import { LANA, HUESO, TINTA, PUNTADA, tela, temblor, ladoPuntada, prefersReducedMotion, type RGB } from "../../lib/tejido";
+
+  type V3 = [number, number, number];
+  type M3 = [V3, V3, V3];
+  interface Dado { p: V3; v: V3; R: M3; w: V3; ws: number }
+
+  const WOOL = LANA, BONE = HUESO, INK = TINTA;
+  const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+  const SHADE = [.6, .74, .88, 1.02];
+  const norm = (v: readonly number[]): V3 => { const n = Math.hypot(v[0], v[1], v[2]); return [v[0] / n, v[1] / n, v[2] / n]; };
+  const cross = (a: V3, b: V3): V3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  const LIGHT = norm([-.45, .85, .35]);
+  const HALF = 1;     // medio lado de cada dado, en casillas
+  const G = 7;        // gravedad, casillas/s²: baja, para que crucen la sección en arco
+  const EVERY = 1.1;  // segundos (promedio) entre un dado y el siguiente
+  // cámara: el ancho del cuadro siempre abarca el tablero entero (apertura horizontal fija), con aire arriba para los dados
+  const CAM: V3 = [0, 7.2, 11], LOOK: V3 = [0, .6, -.2], TAN_H = .42;
+  // caras: +x, -x, +y, -y, +z, -z · color de la cara alternado por eje, como el cubo del grabado
+  // (los nombres de cada cara, para el aria-label, están arriba en el frontmatter)
+  const FACES: { icon: string; bg: RGB }[] = [
+    { icon: "helado", bg: BONE },
+    { icon: "zapatilla", bg: BONE },
+    { icon: "codigo", bg: WOOL },
+    { icon: "empresas", bg: WOOL },
+    { icon: "check", bg: BONE },
+    { icon: "punto", bg: BONE },
+  ];
+  const LORA = '"Lora Variable", Lora, Georgia, serif';
+
+  // matrices 3×3 por filas
+  const mul = (A: M3, B: M3): M3 => A.map((r) => [0, 1, 2].map((j) => r[0] * B[0][j] + r[1] * B[1][j] + r[2] * B[2][j])) as M3;
+  const rotAxis = (k: V3, a: number): M3 => {
+    const c = Math.cos(a), s = Math.sin(a), t = 1 - c, [x, y, z] = k;
+    return [[t * x * x + c, t * x * y - s * z, t * x * z + s * y], [t * x * y + s * z, t * y * y + c, t * y * z - s * x], [t * x * z - s * y, t * y * z + s * x, t * z * z + c]];
+  };
+  const rand3 = () => norm([Math.random() - .5, Math.random() - .5, Math.random() - .5]);
+  // un vector del mundo en las coordenadas locales de un dado (R traspuesta)
+  const loc = (R: M3, v: readonly number[]): V3 => [R[0][0] * v[0] + R[1][0] * v[1] + R[2][0] * v[2], R[0][1] * v[0] + R[1][1] * v[1] + R[2][1] * v[2], R[0][2] * v[0] + R[1][2] * v[1] + R[2][2] * v[2]];
+
+  // íconos de 48×48 dibujados con trazos; se leen como máscara y quedan en puntadas
+  function drawIcon(g: CanvasRenderingContext2D, name: string) {
+    g.fillStyle = g.strokeStyle = "#fff";
+    g.lineCap = "round"; g.lineJoin = "round";
+    if (name === "helado") {
+      g.beginPath(); g.moveTo(15, 24); g.lineTo(33, 24); g.lineTo(24, 45); g.closePath(); g.fill();
+      for (const [x, y] of [[18, 20], [30, 20], [24, 11]]) { g.beginPath(); g.arc(x, y, 7.5, 0, Math.PI * 2); g.fill(); }
+      g.globalCompositeOperation = "destination-out"; g.lineWidth = 1.6;
+      for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(17 + i * 5, 25); g.lineTo(26 + i * 2, 41); g.stroke(); }
+      g.globalCompositeOperation = "source-over";
+    } else if (name === "zapatilla") {
+      g.beginPath(); g.moveTo(5, 18); g.lineTo(17, 16); g.quadraticCurveTo(22, 24, 30, 24); g.lineTo(41, 27);
+      g.quadraticCurveTo(45, 29, 44, 33); g.lineTo(5, 33); g.closePath(); g.fill();
+      g.globalCompositeOperation = "destination-out"; g.fillRect(4, 29, 42, 1.6); g.lineWidth = 1.6;
+      for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(15 + i * 4, 19 + i); g.lineTo(18 + i * 4, 23 + i); g.stroke(); }
+      g.globalCompositeOperation = "source-over";
+      g.font = "700 13px " + LORA; g.textAlign = "center"; g.textBaseline = "alphabetic"; g.fillText("×5", 24, 46);
+    } else if (name === "codigo") {
+      g.font = "700 26px " + LORA; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("{ }", 24, 25);
+    } else if (name === "empresas") {
+      g.fillRect(9, 10, 15, 34); g.fillRect(26, 20, 13, 24);
+      g.globalCompositeOperation = "destination-out";
+      for (let r = 0; r < 5; r++) for (let c = 0; c < 2; c++) g.fillRect(12 + c * 6, 14 + r * 6, 3, 3);
+      for (let r = 0; r < 3; r++) for (let c = 0; c < 2; c++) g.fillRect(29 + c * 5, 24 + r * 6, 3, 3);
+      g.globalCompositeOperation = "source-over";
+    } else if (name === "check") {
+      g.lineWidth = 7; g.beginPath(); g.moveTo(10, 26); g.lineTo(20, 36); g.lineTo(38, 13); g.stroke();
+    } else {
+      g.beginPath(); g.arc(24, 24, 8, 0, Math.PI * 2); g.fill();
+    }
+  }
+
+  const buildMasks = () => FACES.map((f) => {
+    const c = document.createElement("canvas"); c.width = c.height = 48;
+    const g = c.getContext("2d", { willReadFrequently: true })!; drawIcon(g, f.icon);
+    const d = g.getImageData(0, 0, 48, 48).data, m = new Uint8Array(48 * 48);
+    for (let i = 0; i < m.length; i++) m[i] = d[i * 4 + 3] > 110 ? 1 : 0;
+    return m;
+  });
+
+  // rayo contra el cubo en sus coordenadas locales (método de las losas); devuelve distancia o -1
+  function hitCube(o: V3, d: V3) {
+    let tn = -1e9, tf = 1e9;
+    for (let i = 0; i < 3; i++) {
+      if (Math.abs(d[i]) < 1e-9) { if (Math.abs(o[i]) > HALF) return -1; continue; }
+      let t1 = (-HALF - o[i]) / d[i], t2 = (HALF - o[i]) / d[i];
+      if (t1 > t2) { const s = t1; t1 = t2; t2 = s; }
+      if (t1 > tn) tn = t1;
+      if (t2 < tf) tf = t2;
+      if (tn > tf) return -1;
+    }
+    return tf < 0 ? -1 : tn;
+  }
+
+  function dados(box: HTMLElement) {
+    const cv = box.querySelector("canvas")!, ctx = cv.getContext("2d")!;
+    // el cuadro del tablero es `box`; el lienzo cubre la sección entera
+    const sec = box.closest("section") ?? box;
+    const small = document.createElement("canvas"), sctx = small.getContext("2d")!;
+    const S = PUNTADA;
+    let masks = buildMasks();
+    let dice: Dado[] = [], clock = 0, next = 0, visible = false, raf = 0;
+    let frame: { x: number; y: number; w: number; h: number } | null = null;
+    let xl = NaN, xr = NaN, cols = 0, rows = 0;
+    let img: ImageData, jit: Float32Array, pattern: CanvasPattern;
+
+    function resize() {
+      const b = box.getBoundingClientRect(), r = sec.getBoundingClientRect();
+      if (!b.width || !b.height || !r.width || !r.height) return;
+      frame = { x: b.left - r.left, y: b.top - r.top, w: b.width, h: b.height };
+      // hasta dónde llega la sección en el mundo, a la distancia del tablero: de ahí salen y ahí se borran los dados
+      const upp = 2 * TAN_H * Math.hypot(LOOK[0] - CAM[0], LOOK[1] - CAM[1], LOOK[2] - CAM[2]) / b.width;
+      xl = -(frame.x + b.width / 2) * upp - 2 * HALF;
+      xr = (r.width - frame.x - b.width / 2) * upp + 2 * HALF;
+      const dpr = window.devicePixelRatio || 1, T = ladoPuntada(S);
+      cols = Math.ceil(r.width / S); rows = Math.ceil(r.height / S);
+      cv.width = cols * T; cv.height = rows * T;
+      cv.style.left = -frame.x + "px"; cv.style.top = -frame.y + "px";
+      cv.style.width = cols * T / dpr + "px"; cv.style.height = rows * T / dpr + "px";
+      small.width = cols; small.height = rows;
+      img = sctx.createImageData(cols, rows);
+      jit = new Float32Array(cols * rows);
+      for (let i = 0; i < jit.length; i++) jit[i] = temblor(Math.floor(i / cols));
+      // la tela de una puntada, la misma del hero
+      pattern = tela(ctx, T);
+      render();
+    }
+
+    // un dado nuevo entra por un borde de la sección, lanzado en arco para caer sobre el tablero;
+    // rebota, sigue de largo, cae por el otro lado y sale por abajo
+    function spawn() {
+      if (!frame) return;
+      const dir = Math.random() < .5 ? 1 : -1, x0 = dir > 0 ? xl : xr, y0 = 2 + Math.random() * 3;
+      const land = (Math.random() - .5) * 5, vx = dir * (4.5 + Math.random() * 2), t = (land - x0) / vx;
+      dice.push({
+        p: [x0, y0, -2.5 + Math.random() * 4.5],
+        v: [vx, (HALF - y0 + G * t * t / 2) / t, (Math.random() - .5) * .8],
+        R: rotAxis(rand3(), Math.random() * 6.3), w: rand3(), ws: 4 + Math.random() * 5,
+      });
+    }
+
+    function step(dt: number) {
+      clock += dt;
+      if (clock >= next) { spawn(); next = clock + EVERY * (.7 + Math.random() * .6); }
+      for (const d of dice) {
+        d.v[1] -= G * dt;
+        for (let i = 0; i < 3; i++) d.p[i] += d.v[i] * dt;
+        d.R = mul(rotAxis(d.w, d.ws * dt), d.R);
+        // el punto más bajo de un cubo girado: suma de lo que cada eje local baja en y
+        const low = HALF * (Math.abs(d.R[1][0]) + Math.abs(d.R[1][1]) + Math.abs(d.R[1][2]));
+        if (Math.abs(d.p[0]) < 4 && Math.abs(d.p[2]) < 4 && d.p[1] < low && d.v[1] < 0) {
+          d.p[1] = low; d.v[1] *= -.55;
+          // cada rebote le cambia un poco el giro
+          d.w = norm([d.w[0] + (Math.random() - .5) * .9, d.w[1] + (Math.random() - .5) * .9, d.w[2] + (Math.random() - .5) * .9]);
+          d.ws *= .8 + Math.random() * .4;
+        }
+      }
+      // fuera del tablero caen al vacío; se borran cuando ya no se ven
+      dice = dice.filter((d) => d.p[1] > -25 && d.p[0] > xl - 3 && d.p[0] < xr + 3);
+    }
+
+    function render() {
+      if (!cols || !frame) return;
+      const data = img.data;
+      // cámara alta mirando el tablero entero, como el ajedrez del Mac viejo
+      const C = CAM, fwd = norm([LOOK[0] - C[0], LOOK[1] - C[1], LOOK[2] - C[2]]), right = norm(cross(fwd, [0, 1, 0])), up = cross(right, fwd);
+      const FR = frame, tanV = TAN_H * FR.h / FR.w;
+      // por dado: la cámara y la luz en sus coordenadas locales
+      const ds = dice.map((d) => ({ R: d.R, P: d.p, oc: loc(d.R, [C[0] - d.p[0], C[1] - d.p[1], C[2] - d.p[2]]), Ll: loc(d.R, LIGHT) }));
+      for (let y = 0, o = 0; y < rows; y++) for (let x = 0; x < cols; x++, o++) {
+        // misma cámara que el cuadro del tablero, extendida a toda la sección (encuadre descentrado)
+        const sx = (((x + .5) * S - FR.x) / FR.w * 2 - 1) * TAN_H, sy = (1 - ((y + .5) * S - FR.y) / FR.h * 2) * tanV;
+        const d = norm([fwd[0] + right[0] * sx + up[0] * sy, fwd[1] + right[1] * sx + up[1] * sy, fwd[2] + right[2] * sx + up[2] * sy]);
+        const q = o * 4, bay = (BAYER[(y & 3) * 4 + (x & 3)] / 16 - .5) * .9;
+        // el tablero tapa a los dados que ya cayeron por debajo
+        let tp = 1e9, px = 0, pz = 0, onBoard = false, onRim = false;
+        if (d[1] < 0) {
+          tp = -C[1] / d[1]; px = C[0] + d[0] * tp; pz = C[2] + d[2] * tp;
+          onBoard = Math.abs(px) < 4 && Math.abs(pz) < 4;
+          onRim = !onBoard && Math.abs(px) < 4.25 && Math.abs(pz) < 4.25;
+          if (!onBoard && !onRim) tp = 1e9;
+        }
+        let best = -1, bt = tp, bdl: V3 | null = null;
+        for (let k = 0; k < ds.length; k++) {
+          const dl = loc(ds[k].R, d), t = hitCube(ds[k].oc, dl);
+          if (t > 0 && t < bt) { bt = t; best = k; bdl = dl; }
+        }
+        let c: RGB | null = null, m = 1;
+        if (best >= 0 && bdl) {
+          const D = ds[best], lp = [D.oc[0] + bdl[0] * bt, D.oc[1] + bdl[1] * bt, D.oc[2] + bdl[2] * bt];
+          const ax = Math.abs(lp[0]) > Math.abs(lp[1]) ? (Math.abs(lp[0]) > Math.abs(lp[2]) ? 0 : 2) : (Math.abs(lp[1]) > Math.abs(lp[2]) ? 1 : 2);
+          const sg = lp[ax] > 0 ? 1 : -1, fi = ax * 2 + (sg > 0 ? 0 : 1), F = FACES[fi];
+          // ejes de cada cara vistos desde afuera: los íconos no salen espejados
+          const fu = ax === 0 ? -sg * lp[2] : ax === 2 ? sg * lp[0] : lp[0], fv = ax === 1 ? -sg * lp[2] : lp[1];
+          const u = (fu / HALF + 1) / 2, v = (fv / HALF + 1) / 2;
+          const edge = Math.min(u, 1 - u, v, 1 - v);
+          const iu = (u - .1) / .8, iv = 1 - (v - .1) / .8;
+          const ink = iu >= 0 && iu < 1 && iv >= 0 && iv < 1 && masks[fi][((iv * 48) | 0) * 48 + ((iu * 48) | 0)];
+          c = edge < .05 ? INK : ink ? (F.bg === BONE ? WOOL : BONE) : F.bg;
+          // luz por cara, cuantizada en cuatro tonos con trama, como las piezas del hero
+          const lit = .5 + .6 * Math.max(0, sg * D.Ll[ax]);
+          m = SHADE[Math.max(0, Math.min(3, Math.round(lit * 3 + bay)))];
+        } else if (onBoard) {
+          c = (Math.floor(px) + Math.floor(pz)) & 1 ? WOOL : BONE;
+          // sombra: del tablero hacia la luz, ¿choca con algún dado?
+          for (const D of ds) {
+            if (hitCube(loc(D.R, [px - D.P[0], .001 - D.P[1], pz - D.P[2]]), D.Ll) > 0) { m = .55; break; }
+          }
+        } else if (onRim) c = INK;
+        if (!c) { data[q + 3] = 0; continue; }
+        const k = m * jit[o];
+        data[q] = c[0] * k; data[q + 1] = c[1] * k; data[q + 2] = c[2] * k; data[q + 3] = 255;
+      }
+      sctx.putImageData(img, 0, 0);
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(small, 0, 0, cv.width, cv.height);
+      // la tela sólo sobre lo tejido: afuera se ve el fondo de la sección
+      ctx.globalCompositeOperation = "source-atop";
+      ctx.fillStyle = pattern;
+      ctx.fillRect(0, 0, cv.width, cv.height);
+      ctx.globalCompositeOperation = "source-over";
+    }
+
+    function play() {
+      // con movimiento reducido queda un cuadro quieto
+      if (raf || !visible || prefersReducedMotion()) return;
+      let last = performance.now();
+      const loop = (ms: number) => {
+        if (!visible) { raf = 0; return; }
+        step(Math.max(0, Math.min(.05, (ms - last) / 1000))); last = ms;
+        render();
+        raf = requestAnimationFrame(loop);
+      };
+      raf = requestAnimationFrame(loop);
+    }
+
+    const ro = new ResizeObserver(resize);
+    ro.observe(box);
+    ro.observe(sec);
+    resize();
+    // al cargar ya hay dados en el aire: se simulan unos segundos por adelantado
+    for (let i = 0; i < 360; i++) step(1 / 60);
+    render();
+    // "{ }" y "×5" van en Lora: se rehacen cuando llega la fuente
+    document.fonts?.load("700 20px " + LORA).then(() => { masks = buildMasks(); render(); });
+    // sólo se anima mientras la sección está en pantalla (la sección: en teléfonos los dados también cruzan el texto)
+    new IntersectionObserver((es) => { visible = es.some((e) => e.isIntersecting); play(); }).observe(sec);
+  }
+
+  for (const box of document.querySelectorAll<HTMLElement>("[data-dado]")) dados(box);
+</script>

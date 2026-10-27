@@ -25,12 +25,19 @@ export default defineConfig({
   site: 'https://dapan.es',
   output: 'server',
   adapter: vercel(),
+  vite: {
+    server: {
+      allowedHosts: ['elevator-duchess-verbally.ngrok-free.dev'],
+    },
+  },
   integrations: [
     sitemap({
       filter: (page) =>
         page !== 'https://dapan.es/' &&
         !page.endsWith('/404.html') &&
-        decodeURIComponent(new URL(page).pathname) !== '/toñi/',
+        !['/toñi', '/carta'].includes(
+          decodeURIComponent(new URL(page).pathname).replace(/\/$/, ''),
+        ),
     }),
   ],
   markdown: {

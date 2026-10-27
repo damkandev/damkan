@@ -1,68 +1,127 @@
 ---
+// 404 del rediseño: un "404" bordado y la micro detenida donde se acaba la ruta.
+// Es una sola página estática para los dos idiomas: el idioma se decide en el navegador según la ruta pedida.
 import BaseLayout from "../layouts/BaseLayout.astro";
+import Tejido from "../components/tejido/Tejido.astro";
+import { copy } from "../lib/site";
 
 export const prerender = true;
+
+const textos = {
+  es: {
+    title: "Página no encontrada | Damián Panes",
+    h1: "Esta parada no existe.",
+    p: "La micro llegó hasta acá y se le acabó la ruta. Mejor vuelve al inicio.",
+    back: copy.es.tejido.back,
+    href: "/es/",
+  },
+  en: {
+    title: "Page not found | Damián Panes",
+    h1: "This stop doesn't exist.",
+    p: "The bus made it this far and ran out of route. Better head back home.",
+    back: copy.en.tejido.back,
+    href: "/en/",
+  },
+};
 ---
-<BaseLayout
-  locale="es"
-  title="Página no encontrada | Damián Panes"
-  description="La página que buscas no existe."
-  noindex
->
-  <main class="not-found">
-    <h1 class="not-found__ascii" aria-label="Error 404">
-      <pre aria-hidden="true">{String.raw`░██   ░██   ░██████   ░██   ░██
-░██   ░██  ░██  ░██  ░██   ░██
-░████████  ░██  ░██  ░████████
-      ░██  ░██  ░██       ░██
-      ░██   ░██████        ░██`}</pre>
-    </h1>
-
-    <div class="section-rule" data-ascii-rule aria-hidden="true"></div>
-
-    <section class="not-found__message" aria-labelledby="not-found-title">
-      <h2 id="not-found-title" data-not-found-title>Página no encontrada.</h2>
-      <p data-not-found-copy>Parece que esta parte de la boleta no existe.</p>
-      <a class="not-found__home" href="/es/" data-not-found-home>&lt;&lt; Volver al inicio</a>
-    </section>
+<BaseLayout locale="es" title={textos.es.title} description="La página que buscas no existe." noindex theme="tejido">
+  <main class="perdida">
+    <Tejido />
+    <div class="caja">
+      <div class="cartel" role="img" aria-label="404">
+        <canvas class="letras"></canvas>
+        <div class="micro"><canvas></canvas><canvas class="girando"></canvas></div>
+      </div>
+      <h1 class="tejido-titulo" data-t="h1">{textos.es.h1}</h1>
+      <p class="tejido-bajada" data-t="p">{textos.es.p}</p>
+      <a class="volver" href={textos.es.href} data-t="back">{textos.es.back}</a>
+    </div>
   </main>
 
-  <script is:inline>
-    (() => {
-      const english = window.location.pathname === "/en" || window.location.pathname.startsWith("/en/");
-      const language = english ? "en" : "es";
-      const content = english
-        ? {
-            title: "Page not found.",
-            copy: "It looks like this part of the receipt does not exist.",
-            home: "<< Back home",
-            href: "/en/",
-            documentTitle: "Page not found | Damián Panes",
-          }
-        : {
-            title: "Página no encontrada.",
-            copy: "Parece que esta parte de la boleta no existe.",
-            home: "<< Volver al inicio",
-            href: "/es/",
-            documentTitle: "Página no encontrada | Damián Panes",
-          };
-
-      document.documentElement.lang = language;
-      document.title = content.documentTitle;
-      document.querySelector(".site-chrome").setAttribute("aria-label", english ? "Language" : "Idioma");
-      document.querySelector("[data-not-found-title]").textContent = content.title;
-      document.querySelector("[data-not-found-copy]").textContent = content.copy;
-      const home = document.querySelector("[data-not-found-home]");
-      home.textContent = content.home;
-      home.href = content.href;
-
-      const languageLinks = document.querySelectorAll(".site-chrome a");
-      languageLinks.forEach((link) => {
-        const targetLanguage = link.textContent.trim().toLowerCase();
-        link.href = `/${targetLanguage}/`;
-        if (targetLanguage === language) link.setAttribute("aria-current", "page");
-        else link.removeAttribute("aria-current");
-      });
-    })();
+  <!-- antes de pintar: si la ruta pedida es /en/…, la página pasa a inglés -->
+  <script is:inline define:vars={{ textos }}>
+    if (location.pathname === "/en" || location.pathname.startsWith("/en/")) {
+      const t = textos.en;
+      document.documentElement.lang = "en";
+      document.title = t.title;
+      for (const el of document.querySelectorAll("[data-t]")) el.textContent = t[el.dataset.t];
+      document.querySelector('[data-t="back"]').href = t.href;
+    }
   </script>
 </BaseLayout>
+
+<style>
+  .perdida { position: relative; display: grid; place-items: center; min-height: 100vh; min-height: 100svh; padding: 64px 32px; box-sizing: border-box; overflow: hidden; }
+  .caja { position: relative; width: 100%; max-width: 520px; }
+  /* overflow: la micro entra desde el borde izquierdo de la columna, no desde el margen */
+  .cartel { position: relative; width: fit-content; margin-bottom: 56px; overflow: hidden; }
+  .cartel canvas { display: block; }
+  .micro { position: absolute; right: 0; }
+  .micro .girando { position: absolute; left: 0; top: 0; visibility: hidden; }
+  .micro.rueda .girando { visibility: visible; }
+  /* ya estacionada: el motor en ralentí la hace tiritar una puntada */
+  .micro.ralenti { animation: ralenti .36s steps(1) infinite; }
+  @keyframes ralenti { 50% { transform: translateY(-1px); } }
+  @media (prefers-reduced-motion: reduce) { .micro.ralenti { animation: none; } }
+  .volver { display: inline-block; margin-top: 28px; padding: 12px 0; font-style: italic; text-decoration: none; }
+  @media (max-width: 600px) {
+    .perdida { padding: 48px 20px; }
+    .cartel { margin-bottom: 40px; }
+  }
+</style>
+
+<script>
+  import { HUESO, NARANJO, MICRO, celdaMicro, prefersReducedMotion, tejer, type RGB } from "../lib/tejido";
+
+  // el cartel: "404" bordado a todo el ancho de la columna y, debajo, la micro parada al final de una ruta punteada
+  const cartel = document.querySelector<HTMLElement>(".cartel")!, box = cartel.parentElement!;
+  const cv = cartel.querySelector<HTMLCanvasElement>(".letras")!, micro = cartel.querySelector<HTMLElement>(".micro")!;
+  const [quieta, girando] = micro.querySelectorAll("canvas");
+  const S = 6, FUENTE = '"Lora Variable", Lora, Georgia, serif', GAP = 4;
+  let ancho = 0, animada = false;
+
+  async function draw() {
+    const w = box.clientWidth;
+    if (!w || w === ancho) return;
+    ancho = w;
+    await document.fonts.load("600 100px " + FUENTE);
+    const cols = Math.floor(w / S), mw = MICRO[0].length;
+    // texto → máscara: una puntada por pixel, del ancho justo de la columna
+    const tc = document.createElement("canvas"), g = tc.getContext("2d", { willReadFrequently: true })!;
+    g.font = "600 100px " + FUENTE;
+    const px = Math.floor(100 * cols / g.measureText("404").width);
+    g.font = "600 " + px + "px " + FUENTE;
+    const m = g.measureText("404"), asc = Math.ceil(m.actualBoundingBoxAscent), th = asc + Math.ceil(m.actualBoundingBoxDescent);
+    tc.width = cols; tc.height = th;
+    g.font = "600 " + px + "px " + FUENTE;
+    g.fillStyle = "#fff";
+    g.fillText("404", 0, asc);
+    const d = g.getImageData(0, 0, cols, th).data;
+    // debajo: GAP filas libres para la micro y la ruta; la micro va en su propio canvas, pegada a la derecha sobre la ruta
+    const rows = th + GAP + MICRO.length + 1;
+    tejer(cv, cols, rows, (x, y): RGB | null => {
+      if (y < th) return d[(y * cols + x) * 4 + 3] > 120 ? HUESO : null;
+      return y === rows - 1 && x % 5 < 3 ? NARANJO : null;
+    }, S);
+    tejer(quieta, mw, MICRO.length, (x, y) => celdaMicro(x, y), S);
+    tejer(girando, mw, MICRO.length, (x, y) => celdaMicro(x, y, true), S);
+    micro.style.bottom = cv.offsetHeight / rows + "px";
+    if (!animada) { animada = true; if (!prefersReducedMotion()) animar(cols); }
+  }
+
+  // entrada: el 404 y la ruta se bordan de izquierda a derecha, una columna de puntadas a la vez;
+  // después llega la micro con las ruedas girando, frena al final de la ruta y queda en ralentí
+  function animar(cols: number) {
+    const BORDADO = 1100;
+    cv.animate([{ clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0 0 0)" }], { duration: BORDADO, easing: `steps(${cols})` });
+    const viaje = micro.animate(
+      [{ transform: `translateX(${-cv.offsetWidth}px)` }, { transform: "none" }],
+      { duration: 1500, delay: BORDADO + 150, easing: "cubic-bezier(.2, .65, .3, 1)", fill: "backwards" },
+    );
+    let rueda = 0;
+    const giro = setInterval(() => micro.classList.toggle("rueda", !!(rueda++ & 1)), 90);
+    viaje.finished.then(() => { clearInterval(giro); micro.classList.remove("rueda"); micro.classList.add("ralenti"); });
+  }
+
+  new ResizeObserver(draw).observe(box);
+</script>

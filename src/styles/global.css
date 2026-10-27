@@ -121,12 +121,6 @@ html[data-printing] .page-shell { clip-path: inset(0 0 100% 0); box-shadow: none
 .article-body pre { overflow-x: auto; padding: 1em; border: 1px dashed var(--rule); }
 .article-body pre code { padding: 0; background: none; }
 
-.not-found { width: min(100%, 520px); margin: 15vh auto 0; }
-.not-found__ascii { margin: 0; overflow: hidden; font-size: clamp(9px, 1.1vw, 16px); font-weight: 400; line-height: 1.08; }
-.not-found__ascii pre { width: max-content; margin: 0 auto; color: inherit; font: inherit; line-height: inherit; }
-.not-found__message h2 { margin: 0 0 1.32em; font-size: 1rem; }
-.not-found__message p { margin: 0 0 2.64em; }
-.not-found__home { font-weight: 700; }
 
 .tool { width: min(100%, 520px); margin: 54px auto 0; }
 .converter { margin-top: 24px; }
@@ -190,8 +184,6 @@ html[data-printing] .page-shell { clip-path: inset(0 0 100% 0); box-shadow: none
   .article { margin-top: 42px; }
   .tool { margin-top: 42px; }
   .ascii-title--pptx { font-size: clamp(4.5px, 1.5vw, 9.5px); }
-  .not-found { margin-top: 12vh; }
-  .not-found__ascii { font-size: clamp(7px, 2.5vw, 10px); }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,0 +1,320 @@
+---
+// Redes: "mejor desinstálalas", así que las apps están en un escritorio de Mac viejo, al lado de la papelera.
+// Las redes como íconos de un Mac viejo junto a la papelera, y de verdad se pueden arrastrar a la basura;
+// pasar el mouse los rescata un poco, y un click en la papelera los devuelve.
+// Todo lo dibujado va en puntadas como el resto del sitio (lib/tejido); los textos son HTML.
+import Tejido from "./Tejido.astro";
+import { copy, type Locale } from "../../lib/site";
+
+interface Props { locale: Locale }
+const { locale } = Astro.props;
+const c = copy[locale];
+
+const TEXT = {
+  es: { window: "Redes sociales", item: "ítem", items: "ítems", trash: "Papelera", all: "arrástralas a la papelera", some: "vas bien, sigue", none: "bien hecho. click en la papelera para recuperarlas", restore: "Papelera: click para recuperar las apps" },
+  en: { window: "Social media", item: "item", items: "items", trash: "Trash", all: "drag them to the trash", some: "good, keep going", none: "well done. click the trash to get them back", restore: "Trash: click to get the apps back" },
+};
+const t = TEXT[locale];
+// left: centro del ícono en px dentro de la ventana de 960; tilt: cada ícono un poco chueco
+const APPS = [
+  { name: "Instagram", href: "https://www.instagram.com/damian.panes/", left: 140, tilt: -3, icon: "ig" },
+  { name: "LinkedIn", href: "https://www.linkedin.com/in/damianpanes/", left: 300, tilt: 2, icon: "in" },
+  { name: "GitHub", href: "https://github.com/damkandev", left: 460, tilt: 6, icon: "gh" },
+];
+---
+<!-- Redes: "mejor desinstálalas", así que las apps están en un escritorio de Mac viejo, al lado de la papelera -->
+<section class="redes" aria-labelledby="redes">
+  <Tejido />
+  <!-- mismo ancho que la ventana: el título y la frase arrancan alineados con su borde izquierdo -->
+  <div class="columna">
+    <div class="intro">
+      <h2 id="redes" class="tejido-titulo">{c.tejido.socialsTitle}</h2>
+      <p class="tejido-bajada">{c.socials}</p>
+    </div>
+    <!-- la ventana mide siempre 960×330; si no cabe, el script la escala y el marco sigue su alto -->
+    <div class="marco" data-redes>
+      <div class="escritorio" data-t={JSON.stringify(t)}>
+        <canvas class="ventana" aria-hidden="true"></canvas>
+        <p class="titulo-ventana">{t.window}</p>
+        <div class="barra" aria-live="polite">
+          <span class="items">{APPS.length} {t.items}</span><span class="estado">{t.all}</span>
+        </div>
+        <!-- el arrastre a medio camino: la silueta punteada del último ícono va rumbo a la papelera -->
+        <canvas class="fantasma" aria-hidden="true"></canvas>
+        <ul>
+          {APPS.map((a) => (
+            <li style={`left: ${a.left}px`}>
+              <!-- click abre el perfil; arrastrar lo lleva a la papelera (con teclado: Supr) -->
+              <a class="app" href={a.href} target="_blank" rel="noopener noreferrer" draggable="false" aria-keyshortcuts="Delete" data-icon={a.icon} data-tilt={a.tilt} style={`transform: rotate(${a.tilt}deg)`}>
+                <canvas aria-hidden="true"></canvas>
+                <span class="app-label">{a.name}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+        <!-- la papelera, con la tapa entreabierta: se abre más cuando le acercas un ícono, se lo come, y con un click devuelve todo -->
+        <button class="papelera" type="button" aria-label={t.restore}>
+          <span class="tarro">
+            <canvas class="tapa" aria-hidden="true"></canvas>
+            <canvas class="cuerpo" aria-hidden="true"></canvas>
+          </span>
+          <span class="app-label">{t.trash}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .redes { position: relative; padding: 140px 32px 200px; overflow-x: clip; }
+  .columna { position: relative; max-width: 960px; margin: 0 auto; }
+  .intro { margin-bottom: 56px; }
+  .redes .tejido-titulo { margin-bottom: 20px; }
+  .marco { height: 330px; }
+  .escritorio { position: relative; width: 960px; height: 330px; transform-origin: 0 0; font-family: var(--sans); color: var(--lana); }
+  .escritorio canvas { display: block; }
+  .ventana { position: absolute; left: 0; top: 0; pointer-events: none; }
+  .titulo-ventana { position: absolute; left: 50%; top: 6px; margin: 0; transform: translateX(-50%); padding: 0 12px; background: var(--hueso); font-size: 13px; font-weight: 700; line-height: 20px; white-space: nowrap; }
+  .barra { position: absolute; left: 22px; right: 22px; top: 36px; display: flex; justify-content: space-between; font-size: 12px; line-height: 20px; }
+  .escritorio .fantasma { position: absolute; left: 600px; top: 124px; pointer-events: none; transition: opacity .25s; }
+  ul { margin: 0; padding: 0; list-style: none; }
+  li { position: absolute; top: 114px; width: 140px; transform: translateX(-50%); }
+
+  .escritorio .app { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 10px 0; text-decoration: none; color: inherit; transition: transform .3s cubic-bezier(.3, 1.6, .5, 1); cursor: grab; touch-action: none; -webkit-user-drag: none; user-select: none; }
+  .app canvas { pointer-events: none; }
+  .escritorio:not([data-arrastre]) .app:hover, .escritorio .app:focus-visible { transform: translateY(-12px) rotate(0deg) !important; outline: none; }
+  .escritorio .app.agarrada { transition: none; cursor: grabbing; }
+  .app-label { padding: 1px 8px; background: var(--hueso); color: var(--lana); font-size: 13px; font-weight: 600; line-height: 20px; }
+  .app:hover .app-label, .app:focus-visible .app-label, .app.agarrada .app-label, .papelera:focus-visible .app-label { background: var(--lana); color: var(--hueso); }
+  .escritorio:not([data-arrastre]):has(.app:hover, .app:focus-visible) .fantasma, .escritorio[data-arrastre] .fantasma { opacity: 0 !important; }
+
+  .escritorio .papelera { position: absolute; left: 780px; top: 102px; display: flex; flex-direction: column; align-items: center; gap: 10px; border: 0; padding: 0; background: none; font: inherit; color: inherit; text-decoration: none; cursor: pointer; }
+  .tarro { position: relative; display: block; transform-origin: 50% 100%; }
+  /* la tapa tiene la bisagra a la izquierda y se levanta por la derecha */
+  .escritorio .tapa { position: absolute; left: 0; bottom: 100%; transform: rotate(-10deg); transform-origin: 0% 100%; transition: transform .22s ease-out; }
+  .escritorio[data-arrastre] .tapa { transform: rotate(-20deg); }
+  .escritorio[data-arrastre="sobre"] .tapa { transform: rotate(-42deg); }
+
+  @media (max-width: 430px) { .redes { padding-left: 16px; padding-right: 16px; } }
+  /* teléfonos: la ventana no se achica (los textos quedarían ilegibles); mide lo que la columna y se reordena:
+     los tres íconos en fila arriba y la papelera centrada abajo, con puntadas de 4 como el hero en móvil */
+  @media (max-width: 599px) {
+    .marco { height: auto; }
+    .escritorio { width: 100%; height: 350px; }
+    .barra { left: 14px; right: 14px; gap: 8px; font-size: 11px; }
+    .items { flex: none; }
+    .estado { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    li { top: 66px; width: 33.333%; }
+    li:nth-child(1) { left: 16.667% !important; }
+    li:nth-child(2) { left: 50% !important; }
+    li:nth-child(3) { left: 83.333% !important; }
+    .escritorio .fantasma { display: none; }
+    .escritorio .papelera { left: 50%; top: 222px; transform: translateX(-50%); }
+  }
+  @media (prefers-reduced-motion: reduce) { .escritorio .app, .escritorio .fantasma, .escritorio .tapa { transition: none; } }
+</style>
+
+<script>
+  import { tejer, prefersReducedMotion, PUNTADA as S, TINTA as INK, HUESO as BONE, NARANJO as ORANGE, VIDRIO as BLUE, type RGB } from "../../lib/tejido";
+
+  const GRAY: RGB = [150, 146, 140]; // la silueta punteada: más clara que GRIS de lib/tejido, como en el diseño
+  const ICON = 20;                   // lado de cada ícono, en puntadas
+  const ANCHO = 960, ALTO = 330;     // la ventana, px
+  // la marca de GitHub (octicon mark-github, 16×16)
+  const GH_PATH = "M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z";
+
+  // dibuja un ícono a resolución de puntada (n×n) y lo devuelve como grilla de colores
+  function iconGrid(name: string, n: number): (RGB | null)[] {
+    const c = document.createElement("canvas");
+    c.width = c.height = n;
+    const g = c.getContext("2d", { willReadFrequently: true })!, u = n / 20;
+    const layer = (draw: () => void) => {
+      g.clearRect(0, 0, n, n);
+      draw();
+      const d = g.getImageData(0, 0, n, n).data, m: boolean[] = [];
+      for (let i = 0; i < n * n; i++) m.push(d[i * 4 + 3] > 110);
+      return m;
+    };
+    if (name === "ig") {
+      // cámara: cuadrado redondeado, lente y punto; el marco en tinta, lente y punto en naranja
+      const frame = layer(() => { g.strokeStyle = "#000"; g.lineWidth = 1.8 * u; g.beginPath(); g.roundRect(1.5 * u, 1.5 * u, 17 * u, 17 * u, 5 * u); g.stroke(); });
+      const lens = layer(() => { g.strokeStyle = "#000"; g.lineWidth = 1.8 * u; g.beginPath(); g.arc(10 * u, 10.5 * u, 4.2 * u, 0, 7); g.stroke(); g.beginPath(); g.arc(15 * u, 5 * u, 1.2 * u, 0, 7); g.fill(); });
+      const fill = layer(() => { g.beginPath(); g.roundRect(1.5 * u, 1.5 * u, 17 * u, 17 * u, 5 * u); g.fill(); });
+      return frame.map((f, i) => (lens[i] ? ORANGE : f ? INK : fill[i] ? BONE : null));
+    }
+    if (name === "in") {
+      // cuadrado azul con "in" en crema
+      const box = layer(() => { g.beginPath(); g.roundRect(1 * u, 1 * u, 18 * u, 18 * u, 3 * u); g.fill(); });
+      const txt = layer(() => {
+        g.fillRect(4 * u, 8.5 * u, 2.6 * u, 7.5 * u); g.fillRect(4 * u, 4 * u, 2.6 * u, 2.6 * u); // i
+        g.strokeStyle = "#000"; g.lineWidth = 2.6 * u; g.lineCap = "butt";                         // n
+        g.beginPath(); g.moveTo(9.8 * u, 16 * u); g.lineTo(9.8 * u, 8.5 * u); g.stroke();
+        g.beginPath(); g.moveTo(9.8 * u, 12 * u); g.quadraticCurveTo(9.8 * u, 9 * u, 12.4 * u, 9 * u); g.quadraticCurveTo(14.9 * u, 9 * u, 14.9 * u, 12 * u); g.lineTo(14.9 * u, 16 * u); g.stroke();
+      });
+      return box.map((b, i) => (txt[i] ? BONE : b ? BLUE : null));
+    }
+    // gh
+    const mark = layer(() => { g.save(); g.scale(n / 16, n / 16); g.fill(new Path2D(GH_PATH)); g.restore(); });
+    return mark.map((m) => (m ? INK : null));
+  }
+
+  for (const marco of document.querySelectorAll<HTMLElement>("[data-redes]")) {
+    const root = marco.querySelector<HTMLElement>(".escritorio")!;
+    const q = <T extends Element = HTMLElement>(sel: string) => root.querySelector<T>(sel)!;
+    const t = JSON.parse(root.dataset.t!) as Record<string, string>;
+    const win = q<HTMLCanvasElement>(".ventana"), ghost = q<HTMLCanvasElement>(".fantasma");
+    const lid = q<HTMLCanvasElement>(".tapa"), trash = q<HTMLCanvasElement>(".cuerpo");
+    const bin = q<HTMLButtonElement>(".papelera"), can = q(".tarro"), binLabel = q(".papelera .app-label");
+    const itemsEl = q(".items"), statusEl = q(".estado");
+    const apps = [...root.querySelectorAll<HTMLAnchorElement>(".app")].map((el) => ({
+      el, li: el.parentElement!, icon: el.dataset.icon!, tilt: Number(el.dataset.tilt),
+    }));
+    type App = (typeof apps)[number];
+    const gone = new Set<string>();
+    // teléfonos: ventana al ancho de la columna, sin escalar (ver el CSS); íconos y papelera con puntadas de 4
+    // ponytail: se decide al cargar; girar el teléfono a más de 600px no vuelve a tejer los íconos
+    const angosto = matchMedia("(max-width: 599px)").matches, s = angosto ? 4 : S;
+    let k = 1; // escala de la ventana (< 1 entre 600 y 960px); el arrastre la descuenta para que el ícono siga al dedo
+    let held: { a: App; x: number; y: number; moved: boolean; over: boolean } | null = null;
+    let swallow = false;
+
+    // la ventana: borde en tinta, barra de título a rayas con la caja de cerrar, barra de estado y sombra dura.
+    // Se vuelve a tejer si cambia de tamaño (en teléfonos sigue el ancho de la columna)
+    let size = "";
+    const ventana = () => {
+      const cols = Math.floor(root.offsetWidth / S), rows = Math.floor(root.offsetHeight / S), W = cols - 2, H = rows - 2;
+      if (!cols || size === cols + "x" + rows) return;
+      size = cols + "x" + rows;
+      const title = 6, info = 11;
+      tejer(win, cols, rows, (x, y) => {
+        if (x > W || y > H) return x >= 2 && y >= 2 ? INK : null;             // sombra corrida una puntada
+        if (x === 0 || y === 0 || x === W || y === H) return INK;               // borde
+        if (y === title || y === info) return INK;                              // separadores
+        if (y < title) {
+          if (x >= 4 && x <= 8 && y >= 1 && y <= 5) return x === 4 || x === 8 || y === 1 || y === 5 ? INK : BONE; // caja de cerrar
+          if (x >= 2 && x <= 10) return BONE;                                   // aire alrededor de la caja
+          return y % 2 === 0 && x > 1 && x < W - 1 ? INK : BONE;               // rayas
+        }
+        return BONE;
+      }, S);
+    };
+
+    // entre 600 y 960px la ventana de 960 se achica entera y el marco sigue su alto
+    new ResizeObserver(() => {
+      k = angosto ? 1 : Math.min(1, marco.clientWidth / ANCHO);
+      root.style.transform = k < 1 ? `scale(${k})` : "";
+      marco.style.height = angosto ? "" : ALTO * k + "px";
+      ventana();
+    }).observe(marco);
+
+    // íconos, silueta punteada del arrastre y papelera
+    for (const a of apps) {
+      const g = iconGrid(a.icon, ICON);
+      tejer(a.el.querySelector("canvas")!, ICON, ICON, (x, y) => g[y * ICON + x], s);
+    }
+    tejer(ghost, ICON, ICON, (x, y) => ((x === 0 || y === 0 || x === ICON - 1 || y === ICON - 1) && (x + y) % 2 === 0 ? GRAY : null), S);
+    const tw = ICON + 2, th = 20;
+    tejer(trash, tw, th, (x, y) => {
+      const inset = Math.floor(y / 7), l = 1 + inset, r = tw - 2 - inset;   // el tarro se angosta hacia abajo
+      if (x < l || x > r) return null;
+      if (x === l || x === r || y === th - 1 || y === 0) return INK;
+      return (x - l) % 4 === 0 ? INK : BONE;                                  // costillas
+    }, s);
+    tejer(lid, tw, 5, (x, y) => {
+      if (y < 2) return x >= tw / 2 - 3 && x <= tw / 2 + 2 ? (y === 0 || x === tw / 2 - 3 || x === tw / 2 + 2 ? INK : BONE) : null; // manilla
+      return y === 2 || y === 4 || x === 0 || x === tw - 1 ? INK : BONE;
+    }, s);
+
+    // contador, mensaje, papelera (n) y qué íconos quedan
+    const render = () => {
+      const left = apps.length - gone.size;
+      itemsEl.textContent = left + " " + (left === 1 ? t.item : t.items);
+      statusEl.textContent = left === apps.length ? t.all : left ? t.some : t.none;
+      binLabel.textContent = gone.size ? `${t.trash} (${gone.size})` : t.trash;
+      ghost.style.opacity = gone.size ? "0" : "1";
+      for (const a of apps) a.li.style.visibility = gone.has(a.icon) ? "hidden" : "visible";
+    };
+
+    // la app se va a la papelera: la tapa (bisagra a la izquierda, se levanta por la derecha) se cierra de golpe, rebota y vuelve a quedar entreabierta; el tarro se tambalea
+    const toss = (a: App) => {
+      gone.add(a.icon);
+      delete root.dataset.arrastre;
+      // se oculta antes de devolverle su estilo, para que no reaparezca un cuadro en su lugar
+      a.li.style.visibility = "hidden";
+      a.li.style.zIndex = "";
+      a.el.style.transition = "";
+      a.el.style.opacity = "";
+      a.el.style.transform = `rotate(${a.tilt}deg)`;
+      render();
+      if (prefersReducedMotion()) return;
+      lid.animate([{ transform: "rotate(-42deg)" }, { transform: "rotate(2deg)", offset: .3 }, { transform: "rotate(-16deg)", offset: .55 }, { transform: "rotate(-6deg)", offset: .8 }, { transform: "rotate(-10deg)" }], { duration: 520, easing: "ease-out" });
+      can.animate([{ transform: "rotate(0deg)" }, { transform: "rotate(-5deg)" }, { transform: "rotate(4deg)" }, { transform: "rotate(-2deg)" }, { transform: "rotate(0deg)" }], { duration: 420, delay: 60, easing: "ease-out" });
+    };
+
+    // arrastre: el ícono sigue al puntero; sobre la papelera la tapa se abre del todo
+    const drop = () => {
+      const h = held;
+      held = null;
+      if (!h || !h.moved) return;
+      const { a } = h;
+      swallow = true;
+      setTimeout(() => { swallow = false; }, 0);
+      a.el.classList.remove("agarrada");
+      if (!h.over) {
+        // no llegó: vuelve a su lugar con rebote
+        delete root.dataset.arrastre;
+        a.el.style.transform = `rotate(${a.tilt}deg)`;
+        a.li.style.zIndex = "";
+        return;
+      }
+      // adentro: se encoge hacia la boca de la papelera y desaparece (la tapa sigue abierta del todo mientras cae)
+      const r = bin.getBoundingClientRect(), dx = (r.left + r.width / 2 - h.x) / k, dy = (r.top - h.y) / k + 20;
+      const ms = prefersReducedMotion() ? 0 : 280;
+      a.el.style.transition = `transform ${ms}ms ease-in, opacity ${ms}ms ease-in`;
+      a.el.style.transform = `translate(${dx}px,${dy}px) rotate(25deg) scale(.15)`;
+      a.el.style.opacity = "0";
+      setTimeout(() => toss(a), ms);
+    };
+
+    for (const a of apps) {
+      const { el } = a;
+      el.addEventListener("pointerdown", (e) => {
+        if (e.button > 0) return;
+        held = { a, x: e.clientX, y: e.clientY, moved: false, over: false };
+        el.setPointerCapture(e.pointerId);
+      });
+      el.addEventListener("pointermove", (e) => {
+        const h = held;
+        if (!h || h.a !== a) return;
+        const dx = e.clientX - h.x, dy = e.clientY - h.y;
+        if (!h.moved) {
+          if (Math.hypot(dx, dy) < 6) return;
+          h.moved = true;
+          el.classList.add("agarrada");
+          a.li.style.zIndex = "10";
+        }
+        el.style.transform = `translate(${dx / k}px,${dy / k}px) rotate(-4deg) scale(1.08)`;
+        const r = bin.getBoundingClientRect();
+        h.over = e.clientX > r.left - 24 * k && e.clientX < r.right + 24 * k && e.clientY > r.top - 60 * k && e.clientY < r.bottom + 10 * k;
+        root.dataset.arrastre = h.over ? "sobre" : "1";
+      });
+      el.addEventListener("pointerup", drop);
+      el.addEventListener("pointercancel", drop);
+      // si recién lo arrastraste, soltarlo no abre el link
+      el.addEventListener("click", (e) => { if (swallow) { e.preventDefault(); swallow = false; } });
+      el.addEventListener("keydown", (e) => {
+        if (e.key !== "Delete" && e.key !== "Backspace") return;
+        e.preventDefault();
+        toss(a);
+        bin.focus();
+      });
+    }
+
+    // click en la papelera: vuelven todas
+    bin.addEventListener("click", () => {
+      if (!gone.size) return;
+      gone.clear();
+      render();
+    });
+  }
+</script>

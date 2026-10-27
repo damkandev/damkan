@@ -1,0 +1,27 @@
+---
+// Selector ES / EN del rediseño: el idioma activo en dorado, el otro lleva a la misma página traducida.
+import type { Locale } from "../../lib/site";
+import { homePath } from "../../lib/site";
+
+interface Props { locale: Locale; alternatePath?: string; class?: string }
+const { locale, alternatePath, class: className } = Astro.props;
+const other: Locale = locale === "es" ? "en" : "es";
+const otherPath = alternatePath ?? homePath(other);
+---
+<nav class:list={["idioma", className]} aria-label={locale === "es" ? "Idioma" : "Language"}>
+  {(["es", "en"] as const).map((l, i) => (
+    <>
+      {i === 1 && <span aria-hidden="true">/</span>}
+      {l === locale
+        ? <a aria-current="page">{l.toUpperCase()}</a>
+        : <a href={otherPath} hreflang={l} lang={l}>{l.toUpperCase()}</a>}
+    </>
+  ))}
+</nav>
+
+<style>
+  .idioma { display: flex; gap: 10px; align-items: center; font-size: 16px; font-style: italic; }
+  .idioma a { padding: 12px 6px; text-decoration: none; }
+  .idioma a[aria-current] { color: var(--sol); }
+  .idioma span { color: var(--gris); }
+</style>

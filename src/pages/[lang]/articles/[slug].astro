@@ -1,7 +1,10 @@
 ---
+// La página de un artículo: se lee sobre la lana, con el paradero del artículo arriba y un hilo que se borda al leer.
 import { getCollection, render, type CollectionEntry } from "astro:content";
 import BaseLayout from "../../../layouts/BaseLayout.astro";
+import Idioma from "../../../components/tejido/Idioma.astro";
 import { articlePath, copy, homePath, isLocale, type Locale } from "../../../lib/site";
+import { LLEGADA_KEY } from "../../../lib/tejido";
 
 export const prerender = true;
 
@@ -30,6 +33,15 @@ const alternatePath = alternate
 const { Content } = await render(entry);
 const date = new Intl.DateTimeFormat(locale === "es" ? "es-CL" : "en-US", { dateStyle: "long" }).format(entry.data.publishedAt);
 const seoTitle = `${entry.data.seoTitle ?? entry.data.title} | Damián Panes`;
+
+// el recorrido: los artículos del mismo idioma, del más antiguo al más nuevo
+const ruta = entries
+  .filter((e) => e.data.locale === locale)
+  .sort((a, b) => a.data.publishedAt.getTime() - b.data.publishedAt.getTime());
+const n = ruta.findIndex((e) => e.id === entry.id) + 1;
+const next = ruta[n]; // el siguiente (más nuevo); el último vuelve al inicio
+const words = (entry.body ?? "").trim().split(/\s+/).filter(Boolean).length;
+const readingTime = c.tejido.readingTime.replace("{n}", String(Math.max(1, Math.ceil(words / 200))));
 ---
 <BaseLayout
   locale={locale}
@@ -39,14 +51,203 @@ const seoTitle = `${entry.data.seoTitle ?? entry.data.title} | Damián Panes`;
   ogImage={entry.data.ogImage}
   pageType="article"
   publishedAt={entry.data.publishedAt}
+  theme="tejido"
 >
-  <main class="article">
-    <a class="article-back" href={homePath(locale)}>{c.back}</a>
-    <header class="article-header">
-      <h1>{entry.data.title}</h1>
-      <p>{entry.data.excerpt}</p>
-      <time class="article-meta" datetime={entry.data.publishedAt.toISOString()}>{date}</time>
-    </header>
-    <article class="article-body"><Content /></article>
-  </main>
+  <!-- la llegada sólo se anima si el Home acaba de mandar la micro por el ramal; se decide antes de pintar -->
+  <script is:inline define:vars={{ key: LLEGADA_KEY }}>
+    try {
+      if (sessionStorage.getItem(key) != null) {
+        sessionStorage.removeItem(key);
+        if (!matchMedia("(prefers-reduced-motion: reduce)").matches) document.documentElement.setAttribute("data-llegada", "");
+      }
+    } catch {}
+  </script>
+  <div class="pagina" data-articulo>
+    <!-- hilo de lectura: un hilván fijo arriba que se va bordando en naranja a medida que avanzas -->
+    <div class="hilo" aria-hidden="true">
+      <canvas class="hilo-fondo"></canvas>
+      <div class="hilo-avance"><canvas class="hilo-bordado"></canvas></div>
+    </div>
+    <div class="barra">
+      <a href={homePath(locale)}>{c.tejido.back}</a>
+      <Idioma locale={locale} alternatePath={alternatePath} />
+    </div>
+    <!-- el paradero de este artículo: el ramal que bajó desde el Home cae por el margen izquierdo y termina junto al título;
+         la micro llega bajando por ahí y se estaciona sobre el paradero -->
+    <canvas class="paradero" aria-hidden="true"></canvas>
+    <canvas class="micro" aria-hidden="true"></canvas>
+    <article class="lectura">
+      <header class="cabecera llega">
+        <h1>{entry.data.title}</h1>
+        <p class="bajada">{entry.data.excerpt}</p>
+        <p class="meta"><time datetime={entry.data.publishedAt.toISOString()}>{date}</time> · {readingTime}</p>
+      </header>
+      <div class="cuerpo llega"><Content /></div>
+      <!-- al final, la próxima parada del recorrido -->
+      {next ? (
+        <a class="siguiente" href={articlePath(next.data.locale, next.data.slug)}>
+          <span class="siguiente-titulo">{next.data.title}</span>
+          <span class="siguiente-bajada">{next.data.excerpt}</span>
+        </a>
+      ) : (
+        <a class="siguiente" href={homePath(locale)}>
+          <span class="siguiente-titulo">{c.tejido.back}</span>
+        </a>
+      )}
+    </article>
+  </div>
 </BaseLayout>
+
+<style>
+  .pagina { position: relative; min-height: 100vh; background-color: var(--lana); color: var(--hueso); overflow-x: clip; }
+
+  .hilo { position: fixed; left: 0; right: 0; top: 0; height: 10px; z-index: 20; overflow: hidden; pointer-events: none; }
+  .hilo canvas { display: block; }
+  .hilo-fondo { position: absolute; left: 0; top: 0; }
+  .hilo-avance { position: absolute; left: 0; top: 0; height: 100%; width: 0; overflow: hidden; }
+
+  /* encima del ramal: entre 900 y ~1100px la línea pasa por detrás del "volver" */
+  .barra { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center; max-width: 1376px; margin: 0 auto; padding: 28px 32px 0; font-size: 16px; font-style: italic; }
+  .barra > a { padding: 12px 0; text-decoration: none; }
+
+  .paradero, .micro { position: absolute; left: 0; top: 0; display: block; pointer-events: none; }
+
+  .lectura { box-sizing: content-box; max-width: 680px; margin: 0 auto; padding: 0 32px 160px; }
+  .cabecera { margin: 112px 0 56px; }
+  h1 { margin: 0 0 20px; font-size: clamp(38px, 8vw, 56px); font-weight: 600; line-height: 1.08; letter-spacing: -.01em; }
+  .bajada { margin: 0 0 22px; font-size: clamp(19px, 4.6vw, 23px); font-style: italic; line-height: 1.5; color: var(--hueso-suave); }
+  .meta { margin: 0; font-family: var(--sans); font-size: 13px; color: #9a9384; }
+
+  /* llegada: mientras la micro se estaciona, el encabezado sube y aparece, y después el cuerpo */
+  @keyframes llegar { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+  :global(html[data-llegada]) .llega { animation: llegar .7s cubic-bezier(.2, .7, .2, 1) both; }
+  .cabecera.llega { animation-delay: .6s; }
+  .cuerpo.llega { animation-delay: .85s; }
+  @media (prefers-reduced-motion: reduce) { :global(html[data-llegada]) .llega { animation: none; } }
+
+  /* lectura: columna de 680px en Lora, crema sobre la lana. El markdown no lleva el scope de Astro, de ahí los :global */
+  .cuerpo { font-size: 20px; line-height: 1.75; color: var(--texto); }
+  .cuerpo :global(p), .cuerpo :global(ul), .cuerpo :global(ol) { margin: 0 0 1.35em; }
+  .cuerpo :global(ul), .cuerpo :global(ol) { padding-left: 1.4em; }
+  .cuerpo :global(li) { margin: 0 0 .4em; }
+  .cuerpo :global(li)::marker { color: var(--naranjo); }
+  .cuerpo :global(h2) { margin: 2.2em 0 .7em; font-size: 34px; font-weight: 600; line-height: 1.15; color: var(--hueso); }
+  .cuerpo :global(h2)::before { content: ""; display: block; width: 30px; height: 10px; margin-bottom: 18px; background: repeating-linear-gradient(90deg, var(--naranjo) 0 10px, transparent 10px 15px); }
+  .cuerpo :global(h3) { margin: 1.8em 0 .6em; font-size: 25px; font-weight: 600; line-height: 1.25; color: var(--hueso); }
+  .cuerpo :global(em), .cuerpo :global(strong) { color: var(--hueso); }
+  .cuerpo :global(strong) { font-weight: 600; }
+  .cuerpo :global(a) { text-decoration: underline; }
+  /* cita bordada: un parche un poco más claro con hilván punteado alrededor */
+  .cuerpo :global(blockquote) { margin: 1.8em 0; padding: 24px 28px; background: var(--lana-clara); border: 2px dashed rgba(239, 230, 210, .45); font-size: 18px; line-height: 1.7; font-style: italic; color: var(--hueso-suave); }
+  .cuerpo :global(blockquote > :last-child) { margin-bottom: 0; }
+  /* código: un retazo claro con hilván, como la cita */
+  .cuerpo :global(code) { padding: .1em .35em; background: var(--lana-clara); border: 1px dashed rgba(239, 230, 210, .3); font-family: "JetBrains Mono", ui-monospace, monospace; font-size: .82em; color: var(--hueso); }
+  .cuerpo :global(pre) { margin: 1.8em 0; padding: 20px 24px; overflow-x: auto; background: var(--lana-clara); border: 2px dashed rgba(239, 230, 210, .3); line-height: 1.6; }
+  .cuerpo :global(pre code) { padding: 0; border: 0; background: none; }
+  /* separador: tres puntadas naranjas al centro, las mismas del h2 */
+  .cuerpo :global(hr) { width: 40px; height: 10px; margin: 3em auto; border: 0; background: repeating-linear-gradient(90deg, var(--naranjo) 0 10px, transparent 10px 15px); }
+  /* foto como parche cosido: el markdown deja la imagen sola en un <p>; ese párrafo es el marco crema y la imagen lleva
+     el hilván oscuro por dentro */
+  .cuerpo :global(p:has(> img)) { width: fit-content; max-width: 100%; margin: 44px auto; padding: 12px; box-sizing: border-box; background: var(--hueso); line-height: 0; transform: rotate(-.8deg); box-shadow: 0 18px 40px rgba(0, 0, 0, .45); }
+  .cuerpo :global(p > img) { display: block; max-width: 100%; max-height: 540px; width: auto; height: auto; outline: 2px dashed rgba(27, 28, 34, .55); outline-offset: -8px; }
+  /* pie de foto: el párrafo que sigue a la foto y sólo trae una cursiva, cosido como etiqueta crema bajo el parche */
+  .cuerpo :global(p:has(> img):has(+ p > em:only-child)) { margin-bottom: 0; }
+  .cuerpo :global(p:has(> img) + p:has(> em:only-child)) { width: fit-content; max-width: 100%; margin: -2px auto 44px; padding: 12px 16px 12px; box-sizing: border-box; background: var(--hueso); transform: rotate(-.8deg); box-shadow: 0 14px 30px rgba(0, 0, 0, .35); font-size: 15px; line-height: 1.5; text-align: center; color: #4a453d; }
+  .cuerpo :global(p:has(> img) + p > em:only-child) { color: inherit; }
+
+  .siguiente { display: block; margin-top: 88px; padding: 28px 30px; border: 2px dashed rgba(239, 230, 210, .4); background: var(--lana-clara); text-decoration: none; }
+  .lectura a.siguiente:hover { text-decoration: none; border-color: rgba(242, 193, 74, .7); }
+  .siguiente span { display: block; }
+  .siguiente-titulo { margin-bottom: 8px; font-size: 28px; font-weight: 600; line-height: 1.2; color: var(--hueso); }
+  .siguiente-bajada { font-size: 17px; line-height: 1.5; color: var(--apagado); }
+
+  /* bajo 900px no hay margen para el ramal: la micro y el paradero quedan sobre el título (ver el script) */
+  @media (max-width: 899px) {
+    .barra { padding: 20px 20px 0; }
+    .lectura { padding: 0 20px 120px; }
+    .cabecera { margin: 210px 0 44px; }
+  }
+  @media (max-width: 600px) {
+    .cuerpo { font-size: 18px; }
+    .cuerpo :global(h2) { font-size: 28px; }
+    .cuerpo :global(h3) { font-size: 22px; }
+    .cuerpo :global(blockquote) { padding: 18px 20px; font-size: 17px; }
+    .siguiente { margin-top: 64px; padding: 22px 20px; }
+    .siguiente-titulo { font-size: 24px; }
+  }
+</style>
+
+<script>
+  import { HUESO, LANA, MICRO, NARANJO, PUNTADA as S, celdaMicro, prefersReducedMotion, tejer, type RGB } from "../../../lib/tejido";
+
+  const root = document.querySelector<HTMLElement>("[data-articulo]")!;
+  const $ = <T extends Element>(sel: string) => root.querySelector<T>(sel)!;
+  const article = $<HTMLElement>(".lectura"), header = $<HTMLElement>(".cabecera");
+  const stopCv = $<HTMLCanvasElement>(".paradero"), busCv = $<HTMLCanvasElement>(".micro");
+  const threadBg = $<HTMLCanvasElement>(".hilo-fondo"), thread = $<HTMLCanvasElement>(".hilo-bordado"), threadFill = $<HTMLElement>(".hilo-avance");
+  const angosto = matchMedia("(max-width: 899px)");
+  // la llegada la decide el script inline del encabezado (ya borró la clave de sessionStorage)
+  let arrived = !document.documentElement.hasAttribute("data-llegada") || prefersReducedMotion();
+
+  // fondo: un retazo de lana tejida que se repite (la página es larga; un canvas del alto completo sería enorme)
+  tejer(document.createElement("canvas"), 96, 96, () => LANA, S).toBlob((b) => {
+    if (!b) return;
+    root.style.backgroundImage = `url(${URL.createObjectURL(b)})`;
+    root.style.backgroundSize = `${96 * S}px ${96 * S}px`;
+  });
+
+  let drawn = "";
+  function draw() {
+    const w = root.offsetWidth;
+    // offsetTop/offsetLeft (no getBoundingClientRect): el encabezado entra con una animación que lo desplaza
+    const key = w + "x" + header.offsetTop;
+    if (!w || drawn === key) return;
+    drawn = key;
+    const narrow = angosto.matches, col = article.offsetLeft + parseFloat(getComputedStyle(article).paddingLeft);
+    // el paradero: una línea vertical que baja desde arriba de la página por el margen de la columna y termina en el
+    // paradero, a la altura de la primera línea del título; la micro baja por ella y se estaciona encima.
+    // En pantallas angostas no hay margen: sin línea, el paradero queda sobre el título, alineado con la columna.
+    const rx = narrow ? Math.round(col / S) + 5 : Math.round((col - 64) / S);
+    const ringY = narrow ? Math.floor(header.offsetTop / S) - 9 : Math.round((header.offsetTop + 30) / S);
+    const cols = 11, rows = ringY + 6, grid: (RGB | null)[] = new Array(cols * rows).fill(null);
+    const put = (x: number, y: number, c: RGB) => { if (x >= 0 && x < cols && y >= 0 && y < rows) grid[y * cols + x] = c; };
+    if (!narrow) for (let y = 0; y <= ringY; y++) for (let k = -1; k <= 1; k++) put(5 + k, y, NARANJO);
+    for (let y = -5; y <= 5; y++) for (let x = -5; x <= 5; x++) { const r = Math.hypot(x, y); if (r <= 5.4) put(5 + x, ringY + y, r <= 3.6 ? HUESO : NARANJO); }
+    tejer(stopCv, cols, rows, (x, y) => grid[y * cols + x], S);
+    stopCv.style.left = (rx - 5) * S + "px";
+    // la micro girada mirando hacia abajo (la misma de perfil, rotada): la trompa queda a una puntada del paradero
+    const BH = MICRO.length, BW = MICRO[0].length;
+    tejer(busCv, BH, BW, (x, y) => celdaMicro(y, BH - 1 - x), S);
+    busCv.style.left = (rx - 5) * S + "px";
+    busCv.style.top = (ringY - 6 - BW) * S + "px";
+    // llega bajando desde arriba de la pantalla (la misma micro que se fue por el ramal del Home)
+    if (!arrived && busCv.animate) {
+      const from = -((ringY - 6) * S + 40);
+      busCv.animate(
+        [{ transform: `translateY(${from}px)` }, { transform: "translateY(6px)", offset: .85 }, { transform: "translateY(0)" }],
+        { duration: 1200, easing: "cubic-bezier(.2,.6,.3,1)", fill: "backwards" },
+      );
+    }
+    arrived = true;
+    // el hilo de lectura: hilván gris punteado de fondo y la misma línea bordada en naranja encima
+    const tc = Math.ceil(w / S);
+    tejer(threadBg, tc, 2, (x) => (x % 3 < 2 ? [70, 68, 74] : null), S);
+    tejer(thread, tc, 2, () => NARANJO, S);
+  }
+
+  // el hilo: cuánto del artículo ya pasó por la pantalla
+  let queued = false;
+  const onScroll = () => {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(() => {
+      queued = false;
+      const r = article.getBoundingClientRect(), span = r.height - innerHeight;
+      const p = span > 0 ? Math.min(1, Math.max(0, -r.top / span)) : 0;
+      threadFill.style.width = (p * 100).toFixed(2) + "%";
+    });
+  };
+  addEventListener("scroll", onScroll, { passive: true });
+  addEventListener("resize", onScroll);
+  new ResizeObserver(() => { draw(); onScroll(); }).observe(root);
+</script>

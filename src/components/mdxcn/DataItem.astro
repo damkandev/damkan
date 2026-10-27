@@ -1,0 +1,13 @@
+---
+const { tag, ...props } = Astro.props;
+const html = Astro.slots.has('default') ? await Astro.slots.render('default') : '';
+const nested = [...html.matchAll(/<template data-mdxcn-item="([^"]+)"\s*><\/template>/g)]
+  .map(match => { try { return JSON.parse(decodeURIComponent(match[1])); } catch { return null; } })
+  .filter(Boolean);
+const cleanHtml = html.replace(/<template data-mdxcn-item="[^"]+"\s*><\/template>/g, '').trim();
+const label = cleanHtml
+  .replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<')
+  .replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim();
+const value = { ...props, tag, children: nested, html: cleanHtml, content: label, label: props.label ?? label };
+---
+<template data-mdxcn-item={encodeURIComponent(JSON.stringify(value))}></template>

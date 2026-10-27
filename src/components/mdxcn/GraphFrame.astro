@@ -1,0 +1,14 @@
+---
+import './graph.css';
+interface Props { title?: string; corner?: string; class?: string; className?: string; role?: string; }
+const { title, corner = '+', class: className = '', className: extraClass = '', role } = Astro.props;
+const id = title ? `mdxcn-${Math.random().toString(36).slice(2)}` : undefined;
+---
+<figure class:list={['mdxcn-frame', className, extraClass]} aria-labelledby={id} role={role}>
+  {title && <figcaption id={id} class="mdxcn-frame__title">[ {title} ]</figcaption>}
+  <span class="mdxcn-corner mdxcn-corner--tl" aria-hidden="true">{corner}</span>
+  <span class="mdxcn-corner mdxcn-corner--tr" aria-hidden="true">{corner}</span>
+  <span class="mdxcn-corner mdxcn-corner--bl" aria-hidden="true">{corner}</span>
+  <span class="mdxcn-corner mdxcn-corner--br" aria-hidden="true">{corner}</span>
+  <div class="mdxcn-frame__body"><slot /></div>
+</figure>

@@ -27,3 +27,6 @@ data/.analytics.lock
 
 # jetbrains setting folder
 .idea/
+
+# vercel build output
+.vercel/

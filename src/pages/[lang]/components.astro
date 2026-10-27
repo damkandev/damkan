@@ -1,0 +1,72 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Graph from '../../components/mdxcn/Graph.astro';
+import '../../components/mdxcn/graph.css';
+import { isLocale, locales, type Locale } from '../../lib/site';
+
+export const prerender = true;
+export function getStaticPaths() { return locales.map((lang) => ({ params: { lang } })); }
+if (!isLocale(Astro.params.lang)) return Astro.redirect('/es/components', 302);
+const locale: Locale = Astro.params.lang;
+const demo = (kind: string, title: string, props = {}) => ({ kind, title, ...props });
+const examples = [
+  demo('callout','TIP',{items:[{label:'The body is Markdown children.'}]}),
+  demo('quote','QUOTE',{items:[{label:'A sentence worth keeping.',value:'— someone'}]}),
+  demo('steps','STEPS',{items:[{label:'Register it'},{label:'Use it'},{label:'Ship it'}]}),
+  demo('terminal','TERMINAL',{items:[{label:'$ pnpm install'},{label:'✓ done'}]}),
+  demo('changelog','CHANGELOG',{items:[{label:'added: Astro components'},{label:'fixed: motion'}]}),
+  demo('flow','FLOW',{rows:[{nodes:[{label:'request'},{label:'middleware',tone:'accent'},{label:'handler'}]}]}),
+  demo('timeline','TIMELINE',{events:[{date:'Mar 12',label:'CLI copies the files'},{date:'Mar 18',label:'Docs, live previews'}]}),
+  demo('tree','TREE',{nodes:[{label:'registry/default',children:[{label:'graph-frame'},{label:'graph-tree',accent:true}]}]}),
+  demo('gantt','GANTT',{columns:20,ticks:['0','25','50','75','100'],items:[{label:'design',start:0,end:.45},{label:'build',start:.3,end:.9,accent:true}]}),
+  demo('stat','STAT',{items:[{value:'12,400',label:'docs'},{value:'4,100',label:'copies'},{value:'860',label:'shipped'}]}),
+  demo('spec','SPEC',{items:[{label:'Family',value:'Geist Mono'},{label:'Accent',value:'--graph-accent'}]}),
+  demo('check','CHECK',{items:[{label:'freeze tokens',done:true},{label:'write docs'}]}),
+  demo('diff','DIFF',{rows:[{label:'app',value:'+31 kb',sign:'add'},{label:'sourcemaps',value:'-12 kb',sign:'remove'}]}),
+  demo('kpi','KPI',{value:'12,400',label:'this week',hint:'+18%',data:[2,3,4,3,5,5,7,6,9,7,11]}),
+  demo('table','TABLE',{headers:['Agent','Tokens','Time'],rows:[['Inks and paper','115,207','16m'],['Another agent','42,580','9m']]}),
+  demo('sheet','SHEET',{headers:['Item','Status'],sections:[{title:'Scope',rows:[['CLI copies files','done'],['Docs','in progress']]}]}),
+  demo('compare','COMPARE',{columns:['Solo','Studio'],rows:[{label:'Registry',values:[true,true]},{label:'Private source',values:[false,true]}]}),
+  demo('matrix','MATRIX',{columns:['Pos','Neg'],rows:[{label:'Pos',values:[41,3]},{label:'Neg',values:[2,54]}]}),
+  demo('invoice','INVOICE 0041',{from:'mdxcn',to:'Studio',items:[{description:'Design system',amount:'4,200'},{description:'Motion pass',amount:'1,800'}],totals:[{label:'TOTAL',value:'6,000',accent:true}]}),
+  demo('rank','RANK',{items:[{label:'/docs',value:'12,400'},{label:'/plot',value:'860'},{label:'/rank',value:'420'}]}),
+  demo('funnel','FUNNEL',{steps:[{label:'docs',value:12400},{label:'copy',value:4100},{label:'ship',value:860}]}),
+  demo('slope','SLOPE',{fromLabel:'before',toLabel:'after',items:[{label:'docs',from:8200,to:12400},{label:'ship',from:640,to:860}]}),
+  demo('bullet','BULLET',{items:[{label:'CPU',value:72,target:80,max:100},{label:'Docs',value:9,target:12,max:12}]}),
+  demo('waterfall','WATERFALL',{items:[{label:'Revenue',value:'48'},{label:'Refunds',value:'-6'},{label:'Profit',value:'38'}]}),
+  demo('stack','STACK',{items:[{label:'docs',segments:[{label:'js',value:28},{label:'css',value:18}]}]}),
+  demo('spark','SPARK',{data:[2,3,4,3,5,5,7,6,9,7,11]}),
+  demo('plot','PLOT',{data:[2,4,3,6,5,8,7,10]}),
+  demo('meter','METER',{value:67}),
+  demo('waffle','WAFFLE',{value:73}),
+  demo('cells','CELLS',{items:[{label:'A',cells:[[1,0,1],[0,1,0],[1,0,1]]},{label:'B',cells:[[0,1,0],[1,1,1],[0,1,0]]}]}),
+  demo('bars','BARS',{from:{label:'before',values:[2,4,3,5,2,3,6,5]},to:{label:'after',values:[4,5,6,7,5,6,8,7]}}),
+  demo('heatmap','HEATMAP',{columns:['0','4','8','12'],rows:[{label:'Mon',values:[0,1,4,8]},{label:'Tue',values:[2,5,3,7]}]}),
+  demo('activity','ACTIVITY',{days:Array.from({length:28},(_,i)=>({date:`2026-03-${String(i+1).padStart(2,'0')}`,count:i%5}))}),
+  demo('uptime','UPTIME',{days:'ok ok ok degraded ok down ok ok ok ok ok ok degraded ok',from:'Mar 01',to:'Mar 14'}),
+  demo('calendar','CALENDAR',{year:2026,month:3,marks:[12,18,19],today:18}),
+  demo('timer','TIMER',{value:'02:14:08'}),
+  demo('countdown','COUNTDOWN',{value:'14d 06h 32m'}),
+  demo('frame','FRAME',{items:[{label:'The primitive frame.'}]}),
+];
+---
+<BaseLayout locale={locale} title="Components | Damián Panes" description="mdxcn Astro component library" noindex>
+  <main class="mdxcn-page">
+    <header class="mdxcn-header">
+      <p>mdxcn / Astro</p>
+      <h1>Components</h1>
+      <p>38 mdxcn components ported to Astro.</p>
+    </header>
+    <div class="mdxcn-grid">
+      {examples.map((example) => <Graph {...example} />)}
+    </div>
+  </main>
+</BaseLayout>
+<style>
+  .mdxcn-page { width:min(100%, 980px); margin:54px auto 0; }
+  .mdxcn-header { margin-bottom:3rem; }
+  .mdxcn-header h1 { margin:.3rem 0; font-size:clamp(1.8rem,5vw,3rem); }
+  .mdxcn-header p { margin:.35rem 0; color:var(--muted); }
+  .mdxcn-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:2.3rem 1.3rem; }
+  @media(max-width:699px) { .mdxcn-page { margin-top:42px; } .mdxcn-grid { grid-template-columns:1fr; gap:2rem; } }
+</style>

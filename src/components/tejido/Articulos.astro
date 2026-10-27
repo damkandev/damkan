@@ -1,0 +1,330 @@
+---
+// Artículos: los escribo en la micro, así que son paraderos de un recorrido. La sección es alta y su interior queda fijo:
+// mientras se baja, la micro avanza y el recorrido se desliza en horizontal (GSAP ScrollTrigger, más abajo).
+// En teléfonos (< 768px) no hay fijado ni pista horizontal: el recorrido baja en vertical, con links normales.
+import Tejido from "./Tejido.astro";
+import { copy, type Locale } from "../../lib/site";
+
+interface Props {
+  locale: Locale;
+  articles: { href: string; title: string; excerpt: string }[];
+}
+const { locale, articles } = Astro.props;
+const t = copy[locale];
+
+const GAP = 560, LEAD = 460, TAIL = 560; // separación entre paraderos y márgenes de la pista, px
+const stopX = articles.map((_, i) => LEAD + i * GAP);
+const trackW = LEAD + Math.max(0, articles.length - 1) * GAP + TAIL;
+---
+<section class="articulos" aria-labelledby="articulos" data-articulos>
+  <div class="fijo">
+    <Tejido />
+    <div class="cabeza">
+      <div class="cabeza-in">
+        <h2 id="articulos" class="tejido-titulo titulo">{t.tejido.articlesTitle}</h2>
+        <p class="tejido-bajada">{t.articlesIntro}</p>
+      </div>
+    </div>
+    <!-- el recorrido ocupa todo el ancho y va más abajo, separado del texto -->
+    <div class="ruta">
+      <!-- ventana al recorrido: la pista es más ancha que la pantalla y se desliza con el scroll -->
+      <div class="ventana" data-ventana>
+        <div class="pista" data-pista data-ancho={trackW} style={`--ancho:${trackW}px`}>
+          <!-- el ramal: al elegir un artículo se borda un camino que baja desde su paradero, y la micro dobla y se va por ahí.
+               Va primero para quedar debajo del paradero y de la micro -->
+          <canvas data-lienzo="ramal" class="ramal" aria-hidden="true"></canvas>
+          <canvas data-lienzo="pista" aria-hidden="true"></canvas>
+          <!-- la micro va aparte: se teje una vez y después sólo se desplaza (transform), así el scroll no redibuja nada -->
+          <canvas data-lienzo="micro" class="micro" aria-hidden="true"></canvas>
+          <!-- el choque contra el tope del final: estallido y piezas que saltan; sólo se dibuja mientras pasa -->
+          <canvas data-lienzo="choque" aria-hidden="true"></canvas>
+          <!-- en teléfonos: la línea vertical con sus paraderos, al costado de los textos -->
+          <canvas data-lienzo="movil" class="movil" aria-hidden="true"></canvas>
+          <!-- alineado a la izquierda, colgando del hilván del paradero, que baja por su costado; sin fechas a la vista -->
+          <ol>
+            {articles.map((a, i) => (
+              <li data-x={stopX[i]} style={`--x:${stopX[i] - 3}px`}>
+                <a class="parada" href={a.href}>
+                  <span class="parada-titulo">{a.title}</span>
+                  <span class="parada-bajada">{a.excerpt}</span>
+                </a>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .articulos { position: relative; height: calc(100vh + 3200px); }
+  /* la lana cubre toda la pantalla; el contenido sigue midiendo como mucho 900px y queda centrado */
+  .fijo { position: sticky; top: 0; height: 100vh; box-sizing: border-box; padding-block: max(0px, (100vh - 900px) / 2); overflow: hidden; display: flex; flex-direction: column; }
+  .cabeza { position: relative; width: 100%; max-width: 1376px; margin: 0 auto; padding: clamp(40px, 9vh, 96px) 32px 0; box-sizing: border-box; }
+  .cabeza-in { padding-left: 64px; }
+  .titulo { margin-bottom: 20px; }
+  .ruta { position: relative; margin-top: auto; margin-bottom: clamp(12px, 5vh, 56px); }
+  .ventana { position: relative; width: 100%; height: 380px; overflow: hidden; }
+  .pista { position: absolute; left: 0; top: 0; width: var(--ancho); height: 100%; will-change: transform; }
+  .pista canvas { position: absolute; left: 0; top: 0; display: block; pointer-events: none; }
+  .micro { will-change: transform; transform-origin: 100% 100%; }
+  .ramal { visibility: hidden; }
+  .movil { display: none !important; }
+  ol { margin: 0; padding: 0; list-style: none; }
+  li { position: absolute; left: var(--x); top: 166px; width: 300px; }
+  .parada { display: flex; flex-direction: column; gap: 6px; padding: 2px 0 6px 22px; text-decoration: none; color: inherit; }
+  .parada:hover, .parada:focus-visible { text-decoration: none; color: inherit; }
+  .parada-titulo { font-size: 22px; font-weight: 600; line-height: 1.2; color: var(--hueso); }
+  .parada:hover .parada-titulo, .parada:focus-visible .parada-titulo { color: var(--sol); }
+  .parada-bajada { font-size: 15px; line-height: 1.45; color: var(--apagado); }
+
+  @media (max-width: 767.98px) {
+    .articulos { height: auto; }
+    .fijo { position: relative; height: auto; padding-bottom: 96px; }
+    .cabeza { padding: 96px 16px 0; }
+    .cabeza-in { padding-left: 0; }
+    .ruta { margin: 48px 0 0; padding: 0 16px; }
+    .ventana { height: auto; overflow: visible !important; }
+    .pista { position: relative; width: auto; transform: none !important; }
+    .pista canvas { display: none; }
+    .movil { display: block !important; }
+    ol { padding-left: 40px; }
+    li { position: static; width: auto; margin-bottom: 32px; }
+    li:last-child { margin-bottom: 0; }
+  }
+</style>
+
+<script>
+  import { gsap } from "gsap";
+  import { ScrollTrigger } from "gsap/ScrollTrigger";
+  import {
+    tejer, tela, ladoPuntada, prefersReducedMotion, celdaMicro, MICRO, PUNTADA, LLEGADA_KEY,
+    HUESO, TINTA, NARANJO, SOL, VIDRIO, GRIS, type RGB,
+  } from "../../lib/tejido";
+
+  gsap.registerPlugin(ScrollTrigger);
+
+  const S = PUNTADA;
+  const LINE_H = 3;                 // grosor de la línea, en puntadas
+  const LINE_Y = 120;               // altura de la línea dentro de la ventana, px
+  const RULE_END = 330;             // hasta dónde baja el hilván por el costado del texto, px
+  const FOLLOW = .5;                // la micro va a esta altura del ancho de la pantalla mientras la pista se mueve
+  const CRASH_AT = .7, CRASH_END = .86; // tramo del scroll que dura el choque; después la micro queda chocada un rato antes de soltar la sección
+  const CRASH_W = 360;              // ancho de la zona donde saltan las piezas, px
+  const RING = 5;                   // radio del paradero, en puntadas (anillo naranjo hasta 5.4, centro crema hasta 3.6)
+  const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+
+  // el paradero, como en un mapa de micro: anillo del color de la línea y centro crema
+  const anillo = (dx: number, dy: number): RGB | null => {
+    const r = Math.hypot(dx, dy);
+    return r <= 5.4 ? (r <= 3.6 ? HUESO : NARANJO) : null;
+  };
+
+  for (const sec of document.querySelectorAll<HTMLElement>("[data-articulos]")) {
+    const root = sec.querySelector<HTMLElement>("[data-ventana]")!;
+    const track = sec.querySelector<HTMLElement>("[data-pista]")!;
+    const lienzo = (n: string) => sec.querySelector<HTMLCanvasElement>(`[data-lienzo="${n}"]`)!;
+    const [cv, busEl, crashEl, branchEl, movilEl] = ["pista", "micro", "choque", "ramal", "movil"].map(lienzo);
+    const ol = sec.querySelector("ol")!;
+    const paradas = [...ol.querySelectorAll("li")];
+    const STOP_X = paradas.map((li) => Number(li.dataset.x));
+    const TRACK_W = Number(track.dataset.ancho);
+    const BUMPER_X = TRACK_W - 200;   // el tope donde termina el recorrido (y donde la micro se estrella)
+    if (!STOP_X.length) continue;
+
+    const mm = gsap.matchMedia();
+
+    // teléfonos: una línea vertical tejida con un paradero a la altura de cada título; se reteje si cambia el alto
+    mm.add("(max-width: 767.98px)", () => {
+      let size = "";
+      const draw = () => {
+        const h = ol.offsetHeight;
+        if (!h || size === String(h)) return;
+        size = String(h);
+        const ys = paradas.map((li) => Math.round((li.offsetTop + 15) / S)), last = ys[ys.length - 1];
+        tejer(movilEl, RING * 2 + 1, Math.ceil(h / S), (x, y) => {
+          for (const sy of ys) { const c = anillo(x - RING, y - sy); if (c) return c; }
+          return Math.abs(x - RING) <= 1 && y <= last ? NARANJO : null;
+        }, S);
+      };
+      const ro = new ResizeObserver(draw);
+      ro.observe(ol);
+      return () => ro.disconnect();
+    });
+
+    // escritorio: la sección es alta y su bloque interior queda fijo; recorrerla entera lleva la micro del primer paradero al último
+    mm.add("(min-width: 768px)", () => {
+      const dpr = window.devicePixelRatio || 1, quieto = prefersReducedMotion();
+      const h = root.offsetHeight;
+      const cols = Math.ceil(TRACK_W / S), rows = Math.ceil(h / S), ly = Math.round(LINE_Y / S);
+      // la pista (línea + paraderos) se teje una sola vez
+      const grid: (RGB | null)[] = new Array(cols * rows).fill(null);
+      const put = (x: number, y: number, c: RGB) => { if (x >= 0 && x < cols && y >= 0 && y < rows) grid[y * cols + x] = c; };
+      // la línea viene de antes del borde y termina en el tope
+      const bx = Math.round(BUMPER_X / S);
+      for (let x = 0; x < bx + 6; x++) for (let k = -1; k < LINE_H - 1; k++) put(x, ly + k, NARANJO);
+      // el tope: un poste con franjas de peligro amarillas y negras, tapa crema y base
+      for (let y = ly - 12; y <= ly - 2; y++) for (let x = bx; x < bx + 4; x++) put(x, y, y === ly - 12 ? HUESO : ((x + y) >> 1) & 1 ? SOL : TINTA);
+      for (let x = bx - 1; x < bx + 6; x++) put(x, ly - 2, TINTA);
+      STOP_X.forEach((sxp) => {
+        const sx = Math.round(sxp / S), len = Math.round((RULE_END - LINE_Y) / S);
+        // un hilván punteado que baja del paradero y sigue por el costado izquierdo del texto, como el margen de una ficha
+        for (let k = 7; k <= len; k += 2) put(sx, ly + k, HUESO);
+        for (let y = -RING; y <= RING; y++) for (let x = -RING; x <= RING; x++) { const c = anillo(x, y); if (c) put(sx + x, ly + y, c); }
+      });
+      tejer(cv, cols, rows, (x, y) => grid[y * cols + x], S);
+      // la micro, en dos cuadros: llantas a la vista y tapadas (giran mientras anda)
+      const busFrames = [false, true].map((spin) => tejer(document.createElement("canvas"), MICRO[0].length, MICRO.length, (x, y) => celdaMicro(x, y, spin), S));
+      let busFrame = -1;
+      // el ramal: tres puntadas de ancho, largo de sobra para salir por abajo de la pantalla
+      tejer(branchEl, LINE_H, Math.ceil(1200 / S), () => NARANJO, S);
+      // recorrido en px de pista: de un poco antes del primer paradero hasta que la trompa toca el tope
+      const x0 = STOP_X[0] - 300, x1 = BUMPER_X - 2;
+      // las piezas que saltan en el choque: siempre las mismas, para que el choque se pueda rebobinar con el scroll
+      let seed = 7;
+      const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+      const bits = [HUESO, HUESO, VIDRIO, VIDRIO, NARANJO, SOL, GRIS];
+      const debris = Array.from({ length: 16 }, () => {
+        const a = (-170 + rnd() * 120) * Math.PI / 180, v = 140 + rnd() * 220;
+        return { vx: Math.cos(a) * v, vy: Math.sin(a) * v, c: bits[(rnd() * bits.length) | 0], big: rnd() < .3 };
+      });
+      crashEl.width = CRASH_W * dpr; crashEl.height = (LINE_Y + 10) * dpr;
+      crashEl.style.width = CRASH_W + "px"; crashEl.style.height = LINE_Y + 10 + "px";
+      crashEl.style.left = BUMPER_X - CRASH_W + 40 + "px";
+      const crashCtx = crashEl.getContext("2d")!, crashTile = tela(crashCtx, ladoPuntada(S));
+      let crashK = -1, vw = root.offsetWidth, tx = 0, busX: number | null = null, leaving = false, raf = 0, restore = 0;
+      const st = { p: 0 };
+
+      // estallido amarillo en el punto del golpe y piezas de la micro que saltan y caen sobre la línea; todo en puntadas
+      const drawCrash = (k: number) => {
+        const g = crashCtx;
+        g.setTransform(1, 0, 0, 1, 0, 0);
+        g.clearRect(0, 0, crashEl.width, crashEl.height);
+        if (k <= 0) return;
+        g.setTransform(dpr, 0, 0, dpr, 0, 0);
+        const ox = CRASH_W - 42, oy = LINE_Y - 34, floor = LINE_Y - 2 * S;
+        const dot = (x: number, y: number, c: RGB, n: number) => { g.fillStyle = "rgb(" + c.join(",") + ")"; g.fillRect(Math.round(x / S) * S, Math.round(y / S) * S, S * n, S * n); };
+        if (k < .3) {
+          // rayos que salen del golpe y se achican
+          const len = 7 * (1 - k / .3);
+          for (let i = 0; i < 8; i++) {
+            const a = i / 8 * Math.PI * 2;
+            for (let r = 2; r < 2 + len; r++) dot(ox + Math.cos(a) * r * S, oy + Math.sin(a) * r * S, r % 2 ? SOL : HUESO, 1);
+          }
+        }
+        const t = k * 1.3;
+        for (const d of debris) {
+          // vuelo con gravedad hasta tocar la línea, y ahí se quedan
+          const land = (-d.vy + Math.sqrt(d.vy * d.vy + 2 * 900 * (floor - oy))) / 900, tt = Math.min(t, land);
+          dot(ox + d.vx * tt, oy + d.vy * tt + 450 * tt * tt, d.c, d.big ? 2 : 1);
+        }
+        g.setTransform(1, 0, 0, 1, 0, 0);
+        g.globalCompositeOperation = "source-atop";
+        g.fillStyle = crashTile;
+        g.fillRect(0, 0, crashEl.width, crashEl.height);
+        g.globalCompositeOperation = "source-over";
+      };
+
+      // pone la micro con la trompa en x (px de pista); las llantas cambian de cuadro con lo que avanza
+      const place = (x: number, ang: number) => {
+        busX = x;
+        const frame = Math.floor(x / 12) % 2;
+        if (frame !== busFrame) {
+          const src = busFrames[frame];
+          if (busEl.width !== src.width) { busEl.width = src.width; busEl.height = src.height; busEl.style.width = src.style.width; busEl.style.height = src.style.height; }
+          const g = busEl.getContext("2d")!;
+          g.clearRect(0, 0, busEl.width, busEl.height); g.drawImage(src, 0, 0);
+          busFrame = frame;
+        }
+        // trompa en x y ruedas sobre la línea
+        busEl.style.transform = "translate3d(" + (x - MICRO[0].length * S + S).toFixed(2) + "px," + ((ly - 1 - MICRO.length) * S).toFixed(2) + "px,0) rotate(" + ang.toFixed(2) + "deg)";
+      };
+
+      // cada cuadro de scroll sólo mueve dos transform: la pista y la micro; nada se vuelve a tejer
+      const render = () => {
+        if (leaving) return;
+        // la trompa de la micro avanza en proporción directa al scroll hasta tocar el tope; luego viene el choque y una pausa para verlo
+        const p = clamp01(st.p), k = clamp01((p - CRASH_AT) / (CRASH_END - CRASH_AT));
+        let x = x0 + (x1 - x0) * Math.min(1, p / CRASH_AT);
+        // el golpe: la cola se levanta, cae, rebota hacia atrás y queda un poco chueca; la pista tiembla al impacto
+        const hit = Math.min(1, k / .45), ang = 15 * Math.sin(hit * Math.PI) + 3 * hit;
+        x -= 14 * Math.sin(Math.min(1, k / .6) * Math.PI / 2);
+        const shake = !quieto && k > 0 && k < .35 ? Math.sin(k * 90) * 3 * (1 - k / .35) : 0;
+        // la pista sigue a la micro, sin pasarse de sus bordes
+        tx = Math.max(0, Math.min(TRACK_W - vw, x - vw * FOLLOW));
+        track.style.transform = "translate3d(" + (-tx).toFixed(2) + "px," + shake.toFixed(2) + "px,0)";
+        if (k !== crashK) { drawCrash(k); crashK = k; }
+        place(x, ang);
+      };
+
+      // click en un paradero: se borda un ramal que baja desde el paradero, la micro maneja hasta ahí,
+      // dobla hacia abajo y se va por el ramal fuera de la pantalla; recién ahí se abre el artículo, donde llega desde arriba
+      const board = (e: MouseEvent, i: number, a: HTMLAnchorElement) => {
+        if (e.button > 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || prefersReducedMotion() || busX == null) return;
+        e.preventDefault();
+        if (leaving) return;
+        leaving = true;
+        const W = MICRO[0].length * S, H = MICRO.length * S;
+        const cx = Math.round(STOP_X[i] / S) * S + S / 2, base = (ly - 1) * S;   // centro del paradero y techo de la línea
+        const from = busX, stopX = cx - S, down = window.innerHeight + W;
+        const drive = Math.min(1100, Math.max(400, Math.abs(stopX - from) * 1.1)), turn = 380, go = 850;
+        track.style.transform = "translate3d(" + (-tx).toFixed(2) + "px,0,0)";
+        // el camino puede salir del recuadro del recorrido hacia abajo (lo corta el borde de la pantalla)
+        root.style.overflow = "visible";
+        branchEl.style.left = (Math.round(STOP_X[i] / S) - 1) * S + "px";
+        branchEl.style.top = ly * S + "px";
+        branchEl.style.visibility = "visible";
+        branchEl.animate?.([{ clipPath: "inset(0 0 100% 0)" }, { clipPath: "inset(0 0 0 0)" }], { duration: drive + turn, easing: "cubic-bezier(.3,.1,.3,1)", fill: "both" });
+        const pose = (px: number, py: number, deg: number) => { busEl.style.transform = "translate3d(" + (px - W).toFixed(2) + "px," + (py - H).toFixed(2) + "px,0) rotate(" + deg.toFixed(2) + "deg)"; };
+        const t0 = performance.now(), ease = (k: number) => (k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
+        const step = (ms: number) => {
+          const t = ms - t0;
+          if (t < drive) place(from + (stopX - from) * ease(Math.max(0, t) / drive), 0);
+          // dobla: gira sobre la trompa y queda centrada sobre el ramal, mirando hacia abajo
+          else if (t < drive + turn) { const k = ease((t - drive) / turn); pose(cx - k * H / 2, base, 90 * k); }
+          // baja por el ramal acelerando hasta salir de la pantalla
+          else if (t < drive + turn + go) { const k = (t - drive - turn) / go; pose(cx - H / 2, base + down * Math.pow(k, 2.1), 90); }
+          else {
+            // el artículo lee esta marca para que la micro llegue desde arriba
+            try { sessionStorage.setItem(LLEGADA_KEY, "1"); } catch { /* sin storage: el artículo abre sin llegada */ }
+            location.href = a.href;
+            // si la navegación no ocurrió, todo vuelve a obedecer al scroll
+            restore = window.setTimeout(reset, 1500);
+            return;
+          }
+          raf = requestAnimationFrame(step);
+        };
+        raf = requestAnimationFrame(step);
+      };
+
+      const reset = () => {
+        leaving = false; busFrame = -1; root.style.overflow = "";
+        branchEl.getAnimations?.().forEach((x) => x.cancel());
+        branchEl.style.visibility = "";
+        render();
+      };
+
+      const links = paradas.map((li) => li.querySelector("a")!);
+      const handlers = links.map((a, i) => {
+        const f = (e: MouseEvent) => board(e, i, a);
+        a.addEventListener("click", f);
+        return f;
+      });
+      // al cambiar el ancho, la pista recalcula cuánto se puede deslizar
+      const ro = new ResizeObserver(() => { vw = root.offsetWidth; render(); });
+      ro.observe(root);
+      // la micro avanza parejo con el scroll y no para sola; se detiene donde el usuario deje de bajar
+      gsap.to(st, { p: 1, ease: "none", onUpdate: render, scrollTrigger: { trigger: sec, start: "top top", end: "bottom bottom", scrub: 1 } });
+      render();
+
+      return () => {
+        ro.disconnect();
+        cancelAnimationFrame(raf);
+        clearTimeout(restore);
+        links.forEach((a, i) => a.removeEventListener("click", handlers[i]));
+        if (leaving) reset();
+      };
+    });
+  }
+</script>

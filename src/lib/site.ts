@@ -17,6 +17,14 @@ export const copy = {
       page: "Página {current} de {total}",
     },
     socials: "Por si algún día revivo en redes sociales y subo algo interesante y no te lo quieres perder, puedes seguirme en cualquiera de ellas... Pero si te tengo que recomendar algo, mejor desinstálalas.",
+    tejido: {
+      scroll: "Desplázate hacia abajo",
+      aboutTitle: "Sobre mí",
+      articlesTitle: "Artículos",
+      socialsTitle: "Redes",
+      back: "← Volver al inicio",
+      readingTime: "{n} min de lectura",
+    },
     readMore: "Leer más >>",
     back: "<< Volver al inicio",
     toniCobro: {
@@ -138,6 +146,14 @@ export const copy = {
       page: "Page {current} of {total}",
     },
     socials: "If I ever come back to social media and post something interesting you don't want to miss, you can follow me on any of these... Though if I had to recommend something, delete them instead.",
+    tejido: {
+      scroll: "Scroll down",
+      aboutTitle: "About me",
+      articlesTitle: "Articles",
+      socialsTitle: "Socials",
+      back: "← Back home",
+      readingTime: "{n} min read",
+    },
     readMore: "Read more >>",
     back: "<< Back home",
     toniCobro: {

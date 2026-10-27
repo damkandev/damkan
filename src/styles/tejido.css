@@ -1,0 +1,55 @@
+/* Rediseño "tejido": lana negra, hilo crema, Lora. Sólo aplica a las páginas con theme="tejido". */
+:root {
+  --lana: #1b1c22;
+  --lana-clara: #25262d;
+  --hueso: #efe6d2;
+  --hueso-suave: #d9d0bd;
+  --texto: #e4dccb;
+  --apagado: #b9b2a3;
+  --gris: #8a8478;
+  --sol: #f2c14a;
+  --naranjo: #e07028;
+  --azul: #34408f;
+  --tinta: #141418;
+  --serif: "Lora Variable", Lora, Georgia, serif;
+  --sans: "Open Sans", system-ui, sans-serif;
+}
+
+body.tejido {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--lana);
+  color: var(--hueso);
+  font-family: var(--serif);
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+body.tejido a { color: var(--hueso); text-decoration-color: rgba(242, 193, 74, .6); text-underline-offset: 4px; }
+body.tejido a:hover { color: var(--sol); text-decoration-color: var(--sol); text-decoration: underline; }
+body.tejido a:focus-visible, body.tejido button:focus-visible { outline: 2px solid var(--sol); outline-offset: 3px; }
+
+/* títulos de sección del Home */
+.tejido-titulo { margin: 0 0 24px; font-size: clamp(40px, 5vw, 56px); font-weight: 600; line-height: 1.05; letter-spacing: -.01em; }
+.tejido-bajada { margin: 0; max-width: 600px; font-size: clamp(18px, 2vw, 22px); line-height: 1.6; color: var(--hueso-suave); }
+
+/* fondo de lana tejida detrás de una sección (ver components/tejido/Tejido.astro) */
+.tejido-fondo { position: absolute; inset: 0; overflow: hidden; pointer-events: none; background: var(--lana); }
+.tejido-fondo canvas { display: block; }
+
+/* páginas sueltas (links, seabell): una columna sobre la lana, con el volver arriba */
+.tejido-pagina { position: relative; min-height: 100vh; min-height: 100svh; overflow: hidden; }
+.tejido-columna { position: relative; box-sizing: content-box; max-width: 680px; margin: 0 auto; padding: 28px 32px 120px; }
+.tejido-volver { display: inline-block; padding: 12px 0; font-size: 16px; font-style: italic; text-decoration: none; }
+body.tejido a.tejido-volver { text-decoration: none; }
+/* botón como parche: un retazo más claro con hilván punteado, como el "siguiente" del artículo; la flecha en naranjo */
+.tejido-boton { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px 28px; border: 2px dashed rgba(239, 230, 210, .4); background: var(--lana-clara); font-size: 22px; font-weight: 600; line-height: 1.25; text-decoration: none; transition: border-color .15s, transform .15s; }
+body.tejido a.tejido-boton:hover { text-decoration: none; border-color: rgba(242, 193, 74, .7); transform: translateY(-2px); }
+.tejido-boton > [aria-hidden] { color: var(--naranjo); }
+@media (prefers-reduced-motion: reduce) { .tejido-boton { transition: none; } body.tejido a.tejido-boton:hover { transform: none; } }
+@media (max-width: 600px) {
+  .tejido-columna { padding: 20px 20px 96px; }
+  .tejido-boton { padding: 20px; font-size: 19px; }
+}
+
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

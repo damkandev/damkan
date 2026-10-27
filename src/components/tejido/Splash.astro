@@ -1,0 +1,103 @@
+---
+// Splash: mientras carga el hero, sólo una barra de progreso tejida al centro, sobre lana.
+// Sin JS o con movimiento reducido no aparece; si algo falla, se quita solo.
+import type { Locale } from "../../lib/site";
+
+interface Props { locale: Locale }
+const { locale } = Astro.props;
+---
+<div class="splash" data-splash hidden>
+  <canvas role="progressbar" aria-label={locale === "es" ? "Cargando" : "Loading"} aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></canvas>
+</div>
+<script is:inline>
+  // se muestra antes del primer pintado (el script con la animación llega después, diferido)
+  (function () {
+    var el = document.currentScript && document.currentScript.previousElementSibling;
+    if (!el) return;
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return el.remove();
+    el.hidden = false;
+    // seguro: nunca tapa la página más de 4 s, aunque no cargue nada más
+    setTimeout(function () { el.remove(); }, 4000);
+  })();
+</script>
+
+<style>
+  .splash { position: fixed; inset: 0; z-index: 100; overflow: hidden; background: var(--lana); transition: opacity .4s ease; }
+  .splash.fuera { opacity: 0; pointer-events: none; }
+  .splash canvas { position: absolute; left: 0; top: 0; display: block; }
+</style>
+
+<script>
+  import { tela, temblor, ladoPuntada, LANA, HUESO, AZUL, SOL, type RGB } from "../../lib/tejido";
+
+  const WOOL = LANA, TRACK: RGB = [38, 40, 54], BONE = HUESO, BLUE = AZUL, SUN = SOL;
+  // puntada de 6 px; la barra se teje en 3,6 s y al estar listo el hero se completa en CIERRE s
+  const S = 6, STITCH = 3.6, CIERRE = .3, TOPE = 2500;
+
+  const el = document.querySelector<HTMLElement>("[data-splash]");
+  if (el && !el.hidden) iniciar(el);
+
+  function iniciar(el: HTMLElement) {
+    const cv = el.querySelector("canvas")!, ctx = cv.getContext("2d")!;
+    const small = document.createElement("canvas"), sctx = small.getContext("2d")!;
+    let cols = 0, rows = 0, img: ImageData, jit = new Float32Array(0), pattern: CanvasPattern;
+    let bar = { x: 0, y: 0, w: 0, h: 0 };
+
+    const resize = () => {
+      const dpr = window.devicePixelRatio || 1, T = ladoPuntada(S);
+      // la pantalla puede medir 0 mientras el navegador todavía no la dimensiona: al menos una puntada
+      cols = Math.max(1, Math.ceil(innerWidth / S)); rows = Math.max(1, Math.ceil(innerHeight / S));
+      cv.width = cols * T; cv.height = rows * T;
+      cv.style.width = cols * T / dpr + "px"; cv.style.height = rows * T / dpr + "px";
+      small.width = cols; small.height = rows;
+      img = sctx.createImageData(cols, rows);
+      jit = new Float32Array(cols * rows);
+      for (let i = 0; i < jit.length; i++) jit[i] = temblor(Math.floor(i / cols));
+      pattern = tela(ctx, T);
+      // sólo la barra, centrada: 30% del ancho, 3 puntadas de alto
+      const w = Math.round(cols * .3), h = 3;
+      bar = { x: Math.round((cols - w) / 2), y: Math.round((rows - h) / 2), w, h };
+    };
+    resize();
+    addEventListener("resize", resize);
+
+    const t0 = performance.now();
+    let p = 0, pct = -1, fin: number | null = null, pFin = 0, raf = 0, fuera = false;
+    const quitar = () => { cancelAnimationFrame(raf); removeEventListener("resize", resize); el.remove(); };
+    // hero listo (o tope de 2,5 s desde que empezó a cargar la página): la barra se completa rápido y el splash se desvanece
+    const terminar = () => { if (fin == null) { fin = performance.now(); pFin = p; } };
+    addEventListener("tejido:hero-listo", terminar, { once: true });
+    setTimeout(terminar, Math.max(0, TOPE - performance.now()));
+
+    const frame = (now: number) => {
+      if (!el.isConnected) return quitar(); // ya lo quitó el seguro
+      raf = requestAnimationFrame(frame);
+      const data = img.data;
+      p = fin == null ? Math.min(1, (now - t0) / 1000 / STITCH) : pFin + (1 - pFin) * Math.min(1, (now - fin) / 1000 / CIERRE);
+      const head = bar.x + Math.floor(p * bar.w);
+      for (let o = 0, y = 0; y < rows; y++) for (let x = 0; x < cols; x++, o++) {
+        let c: RGB = WOOL;
+        if (y >= bar.y && y < bar.y + bar.h && x >= bar.x && x < bar.x + bar.w) {
+          // lo tejido en damero azul y crema; la aguja dorada en la punta; lo que falta, un surco apenas más claro
+          c = x < head ? (((x - bar.x) + (y - bar.y)) & 1 ? BLUE : BONE) : x === head && p < 1 ? SUN : TRACK;
+        }
+        const m = jit[o], q = o * 4;
+        data[q] = c[0] * m; data[q + 1] = c[1] * m; data[q + 2] = c[2] * m; data[q + 3] = 255;
+      }
+      sctx.putImageData(img, 0, 0);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(small, 0, 0, cv.width, cv.height);
+      ctx.fillStyle = pattern;
+      ctx.fillRect(0, 0, cv.width, cv.height);
+      const n = Math.round(p * 100);
+      if (n !== pct) cv.setAttribute("aria-valuenow", String(pct = n));
+      if (p >= 1 && fin != null && !fuera) {
+        fuera = true;
+        el.classList.add("fuera");
+        el.addEventListener("transitionend", quitar, { once: true });
+        setTimeout(quitar, 600);
+      }
+    };
+    raf = requestAnimationFrame(frame);
+  }
+</script>

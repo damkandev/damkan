@@ -1,0 +1,25 @@
+---
+// Fondo de lana tejida: cubre su contenedor posicionado (position: relative) con puntadas de un color liso.
+interface Props { color?: string; class?: string }
+const { color = "#1b1c22", class: className } = Astro.props;
+---
+<div class:list={["tejido-fondo", className]} data-tejido={color} style={`background:${color}`} aria-hidden="true"><canvas></canvas></div>
+
+<script>
+  import { tejer, type RGB } from "../../lib/tejido";
+
+  const rgb = (hex: string): RGB => [0, 2, 4].map((i) => parseInt(hex.replace("#", "").slice(i, i + 2), 16)) as unknown as RGB;
+
+  for (const box of document.querySelectorAll<HTMLElement>("[data-tejido]")) {
+    const cv = box.querySelector("canvas")!, color = rgb(box.dataset.tejido!);
+    let size = "";
+    // offsetWidth/Height (no getBoundingClientRect): si el contenedor va girado, la caja girada mide de más
+    const draw = () => {
+      const S = 5, cols = Math.ceil(box.offsetWidth / S), rows = Math.ceil(box.offsetHeight / S);
+      if (!cols || !rows || size === cols + "x" + rows) return;
+      size = cols + "x" + rows;
+      tejer(cv, cols, rows, () => color, S);
+    };
+    new ResizeObserver(draw).observe(box);
+  }
+</script>

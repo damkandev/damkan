@@ -1,0 +1,166 @@
+---
+import GraphFrame from './GraphFrame.astro';
+import { cells, clamp, flattenTree, fraction, glyph, numbers, percent, resolveGlyphs, text, words } from './utils';
+
+type Item = Record<string, any>;
+interface Props {
+  kind: string;
+  title?: string;
+  corner?: string;
+  class?: string;
+  className?: string;
+  items?: Item[];
+  rows?: Item[] | any[][];
+  data?: number[] | string;
+  value?: number | string;
+  label?: string;
+  hint?: string;
+  caption?: string | false;
+  glyphs?: Record<string, string> | string[];
+  palette?: string;
+  [key: string]: any;
+}
+const p = Astro.props as Props;
+const kind = p.kind.replace(/^graph-/, '').toLowerCase();
+const slotHtml = Astro.slots.has('default') ? await Astro.slots.render('default') : '';
+const tagged: Item[] = [...slotHtml.matchAll(/<template data-mdxcn-item="([^"]+)"\s*><\/template>/g)]
+  .map(match => { try { return JSON.parse(decodeURIComponent(match[1])); } catch { return null; } })
+  .filter(Boolean);
+const tags = (name: string) => tagged.filter(item => item.tag === name);
+const title = p.title ?? ({ callout: p.type ?? 'note', quote: undefined, steps: undefined, terminal: 'shell', changelog: p.version } as Record<string, string | undefined>)[kind];
+const items: Item[] = Array.isArray(p.items) ? p.items : Array.isArray(p.rows) ? p.rows as Item[] : tagged;
+const terminalSource = items.length ? items.map(item => item.label).join('\n') : slotHtml.replace(/<br\s*\/?>/g, '\n').replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+const terminalLines = terminalSource.replace(/\r\n?/g, '\n').trim().split('\n').map(line => {
+  const raw = line.trimEnd();
+  const prompt = p.prompt ?? '$';
+  return raw.startsWith(`${prompt} `) || raw === prompt ? { kind: 'command', text: raw.slice(prompt.length).trimStart() } : raw.startsWith('#') ? { kind: 'comment', text: raw } : /^[✓✔√]/.test(raw) ? { kind: 'ok', text: raw } : { kind: 'output', text: raw };
+});
+const values = numbers(p.data);
+const max = Math.max(...values, 1);
+const ratio = fraction(p.value);
+const fg = (key: string, fallback: string) => glyph(p.glyphs, key, fallback);
+const chunks = (count: number, filled: number, fill = '█', empty = '░') => cells(count).map(i => i < filled ? fill : empty);
+const bar = (value: number, maximum: number, ticks = 20) => chunks(ticks, Math.round(percent(value, maximum) / 100 * ticks), fg('fill', '█'), fg('empty', '░')).join('');
+const colNames = words(p.columns ?? p.headers ?? tags('Head')[0]?.label ?? tags('Col').map(item => item.label));
+const tableRows = Array.isArray(p.rows) ? p.rows as any[] : tags('Row').map(item => ({ ...item, cells: item.cells ?? item.values ?? (kind === 'table' || kind === 'sheet' ? item.content?.split('|').map((s: string) => s.trim()) : words(item.content).map((s: string) => s === 'true' ? true : s === 'false' ? false : Number.isFinite(Number(s)) ? Number(s) : s)) }));
+const tableCells = (row: any) => Array.isArray(row) ? row : Array.isArray(row.cells) ? row.cells : Array.isArray(row.values) ? row.values : [row.value];
+const format = (value: unknown) => typeof value === 'number' ? value.toLocaleString('en-US') : text(value);
+const meterTicks = Math.max(1, Math.min(100, Number(p.ticks ?? 14)));
+const timeTarget = p.to ? new Date(p.to).getTime() : 0;
+const timeLeft = Math.max(0, timeTarget - Date.now());
+const duration = { days: Math.floor(timeLeft / 86400000), hours: Math.floor(timeLeft / 3600000) % 24, minutes: Math.floor(timeLeft / 60000) % 60, seconds: Math.floor(timeLeft / 1000) % 60 };
+const current = p.at ? new Date(p.at) : new Date();
+const calendarYear = Number(p.year ?? current.getFullYear());
+const calendarMonth = Number(p.month ?? current.getMonth() + 1);
+const firstDay = new Date(calendarYear, calendarMonth - 1, 1).getDay();
+const dayCount = new Date(calendarYear, calendarMonth, 0).getDate();
+const offset = (firstDay - Number(p.weekStartsOn ?? 0) + 7) % 7;
+const marks = Array.isArray(p.marks) ? p.marks : words(p.marks).map(Number);
+const marked = (day: number) => marks.some((m: any) => Number(typeof m === 'object' ? m.day : m) === day);
+const treeNodes = (p.nodes ?? tags('Node').map(item => ({ ...item, children: item.children?.filter((child: Item) => child.tag === 'Node') }))) as Item[];
+const tree = flattenTree(treeNodes);
+const sparkGlyphs = resolveGlyphs(p.glyphs as string | string[] | undefined, 'bar');
+const spark = values.map(n => sparkGlyphs[Math.round(clamp(n / max) * (sparkGlyphs.length - 1))] ?? '▁');
+const plotHeight = Math.max(2, Math.min(20, Number(p.height ?? 8)));
+const plotRows = cells(plotHeight).map(r => values.map(n => ((p.variant === 'area' ? Math.round(clamp(n / max) * (plotHeight - 1)) >= plotHeight - r - 1 : Math.round(clamp(n / max) * (plotHeight - 1)) === plotHeight - r - 1) ? (p.variant === 'area' ? '█' : '●') : '·')));
+const barsFrom = p.from?.values ?? numbers(tags('Series')[0]?.values ?? tags('Series')[0]?.label);
+const barsTo = p.to?.values ?? numbers(tags('Series')[1]?.values ?? tags('Series')[1]?.label);
+const miniBars = (values: number[], height: number) => cells(height).map(row => values.map(value => {
+  const level = Math.round(Number(value) / Math.max(...values, 1) * (height - 1));
+  return height - 1 - row <= level ? fg('fill', '█') : ' ';
+}));
+const fromBars = miniBars(barsFrom, (p.from?.size ?? tags('Series')[0]?.size) === 'lg' ? 8 : 5);
+const toBars = miniBars(barsTo, (p.to?.size ?? tags('Series')[1]?.size) === 'lg' ? 8 : 5);
+const weekNames = p.weekStartsOn === 1 ? ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'] : ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+const heatRows = (p.rows ?? tags('Row').map(item => ({ ...item, values: numbers(item.values ?? item.content) }))) as Item[];
+const heatMax = Number(p.max ?? Math.max(...heatRows.flatMap(row => numbers(row.values)), 0));
+const heatGlyphs = resolveGlyphs(p.glyphs as string | string[] | undefined);
+const heatCell = (value: number) => heatGlyphs[Math.round(clamp(value / Math.max(heatMax, 1)) * (heatGlyphs.length - 1))] ?? '·';
+const stackRows = items.map(row => {
+  const segments: Item[] = row.segments ?? row.children ?? [];
+  const total = segments.reduce((sum, segment) => sum + Math.max(0, Number(segment.value) || 0), 0);
+  const ticks = Math.max(1, Math.min(80, Number(p.ticks ?? 20)));
+  let used = 0;
+  return { label: row.label, segments: segments.map((segment, index) => {
+    const end = total <= 0 ? 0 : index === segments.length - 1 ? ticks : Math.round(segments.slice(0, index + 1).reduce((sum, entry) => sum + Math.max(0, Number(entry.value) || 0), 0) / total * ticks);
+    const count = Math.max(0, end - used);
+    used = end;
+    return { label: segment.label, count, value: segment.value };
+  }) };
+});
+const isTable = ['table', 'sheet', 'compare', 'matrix', 'heatmap'].includes(kind);
+const proseKind = ['callout', 'quote', 'steps', 'terminal', 'changelog'].includes(kind);
+---
+<GraphFrame title={title} corner={p.corner} class:list={['mdxcn-graph', `mdxcn-${kind}`, p.class, p.className, p.palette && `mdxcn-palette-${p.palette}`]} role={kind === 'callout' ? 'note' : undefined}>
+  {kind === 'callout' && <div class="mdxcn-callout-body"><span class="mdxcn-accent" aria-hidden="true">{({ note: 'i', tip: '+', warning: '!', danger: '×' } as Record<string,string>)[p.type ?? 'note'] ?? 'i'}</span><div class="mdxcn-prose"><slot />{items.map(item => <p>{item.label}</p>)}</div></div>}
+  {kind === 'quote' && <blockquote class="mdxcn-quote-body"><div class="mdxcn-quote-main"><span class="mdxcn-accent" aria-hidden="true">“</span><div class="mdxcn-prose"><slot />{items.map(item => <p>{item.label}</p>)}</div></div>{(p.by || p.source || items[0]?.value) && <footer><span aria-hidden="true">—</span><span><cite>{p.by ?? items[0]?.value}</cite> {p.source && <span class="mdxcn-muted">{p.source}</span>}</span></footer>}</blockquote>}
+  {kind === 'steps' && <ol class="mdxcn-steps-list">{items.map((item, i) => <li><span class="mdxcn-accent">{String(i + 1).padStart(2, '0')}</span><div><strong>{item.title ?? (item.html ? '' : item.label)}</strong>{item.html ? <div class="mdxcn-prose" set:html={item.html} /> : item.body && <p>{item.body}</p>}</div></li>)}</ol>}
+  {kind === 'terminal' && <pre class="mdxcn-terminal-body">{terminalLines.map(line => <code class:list={[`mdxcn-terminal-${line.kind}`]}><span aria-hidden="true">{line.kind === 'command' ? p.prompt ?? '$' : ' '}</span><span>{line.text || ' '}</span></code>)}</pre>}
+  {kind === 'changelog' && <div class="mdxcn-changelog-body">{p.date && <p class="mdxcn-muted">{p.date}</p>}{items.map(item => <div><span class="mdxcn-accent">{item.type === 'remove' ? '−' : item.type === 'add' ? '+' : '·'}</span> {item.html ? <span set:html={item.html} /> : item.label}</div>)}</div>}
+
+  {kind === 'stat' && <ul class="mdxcn-stats">{items.map(item => <li><strong class:list={[item.accent && 'mdxcn-accent']}>{item.value}</strong><span>{item.label}</span>{item.hint && <small>{item.hint}</small>}</li>)}</ul>}
+  {kind === 'spec' && <dl class="mdxcn-spec">{items.map(item => <div><dt>{item.label}</dt><dd class:list={[item.accent && 'mdxcn-accent']}>{item.value ?? item.content}</dd></div>)}</dl>}
+  {kind === 'check' && <ul class="mdxcn-check-list">{items.map(item => <li><span class:list={[item.done ? 'mdxcn-accent' : 'mdxcn-muted']}>{item.done ? '[x]' : '[ ]'}</span><div class:list={[!item.done && 'mdxcn-muted']}>{item.label}{item.note && <small>{item.note}</small>}</div></li>)}</ul>}
+  {kind === 'diff' && <div class="mdxcn-diff-list">{items.map(item => <div><span class:list={[item.sign === 'add' || item.done ? 'mdxcn-accent' : 'mdxcn-muted']}>{item.sign === 'remove' ? '−' : item.sign === 'add' || item.done ? '+' : '·'}</span><span>{item.label}</span><span>{item.value}</span></div>)}{p.footer && <div class="mdxcn-rule"><span></span><span>{p.footer.label}</span><span>{p.footer.value}</span></div>}</div>}
+  {kind === 'kpi' && <div class="mdxcn-kpi-body"><p class="mdxcn-muted">{p.label}</p><strong>{p.value}</strong><div class="mdxcn-sparkline" aria-hidden="true">{spark.join('')}</div>{p.hint && <p class="mdxcn-muted">{p.hint}</p>}</div>}
+  {kind === 'meter' && <div class="mdxcn-meter-body"><div class="mdxcn-meter-track"><span class="mdxcn-muted">[</span><span class="mdxcn-meter-glyphs">{chunks(meterTicks, Math.round(ratio * meterTicks), fg('fill', '='), fg('empty', '-')).map((c, i) => <span class:list={[i < Math.round(ratio * meterTicks) ? 'mdxcn-accent' : 'mdxcn-muted']}>{c}</span>)}</span><span class="mdxcn-muted">]</span><strong class="mdxcn-accent">{Math.round(ratio * 100)}%</strong></div>{p.caption && <p class="mdxcn-muted">{p.caption}</p>}</div>}
+  {kind === 'waffle' && <div class="mdxcn-waffle-body"><div class="mdxcn-glyph-grid" style={`--cols:${Number(p.columns ?? 10)}`} aria-hidden="true">{chunks(Number(p.cells ?? 100), Math.round(ratio * Number(p.cells ?? 100)), fg('fill', '█'), fg('empty', '░')).map((c, i) => <span class:list={[i < Math.round(ratio * Number(p.cells ?? 100)) ? 'mdxcn-accent' : 'mdxcn-muted']}>{c}</span>)}</div><p class="mdxcn-accent">{Math.round(ratio * 100)}%</p>{p.caption && <p class="mdxcn-muted">{p.caption}</p>}</div>}
+  {kind === 'spark' && <div class="mdxcn-spark-body"><div class="mdxcn-sparkline" aria-label={`Sparkline with ${values.length} points`}>{spark.map((c, i) => <span class:list={[i === spark.length - 1 ? 'mdxcn-accent' : 'mdxcn-muted']}>{c}</span>)}</div>{p.caption && <p class="mdxcn-muted">{p.caption}</p>}</div>}
+  {kind === 'plot' && <div class="mdxcn-plot-body"><div class="mdxcn-plot-grid" aria-label={`Plot with ${values.length} points`}>{plotRows.map(row => <div>{row.map(c => <span class:list={[c === '·' ? 'mdxcn-muted' : 'mdxcn-accent']}>{c}</span>)}</div>)}</div>{p.labels && <div class="mdxcn-plot-labels">{p.labels.map((label: string) => <span>{label}</span>)}</div>}</div>}
+  {kind === 'bars' && <div class="mdxcn-series"><div><div class="mdxcn-mini-bars mdxcn-muted">{fromBars.map(row => <div>{row.map(mark => <span>{mark}</span>)}</div>)}</div><span class="mdxcn-muted">{p.from?.label ?? tags('Series')[0]?.label}</span></div><div class="mdxcn-series-arrow mdxcn-muted">→ {p.processor} →</div><div><div class="mdxcn-mini-bars mdxcn-accent">{toBars.map(row => <div>{row.map(mark => <span>{mark}</span>)}</div>)}</div><span>{p.to?.label ?? tags('Series')[1]?.label}</span></div></div>}
+
+  {kind === 'rank' && <ol class="mdxcn-ranked">{items.map(item => <li><span>{item.label}</span><span class="mdxcn-track"><span class="mdxcn-muted">[</span><span class="mdxcn-accent">{bar(Number(item.value), Number(p.max ?? Math.max(...items.map(x => Number(x.value) || 0), 1)), Number(p.ticks ?? 20))}</span><span class="mdxcn-muted">]</span></span><strong class="mdxcn-muted">{item.display ?? format(item.value)}</strong></li>)}</ol>}
+  {kind === 'funnel' && <div class="mdxcn-funnel-body">{(p.steps ?? items).map((item: Item, index: number) => <div class:list={[p.stage && item.label !== p.stage && 'mdxcn-dim']}><span>{item.label}</span><span class="mdxcn-accent">{bar(Number(item.value), Number(Math.max(...(p.steps ?? items).map((step: Item) => Number(step.value)), 1)), Number(p.ticks ?? 20))}</span><strong>{item.display ?? format(item.value)}</strong><span class="mdxcn-muted">{index === 0 ? '' : `${Math.round(Number(item.value) / Number((p.steps ?? items)[0]?.value || 1) * 100)}%`}</span></div>)}</div>}
+  {kind === 'slope' && <div class="mdxcn-slope-body"><div class="mdxcn-axis"><span>{p.fromLabel}</span><span>{p.toLabel}</span></div>{items.map(item => <div><span>{item.label}</span><span>{format(item.from ?? text(item.value).split('→')[0])}</span><span class="mdxcn-accent">⟶</span><strong>{format(item.to ?? text(item.value).split('→')[1])}</strong></div>)}</div>}
+  {kind === 'bullet' && <div class="mdxcn-bullet-body">{items.map(item => <div><span>{item.label}</span><span class="mdxcn-accent">{bar(Number(item.value), Number(item.max ?? item.target ?? item.value ?? 1), Number(p.ticks ?? 20))}</span><strong>{item.display ?? `${item.value} / ${item.target ?? item.max ?? ''}`}</strong></div>)}</div>}
+  {kind === 'waterfall' && <div class="mdxcn-waterfall-body">{items.map(item => <div><span>{item.label}</span><span class:list={[Number(item.value) >= 0 ? 'mdxcn-accent' : 'mdxcn-muted']}>{Number(item.value) >= 0 ? '+' : '−'} {bar(Math.abs(Number(item.value)), Math.max(...items.map(x => Math.abs(Number(x.value))), 1), Number(p.ticks ?? 16))}</span><strong>{item.display ?? format(item.value)}</strong></div>)}</div>}
+  {kind === 'stack' && <div class="mdxcn-stack-body">{stackRows.map(item => <div><span>{item.label}</span><div>{item.segments.map((segment, index) => <span class:list={[index === 0 ? 'mdxcn-accent' : 'mdxcn-muted']} title={`${segment.label}: ${segment.value}`}>{fg('fill', '█').repeat(segment.count)}</span>)}</div></div>)}</div>}
+  {kind === 'gantt' && <div class="mdxcn-gantt-body"><div class="mdxcn-axis"><span></span>{(p.ticks ?? []).map((tick: string) => <span>{tick}</span>)}</div>{items.map(item => <div><span>{item.label}</span><span class="mdxcn-accent">{cells(Number(p.columns ?? 20)).map(i => i / Number(p.columns ?? 20) >= Number(item.start) && i / Number(p.columns ?? 20) < Number(item.end) ? fg('fill','█') : fg('empty','·')).join('')}</span></div>)}{p.stage && <p class="mdxcn-muted">{p.stage}</p>}</div>}
+  {kind === 'flow' && <div class="mdxcn-flow-body">{(p.rows ?? items).map((row: Item) => <div>{(row.nodes ?? words(row.label).filter(word => word !== '→').map(label => ({label}))).map((node: Item, i: number, all: Item[]) => <><span class:list={[node.tone === 'accent' && 'mdxcn-accent']}>{node.label}</span>{i < all.length - 1 && <span class="mdxcn-muted">────→</span>}</>)}</div>)}</div>}
+  {kind === 'timeline' && <ol class="mdxcn-timeline-body">{(p.events ?? items).map((item: Item) => <li><time class="mdxcn-muted">{item.date}</time><span class="mdxcn-accent">●</span><span>{item.label}</span></li>)}</ol>}
+  {kind === 'tree' && <div class="mdxcn-tree-body">{tree.map(row => <div><span class="mdxcn-muted">{row.branch}</span><span class:list={[row.accent && 'mdxcn-accent']}>{row.label}</span>{row.meta && <span class="mdxcn-muted"> {row.meta}</span>}</div>)}</div>}
+  {kind === 'cells' && <div class="mdxcn-cells-body">{items.map(item => <div><span class="mdxcn-muted">{item.label}</span><div class="mdxcn-glyph-grid" style={`--cols:${item.cells?.[0]?.length ?? 5}`}>{(item.cells ?? []).flat().map((n: number) => <span class:list={[n ? 'mdxcn-accent' : 'mdxcn-muted']}>{n ? fg('fill','█') : fg('empty','░')}</span>)}</div></div>)}</div>}
+  {kind === 'uptime' && <div class="mdxcn-uptime-body"><div>{words(p.days).map(day => <span class:list={[day === 'ok' ? 'mdxcn-accent' : 'mdxcn-muted']} title={day}>{day === 'ok' ? fg('fill','█') : day === 'degraded' ? '▒' : day === 'down' ? '░' : '·'}</span>)}</div><p class="mdxcn-muted">{p.from} <span>{p.to}</span></p></div>}
+  {kind === 'activity' && <div class="mdxcn-activity-body"><div class="mdxcn-glyph-grid" style="--cols: 7">{(p.days ?? []).map((day: Item) => <span class:list={[day.count ? 'mdxcn-accent' : 'mdxcn-muted']} title={`${day.date}: ${day.count}`}>{day.count ? fg('fill','█') : fg('empty','░')}</span>)}</div>{p.caption !== false && <p class="mdxcn-muted">{p.caption}</p>}</div>}
+  {kind === 'calendar' && <div class="mdxcn-calendar-body"><div class="mdxcn-calendar-month">{new Date(calendarYear, calendarMonth - 1, 1).toLocaleString('en-US', { month: 'long', year: 'numeric' })}</div><div class="mdxcn-calendar-grid">{weekNames.map(day => <span class="mdxcn-muted">{day}</span>)}{cells(offset).map(() => <span></span>)}{cells(dayCount).map(i => <span class:list={[marked(i + 1) && 'mdxcn-accent', Number(p.today) === i + 1 && 'mdxcn-today']}>{String(i + 1).padStart(2,'0')}</span>)}</div></div>}
+  {kind === 'timer' && <div class="mdxcn-time-body"><strong class="mdxcn-accent" data-mdxcn-time="timer" data-kind={p.timerKind ?? 'elapsed'} data-at={p.at instanceof Date ? p.at.toISOString() : p.at}>{p.value ?? (p.timerKind === 'clock' ? current.toLocaleTimeString('en-US', { hour12: false }) : '00:00:00')}</strong>{p.caption && <p class="mdxcn-muted">{p.caption}</p>}</div>}
+  {kind === 'countdown' && <div class="mdxcn-time-body"><strong class="mdxcn-accent" data-mdxcn-time="countdown" data-to={p.to instanceof Date ? p.to.toISOString() : p.to} data-done={p.done ?? 'done'}>{p.value ?? (timeLeft ? `${duration.days}d ${String(duration.hours).padStart(2,'0')}:${String(duration.minutes).padStart(2,'0')}:${String(duration.seconds).padStart(2,'0')}` : p.done ?? '00:00:00')}</strong>{p.caption && <p class="mdxcn-muted">{p.caption}</p>}</div>}
+
+  {isTable && <div class="mdxcn-table-wrap"><table><thead>{colNames.length > 0 && <tr>{kind !== 'table' && <th></th>}{colNames.map(name => <th>{name}</th>)}</tr>}</thead><tbody>{kind === 'sheet' ? (p.sections ?? tags('Section').map(section => ({ title: section.title, rows: section.children?.filter((child: Item) => child.tag === 'Row').map((row: Item) => row.label.split('|').map((s: string) => s.trim())) ?? [] }))).flatMap((section: Item) => [{ section: section.title }, ...(section.rows ?? [])]).map((row: any) => row.section ? <tr class="mdxcn-section"><th colspan={colNames.length}>{row.section}</th></tr> : <tr>{tableCells(row).map((cell: any) => <td>{cell}</td>)}</tr>) : tableRows.map((row: any) => <tr>{kind !== 'table' && !Array.isArray(row) && <th>{row.label}</th>}{tableCells(row).map((cell: any) => <td class:list={[cell === true && 'mdxcn-accent']}>{kind === 'heatmap' ? heatCell(Number(cell)) : typeof cell === 'boolean' ? cell ? '✓' : '–' : cell}</td>)}</tr>)}</tbody>{(p.footer ?? tags('Foot')[0]?.label?.split('|').map((s: string) => s.trim())) && <tfoot><tr>{(p.footer ?? tags('Foot')[0]?.label?.split('|').map((s: string) => s.trim())).map((cell: any) => <td>{cell}</td>)}</tr></tfoot>}</table>{kind === 'heatmap' && p.legend !== false && <p class="mdxcn-heatmap-legend mdxcn-muted">Less <span>{heatGlyphs.join('')}</span> More</p>}{kind === 'heatmap' && p.caption && <p class="mdxcn-muted">{p.caption}</p>}</div>}
+  {kind === 'invoice' && <div class="mdxcn-invoice-body"><div class="mdxcn-invoice-parties"><div><span class="mdxcn-muted">FROM</span><strong>{typeof p.from === 'string' ? p.from : p.from?.name ?? tags('From')[0]?.name ?? tags('From')[0]?.label}</strong>{p.from?.lines?.map((line: string) => <span>{line}</span>)}</div><div><span class="mdxcn-muted">TO</span><strong>{typeof p.to === 'string' ? p.to : p.to?.name ?? tags('To')[0]?.name ?? tags('To')[0]?.label}</strong>{p.to?.lines?.map((line: string) => <span>{line}</span>)}</div></div>{(p.meta ?? tags('Meta')).map((item: Item) => <p>{item.label} <span>{item.value}</span></p>)}<table><tbody>{(p.items ?? tags('Item')).map((item: Item) => <tr><td>{item.description ?? item.label}</td><td>{item.qty}</td><td>{item.rate}</td><td>{item.amount ?? item.value}</td></tr>)}</tbody></table>{(p.totals ?? tags('Total')).map((item: Item) => <p class:list={[item.accent && 'mdxcn-accent']}>{item.label}<strong>{item.value}</strong></p>)}{p.note && <small class="mdxcn-muted">{p.note}</small>}</div>}
+  {kind === 'frame' && <div class="mdxcn-prose"><slot />{items.map(item => <p>{item.label}</p>)}</div>}
+</GraphFrame>
+<script>
+  const pad = (n: number) => String(Math.trunc(n)).padStart(2, '0');
+  const hms = (ms: number) => {
+    const seconds = Math.max(0, Math.floor(ms / 1000));
+    const days = Math.floor(seconds / 86400);
+    const value = `${pad(Math.floor(seconds / 3600) % 24)}:${pad(Math.floor(seconds / 60) % 60)}:${pad(seconds % 60)}`;
+    return days ? `${days}d ${value}` : value;
+  };
+  const renderTimes = () => document.querySelectorAll<HTMLElement>('[data-mdxcn-time]').forEach(el => {
+    const now = Date.now();
+    const parse = (value: string | undefined) => /^\d+$/.test(value ?? '') ? Number(value) : Date.parse(value ?? '');
+    if (el.dataset.mdxcnTime === 'countdown') {
+      const target = parse(el.dataset.to);
+      if (Number.isFinite(target)) {
+        const remaining = target - now;
+        el.textContent = remaining <= 0 ? el.dataset.done ?? 'done' : hms(remaining);
+        el.classList.toggle('mdxcn-muted', remaining <= 0);
+      }
+    } else if (el.dataset.kind === 'clock') {
+      const date = new Date(now);
+      el.textContent = `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+    } else {
+      const origin = parse(el.dataset.at);
+      if (!Number.isFinite(origin)) return;
+      const elapsed = Math.max(0, now - origin);
+      if (el.dataset.kind === 'ago') {
+        const s = Math.floor(elapsed / 1000);
+        el.textContent = s < 60 ? `${s}s ago` : s < 3600 ? `${Math.floor(s / 60)}m ago` : s < 172800 ? `${Math.floor(s / 3600)}h ago` : `${Math.floor(s / 86400)}d ago`;
+      } else el.textContent = hms(elapsed);
+    }
+  });
+  renderTimes();
+  window.setInterval(renderTimes, 1000);
+</script>

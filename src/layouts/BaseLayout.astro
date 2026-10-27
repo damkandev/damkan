@@ -2,6 +2,11 @@
 import "@fontsource/jetbrains-mono/400.css";
 import "@fontsource/jetbrains-mono/700.css";
 import "../styles/global.css";
+import "@fontsource-variable/lora/wght.css";
+import "@fontsource-variable/lora/wght-italic.css";
+import "@fontsource/open-sans/400.css";
+import "@fontsource/open-sans/600.css";
+import "../styles/tejido.css";
 import faviconUrl from "../public/icono.svg?url";
 import SiteChrome from "../components/SiteChrome.astro";
 import type { Locale } from "../lib/site";
@@ -17,6 +22,8 @@ interface Props {
   publishedAt?: Date;
   noindex?: boolean;
   instant?: boolean;
+  /** "tejido": el rediseño (lana, Lora, sin boleta); "boleta": las páginas que aún no se rediseñan */
+  theme?: "boleta" | "tejido";
 }
 
 const {
@@ -29,7 +36,9 @@ const {
   publishedAt,
   noindex = false,
   instant = false,
+  theme = "boleta",
 } = Astro.props;
+const tejido = theme === "tejido";
 const otherLocale: Locale = locale === "es" ? "en" : "es";
 const otherPath = alternatePath ?? homePath(otherLocale);
 // `Astro.site` can be temporarily undefined while the dev server reloads its
@@ -118,7 +127,7 @@ const structuredData = noindex
     <meta name="twitter:image" content={ogImageUrl} />
     <meta name="twitter:image:alt" content={locale === "es" ? "dapan.es, sitio personal de Damián Panes" : "dapan.es, Damián Panes' personal website"} />
     {structuredData && <script type="application/ld+json" set:html={JSON.stringify(structuredData)}></script>}
-    {!instant && <script is:inline>
+    {!instant && !tejido && <script is:inline>
       (() => {
         if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
           document.documentElement.setAttribute("data-printing", "true");
@@ -127,15 +136,19 @@ const structuredData = noindex
       })();
     </script>}
   </head>
-  <body>
-    <div class="page-shell">
-      <div id="paper-texture" aria-hidden="true"></div>
-      <div class="page-content">
-        <SiteChrome locale={locale} alternatePath={alternatePath} />
-        <slot />
-        <footer class="receipt-footer" data-ascii-rule aria-hidden="true"></footer>
+  <body class={tejido ? "tejido" : undefined}>
+    {tejido ? (
+      <slot />
+    ) : (
+      <div class="page-shell">
+        <div id="paper-texture" aria-hidden="true"></div>
+        <div class="page-content">
+          <SiteChrome locale={locale} alternatePath={alternatePath} />
+          <slot />
+          <footer class="receipt-footer" data-ascii-rule aria-hidden="true"></footer>
+        </div>
       </div>
-    </div>
+    )}
     <script>
       import {
         ShaderFitOptions,

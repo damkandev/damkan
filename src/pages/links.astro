@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { homePath } from "../lib/site";
+import Tejido from "../components/tejido/Tejido.astro";
+import { copy, homePath } from "../lib/site";
 
 export const prerender = true;
 
@@ -12,24 +13,23 @@ const links = [
   { label: "Mi Instagram", href: "https://instagram.com/damian.panes" },
 ];
 ---
-<BaseLayout locale="es" title="Links | Damián Panes" description="Links de Damián Panes." instant>
-  <main class="tool">
-    <a class="article-back" href={homePath("es")}>&lt;&lt; Volver al inicio</a>
-    <h1 class="links__title">Links</h1>
-    <div class="section-rule" data-ascii-rule aria-hidden="true"></div>
-    <section class="links">
+<BaseLayout locale="es" title="Links | Damián Panes" description="Links de Damián Panes." theme="tejido">
+  <main class="tejido-pagina">
+    <Tejido />
+    <div class="tejido-columna">
+      <a class="tejido-volver" href={homePath("es")}>{copy.es.tejido.back}</a>
+      <h1 class="tejido-titulo">Links</h1>
       <ul>
         {links.map(({ label, href }) => (
-          <li><a class="links__button" href={href} target="_blank" rel="noopener noreferrer"><span>{label}</span><span aria-hidden="true">&rarr;</span></a></li>
+          <li><a class="tejido-boton" href={href} target="_blank" rel="noopener noreferrer"><span>{label}</span><span aria-hidden="true">&rarr;</span></a></li>
         ))}
       </ul>
-    </section>
+    </div>
   </main>
 </BaseLayout>
 
 <style>
-  .links__title { margin: 28px 0 14px; font-size: 1.35rem; }
-  .links ul { display: grid; gap: 16px; margin: 28px 0 0; padding: 0; list-style: none; }
-  .links__button { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px 24px; border: 2px solid var(--ink); background: var(--ink); color: var(--paper); font-size: 1.15rem; font-weight: 700; text-decoration: none; transition: transform 0.12s, background 0.12s, color 0.12s; }
-  .links__button:hover, .links__button:focus-visible { background: transparent; color: var(--ink); transform: translate(-3px, -3px); box-shadow: 6px 6px 0 var(--ink); }
+  h1 { margin-top: 72px; }
+  ul { display: grid; gap: 16px; margin: 40px 0 0; padding: 0; list-style: none; }
+  @media (max-width: 600px) { h1 { margin-top: 48px; } }
 </style>

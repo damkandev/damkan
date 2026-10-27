@@ -1,0 +1,481 @@
+---
+// Hero del Home: tablero de ajedrez en perspectiva con piezas de torno bordadas en punto cruz y el nombre bordado.
+// Cuatro piezas son links (rey Rodar, alfil KeroKero, peón Seabell, torre naranja = artículo al azar).
+import { copy, type Locale } from "../../lib/site";
+import Idioma from "./Idioma.astro";
+import Tejido from "./Tejido.astro";
+
+interface Props { locale: Locale; articles: { href: string; title: string; excerpt: string }[] }
+const { locale, articles } = Astro.props;
+const es = locale === "es";
+const hrefs = articles.map((a) => a.href);
+---
+<header class="tablero" data-hero data-locale={locale} data-lista-azar={JSON.stringify(hrefs)}>
+  <canvas class="hero-lienzo" aria-hidden="true"></canvas>
+  <h1 class="sr-only">Damián Panes</h1>
+  <!-- alternativa accesible a las piezas: oculta, se muestra al recibir foco con teclado -->
+  <nav class="hero-enlaces" aria-label={es ? "Proyectos" : "Projects"}>
+    <a href="https://rodar.cl" target="_blank" rel="noopener">Rodar</a>
+    <a href="https://kerokero.cl" target="_blank" rel="noopener">KeroKero</a>
+    <a href="/seabell">Seabell</a>
+    {hrefs.length > 0 && <a href={hrefs[hrefs.length - 1]} data-azar>{es ? "Artículo al azar" : "Random article"}</a>}
+  </nav>
+  <div class="hero-idioma"><Idioma locale={locale} /></div>
+  <!-- el pie del tablero se funde con la lana: el aviso se lee y la página sigue sin corte hacia la próxima sección -->
+  <div class="hero-pie" aria-hidden="true"><Tejido /></div>
+  <!-- aviso de scroll: HTML encima del canvas; no captura el puntero para no estorbar el arrastre -->
+  <p class="bajar">{copy[locale].tejido.scroll}</p>
+</header>
+
+<style>
+  /* la pantalla entera (svh: no salta al esconderse la barra del navegador en el teléfono) */
+  .tablero { position: relative; width: 100%; height: 100vh; height: 100svh; min-height: 640px; overflow: hidden; background: var(--lana); color: var(--hueso); }
+  .hero-lienzo { position: absolute; left: 0; top: 0; display: block; }
+  .hero-enlaces { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .hero-enlaces:focus-within { left: 28px; bottom: 72px; width: auto; height: auto; overflow: visible; clip: auto; z-index: 2; display: flex; gap: 18px; padding: 10px 14px; background: var(--lana); }
+  .hero-idioma { position: absolute; top: 24px; right: 28px; z-index: 1; }
+  .hero-pie {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 200px; pointer-events: none;
+    -webkit-mask-image: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, .55) 40%, rgba(0, 0, 0, .9) 72%, #000);
+    mask-image: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, .55) 40%, rgba(0, 0, 0, .9) 72%, #000);
+  }
+  .bajar {
+    position: absolute; left: 50%; bottom: 32px; margin: 0; transform: translateX(-50%);
+    color: #ffeec5; font-family: var(--sans); font-weight: 400; font-size: 12px; letter-spacing: .04em; white-space: nowrap;
+    pointer-events: none; animation: hero-bajar 2.4s ease-in-out infinite;
+  }
+  @keyframes hero-bajar { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, 6px); } }
+  @media (prefers-reduced-motion: reduce) { .bajar { animation: none; } }
+  /* móvil: el selector como en Mobile */
+  @media (max-width: 767px) {
+    .hero-idioma { top: 16px; right: 12px; }
+    .tablero .hero-idioma :global(.idioma) { gap: 4px; font-size: 15px; }
+    .tablero .hero-idioma :global(.idioma a) { padding: 12px 8px; }
+  }
+</style>
+
+<script>
+  import { tela, temblor, ladoPuntada, prefersReducedMotion, LANA, HUESO, TINTA, SOL, type RGB } from "../../lib/tejido";
+
+  type Kind = "pawn" | "king" | "bishop" | "rook" | "queen";
+  type Ramp = "blue" | "mint" | "moss" | "gray" | "orange";
+  type Texto = string | { es: string; en: string };
+  interface Pieza { kind: Kind; x: number; y: number; s: number; a: number; b: number; ramp: Ramp; d: number; label?: Texto; href?: string }
+  interface Layout { horizon: number; label: number; name: { lines: string[]; x: number; y: number; h: number }; pieces: Pieza[] }
+  interface Forma { cs: number; sn: number; lut: Float32Array; bishop: boolean; king: boolean }
+  interface Parche { mask: Uint8Array; bw: number; bh: number }
+
+  const WOOL = LANA, PATCH: RGB = [38, 40, 54], BONE = HUESO, INK = TINTA, SHADOW: RGB = [112, 110, 116], SUN = SOL;
+  const RAMPS: Record<Ramp, number[][]> = {
+    blue: [[52, 64, 143], [91, 120, 201], [143, 168, 230], [196, 212, 245]],
+    mint: [[72, 128, 104], [128, 188, 152], [178, 224, 188], [224, 245, 216]],
+    moss: [[26, 88, 60], [44, 140, 88], [92, 190, 112], [176, 228, 140]],
+    gray: [[64, 66, 76], [112, 114, 124], [160, 160, 166], [208, 206, 202]],
+    orange: [[168, 70, 26], [224, 112, 40], [242, 158, 66], [250, 206, 136]],
+  };
+  // la torre naranja abre un artículo al azar del idioma activo (la lista viene del Home en data-lista-azar)
+  const RANDOM = { es: "Artículo al azar", en: "Random article" };
+  // [altura 0..1, radio] — perfiles de torno, como piezas de verdad
+  const PROFILES: Record<Kind, number[][]> = {
+    pawn: [[0, .32], [.07, .32], [.1, .26], [.15, .25], [.2, .18], [.45, .11], [.52, .19], [.57, .19], [.6, .11], [.64, .15], [.72, .19], [.82, .18], [.9, .13], [.96, .07], [1, 0]],
+    king: [[0, .32], [.06, .32], [.09, .26], [.13, .24], [.18, .16], [.6, .1], [.65, .2], [.69, .2], [.72, .12], [.76, .13], [.9, .2], [.95, .18], [.97, .06], [1, .04]],
+    bishop: [[0, .3], [.06, .3], [.09, .24], [.14, .22], [.2, .15], [.52, .09], [.57, .18], [.61, .18], [.64, .1], [.7, .14], [.8, .16], [.88, .13], [.93, .07], [.95, .05], [.97, .06], [1, 0]],
+    rook: [[0, .3], [.07, .3], [.1, .25], [.15, .22], [.2, .17], [.75, .15], [.8, .22], [1, .22]],
+    queen: [[0, .32], [.06, .32], [.09, .26], [.13, .24], [.18, .16], [.6, .1], [.65, .2], [.69, .2], [.72, .12], [.78, .14], [.92, .22], [.95, .1], [.98, .06], [1, 0]],
+  };
+  // x, y: centro (fracción del ancho/alto) · s: alto en fracción de filas · a: giro en pantalla · b: inclinación hacia la cámara · d: parallax
+  const LAYOUTS: Record<"desktop" | "mobile", Layout> = {
+    desktop: {
+      horizon: .46, label: .07,
+      name: { lines: ["Damián Panes"], x: .05, y: .06, h: .15 },
+      pieces: [
+        { kind: "rook", x: .14, y: .38, s: .18, a: -1.0, b: .4, ramp: "gray", d: .6 },
+        { kind: "bishop", x: .41, y: .4, s: .3, a: .55, b: -.45, ramp: "mint", d: .8, label: "KeroKero", href: "https://kerokero.cl" },
+        { kind: "king", x: .66, y: .3, s: .36, a: 2.75, b: .55, ramp: "blue", d: 1, label: "Rodar", href: "https://rodar.cl" },
+        { kind: "queen", x: .88, y: .34, s: .2, a: 1.2, b: .7, ramp: "gray", d: .5 },
+        { kind: "queen", x: .76, y: .63, s: .28, a: 1.75, b: -.5, ramp: "gray", d: .9 },
+        { kind: "pawn", x: .26, y: .75, s: .3, a: .06, b: .45, ramp: "moss", d: 1.2, label: "Seabell", href: "/seabell" },
+        { kind: "rook", x: .52, y: .6, s: .22, a: -.5, b: .5, ramp: "orange", d: 1, label: RANDOM, href: "random" },
+      ],
+    },
+    mobile: {
+      horizon: .52, label: .07,
+      // y: bajo el selector ES / EN, que va arriba a la derecha
+      name: { lines: ["Damián", "Panes"], x: .08, y: .085, h: .1 },
+      pieces: [
+        { kind: "rook", x: .12, y: .33, s: .08, a: -1.0, b: .4, ramp: "gray", d: .6 },
+        { kind: "queen", x: .85, y: .33, s: .09, a: 1.2, b: .7, ramp: "gray", d: .5 },
+        { kind: "king", x: .62, y: .39, s: .2, a: 2.75, b: .55, ramp: "blue", d: 1, label: "Rodar", href: "https://rodar.cl" },
+        { kind: "bishop", x: .27, y: .47, s: .17, a: .55, b: -.45, ramp: "mint", d: .8, label: "KeroKero", href: "https://kerokero.cl" },
+        { kind: "queen", x: .72, y: .7, s: .14, a: 1.75, b: -.5, ramp: "gray", d: .9 },
+        { kind: "pawn", x: .3, y: .8, s: .17, a: .06, b: .45, ramp: "moss", d: 1.2, label: "Seabell", href: "/seabell" },
+        { kind: "rook", x: .5, y: .6, s: .12, a: -.5, b: .5, ramp: "orange", d: 1, label: RANDOM, href: "random" },
+      ],
+    },
+  };
+  const FUENTE = '"Lora Variable", Lora, Georgia, serif';
+  const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+  function radius(pr: number[][], y: number) {
+    if (y < 0 || y > 1) return -1;
+    for (let i = 1; i < pr.length; i++) {
+      if (y <= pr[i][0]) { const a = pr[i - 1], b = pr[i]; return a[1] + (b[1] - a[1]) * (y - a[0]) / ((b[0] - a[0]) || 1); }
+    }
+    return -1;
+  }
+  // radio por altura en tabla (257 muestras) para no buscar en el perfil en cada paso del rayo
+  const LUTS = {} as Record<Kind, Float32Array>;
+  for (const k of Object.keys(PROFILES) as Kind[]) { const l = LUTS[k] = new Float32Array(257); for (let i = 0; i <= 256; i++) l[i] = radius(PROFILES[k], i / 256); }
+  // paleta por pieza: la rampa del tapiz + un brillo casi crema
+  const PALS = {} as Record<Ramp, number[][]>;
+  for (const k of Object.keys(RAMPS) as Ramp[]) { const r = RAMPS[k], top = r[3].map((c) => c + (250 - c) * .55); PALS[k] = [...r, top]; }
+  const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+  const LIGHT = (() => { const v = [-.45, -.65, -.6], n = Math.hypot(...v); return v.map((c) => c / n); })();
+  const HALF = (() => { const v = [LIGHT[0], LIGHT[1], LIGHT[2] - 1], n = Math.hypot(...v); return v.map((c) => c / n); })();
+  const STEPS = 26;
+  // curvas: la entrada va con outQuint y el giro con outCubic
+  const outQuint = (x: number) => 1 - Math.pow(1 - x, 5);
+  const outCubic = (x: number) => 1 - Math.pow(1 - x, 3);
+  // sólido de revolución en coordenadas locales (h = altura 0..1 a lo largo del eje): 1 = cuerpo, 2 = cruz del rey
+  // la cruz del rey y el corte de la mitra del alfil no son simétricos: giran con la pieza y delatan el giro
+  function inside(p: Forma, h: number, lx: number, lz: number) {
+    const u = lx * p.cs - lz * p.sn, w = lx * p.sn + lz * p.cs;
+    if (h >= 0 && h <= 1) {
+      const r = p.lut[(h * 256) | 0];
+      if (r > 0 && lx * lx + lz * lz <= r * r && !(p.bishop && h > .66 && h < .9 && Math.abs(u - (h - .78) * .6) < .025)) return 1;
+    }
+    if (p.king && h > 1 && h < 1.2 && Math.abs(w) < .035 && (Math.abs(u) < .035 || (h > 1.07 && h < 1.12 && Math.abs(u) < .1))) return 2;
+    return 0;
+  }
+
+  const root = document.querySelector<HTMLElement>("[data-hero]");
+  if (root) iniciar(root);
+
+  function iniciar(root: HTMLElement) {
+    const cv = root.querySelector<HTMLCanvasElement>(".hero-lienzo")!, ctx = cv.getContext("2d")!;
+    const small = document.createElement("canvas"), sctx = small.getContext("2d")!;
+    const tc = document.createElement("canvas");
+    const lang = root.dataset.locale === "en" ? "en" : "es";
+    const articulos: string[] = JSON.parse(root.dataset.listaAzar || "[]");
+    // movimiento reducido: sin entrada, temblor, vaivén ni giroscopio; las piezas quedan quietas en su lugar
+    const reduce = prefersReducedMotion();
+    let L = LAYOUTS.desktop, cols = 0, rows = 0;
+    let img: ImageData, ids = new Int8Array(0), jit = new Float32Array(0), pattern: CanvasPattern | null = null;
+    let nameMask: Uint8Array | null = null, parche: Parche | null = null;
+    let mx = .5, my = .5, smx = .5, smy = .5, hover = -1, labelFor: number | null = null;
+    let off: { x: number; y: number; vx: number; vy: number }[] | null = null;
+    let drag: { id: number; gx: number; gy: number; moved: boolean } | null = null;
+    let t0: number | null = null, onScreen = true, fuenteLista = false, listo = false;
+
+    const textOf = (v: Texto) => (typeof v === "string" ? v : v[lang]);
+    const azar = () => articulos[(Math.random() * articulos.length) | 0];
+    const hrefOf = (p: Pieza) => (p.href === "random" ? azar() : p.href!);
+    const linkOf = (p: Pieza) => !!p.href && (p.href !== "random" || articulos.length > 0);
+    // externos en pestaña nueva; los internos en la misma (o nueva con cmd/ctrl)
+    const abrir = (href: string, nueva: boolean) => {
+      if (nueva || /^https?:/.test(href)) window.open(href, "_blank", "noopener");
+      else location.href = href;
+    };
+    const enlaceAzar = root.querySelector<HTMLAnchorElement>("a[data-azar]");
+    if (enlaceAzar && articulos.length) enlaceAzar.href = azar();
+
+    // arrastre: la pieza se deja tirar un poco (con freno elástico) y al soltarla vuelve con resorte
+    const idAt = (gx: number, gy: number) => {
+      const x = Math.floor(gx), y = Math.floor(gy);
+      return x < 0 || y < 0 || x >= cols || y >= rows ? -1 : ids[y * cols + x];
+    };
+    const cell = (e: PointerEvent) => [e.offsetX / cv.clientWidth * cols, e.offsetY / cv.clientHeight * rows];
+    const pick = (e: PointerEvent) => { const [gx, gy] = cell(e), id = idAt(gx, gy); return id >= 0 && linkOf(L.pieces[id]) ? id : -1; };
+    cv.addEventListener("pointerdown", (e) => {
+      if (!cols || !off || e.button !== 0) return;
+      const [gx, gy] = cell(e), id = idAt(gx, gy);
+      if (id < 0) return;
+      drag = { id, gx, gy, moved: false };
+      cv.setPointerCapture(e.pointerId);
+    });
+    // touch: si el dedo cae en una pieza no se hace scroll (se arrastra o se toca); en el resto del hero, la página baja normal
+    cv.addEventListener("touchstart", (e) => {
+      const r = cv.getBoundingClientRect(), t = e.touches[0];
+      if (cols && t && idAt((t.clientX - r.left) / r.width * cols, (t.clientY - r.top) / r.height * rows) >= 0) e.preventDefault();
+    }, { passive: false });
+    cv.addEventListener("pointercancel", () => { drag = null; });
+    cv.addEventListener("pointermove", (e) => {
+      const d = drag;
+      if (d && off) {
+        const [gx, gy] = cell(e), dx = gx - d.gx, dy = gy - d.gy, M = rows * .08, o = off[d.id];
+        if (Math.hypot(dx, dy) > 1.5) d.moved = true;
+        o.x = M * Math.tanh(dx / M); o.y = M * Math.tanh(dy / M); o.vx = o.vy = 0;
+        cv.style.cursor = "grabbing";
+        return;
+      }
+      if (!cols || e.pointerType !== "mouse") return;
+      mx = e.offsetX / cv.clientWidth; my = e.offsetY / cv.clientHeight;
+      hover = pick(e);
+      cv.style.cursor = hover >= 0 ? "pointer" : "default";
+    });
+    cv.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") { hover = -1; mx = my = .5; } });
+    // mouse: hover muestra el nombre y click abre · touch: sin hover ni parche, el tap abre directo
+    cv.addEventListener("pointerup", (e) => {
+      const d = drag;
+      drag = null;
+      if (d && d.moved) { cv.style.cursor = "default"; return; }
+      const id = d && cols ? pick(e) : -1;
+      if (id >= 0) abrir(hrefOf(L.pieces[id]), e.metaKey || e.ctrlKey);
+      else if (e.pointerType !== "mouse") pedirGiroscopio();
+    });
+
+    // giroscopio: inclinar el teléfono hace el parallax. iOS pide permiso, y sólo dentro de un gesto: se pide en el primer tap que no abre nada
+    let pedido = false;
+    const pedirGiroscopio = () => {
+      const D = window.DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> } | undefined;
+      if (pedido || reduce || !D?.requestPermission) return;
+      pedido = true;
+      D.requestPermission().catch(() => {});
+    };
+    if (!reduce) window.addEventListener("deviceorientation", (e) => {
+      if (e.gamma == null || e.beta == null) return;
+      mx = clamp01(.5 + e.gamma / 60);
+      my = clamp01(.5 + (e.beta - 45) / 60);
+    });
+
+    // escritorio desde 768px (puntada 5), móvil bajo eso (puntada 4)
+    const resize = () => {
+      const box = root.getBoundingClientRect();
+      if (!box.width || !box.height) return;
+      const desktop = matchMedia("(min-width: 768px)").matches;
+      L = desktop ? LAYOUTS.desktop : LAYOUTS.mobile;
+      const S = desktop ? 5 : 4, dpr = window.devicePixelRatio || 1, T = ladoPuntada(S);
+      cols = Math.ceil(box.width / S); rows = Math.ceil(box.height / S);
+      cv.width = cols * T; cv.height = rows * T;
+      cv.style.width = cols * T / dpr + "px"; cv.style.height = rows * T / dpr + "px";
+      small.width = cols; small.height = rows;
+      img = sctx.createImageData(cols, rows);
+      ids = new Int8Array(cols * rows).fill(-1);
+      jit = new Float32Array(cols * rows);
+      for (let i = 0; i < jit.length; i++) jit[i] = temblor(Math.floor(i / cols));
+      pattern = tela(ctx, T);
+      hover = -1;
+      buildName();
+      labelFor = null;
+    };
+
+    // texto → máscara de puntadas: 1 = hilo
+    // el alto sale de las filas; si la línea más larga no cabe en maxW, se achica hasta caber
+    function textMask(lines: string[], x: number, y: number, px: number, maxW: number) {
+      tc.width = cols; tc.height = rows;
+      const g = tc.getContext("2d", { willReadFrequently: true })!;
+      g.fillStyle = "#fff"; g.textBaseline = "top";
+      const font = () => { g.font = "600 " + px + "px " + FUENTE; g.letterSpacing = Math.max(1, Math.round(px * .08)) + "px"; };
+      font();
+      const w = Math.max(...lines.map((s) => g.measureText(s).width));
+      if (w > maxW) { px = Math.floor(px * maxW / w); font(); }
+      lines.forEach((s, i) => g.fillText(s, x, y + i * px * 1.05));
+      const d = g.getImageData(0, 0, cols, rows).data, m = new Uint8Array(cols * rows);
+      for (let i = 0; i < m.length; i++) if (d[i * 4 + 3] > 120) m[i] = 1;
+      return m;
+    }
+
+    // nombre del proyecto como máscara (1 = letra); la tela y el hilván del parche se arman en casillas
+    function buildPatch(text: string): Parche {
+      const px = 64, c = document.createElement("canvas"), g = c.getContext("2d", { willReadFrequently: true })!;
+      const font = () => { g.font = "700 " + px + "px " + FUENTE; g.letterSpacing = Math.round(px * .06) + "px"; };
+      font();
+      const bw = Math.ceil(g.measureText(text).width + px * .2), bh = Math.ceil(px * 1.2);
+      c.width = bw; c.height = bh;
+      font();
+      g.fillStyle = "#fff"; g.textAlign = "center"; g.textBaseline = "middle";
+      g.fillText(text, bw / 2, bh * .55);
+      const d = g.getImageData(0, 0, bw, bh).data, mask = new Uint8Array(bw * bh);
+      for (let i = 0; i < mask.length; i++) if (d[i * 4 + 3] > 120) mask[i] = 1;
+      return { mask, bw, bh };
+    }
+
+    function buildName() {
+      if (!cols) return;
+      const n = L.name;
+      nameMask = textMask(n.lines, n.x * cols, n.y * rows, Math.round(n.h * rows), cols * (1 - 2 * n.x));
+    }
+
+    function frame(t: number) {
+      if (!cols || !pattern) return;
+      const data = img.data;
+      smx += (mx - smx) * .06;
+      smy += (my - smy) * .06;
+      if (labelFor !== hover) {
+        labelFor = hover;
+        parche = hover >= 0 ? buildPatch(textOf(L.pieces[hover].label!)) : null;
+      }
+      // entrada: todas parten paradas al fondo del tablero, chicas por la perspectiva,
+      // y levitan juntas hacia la cámara, creciendo hasta su lugar.
+      // El reloj arranca cuando la fuente ya está: es lo que tapa el splash
+      if (t0 == null || !fuenteLista) t0 = t;
+      // sin pausa: al salir del splash ya vienen subiendo, y frenan al llegar
+      const e = reduce ? 1 : outQuint(clamp01((t - t0) / 3.2)), fog = clamp01(1 - e);
+      // el giro va con su propia curva, más larga: sigue frenando cuando ya llegaron
+      const spinE = reduce ? 1 : outCubic(clamp01((t - t0) / 4.5));
+      // temblor de tablero y piezas: atado al avance de la subida, se apaga cuando frenan (en puntadas)
+      const shake = Math.pow(fog, 2.5);
+      const bx = Math.round(Math.sin(t * 55) * shake * 2.5), by = Math.round(Math.cos(t * 47) * shake * 1.5);
+      const H = L.horizon * rows;
+      // resorte por pieza, en puntadas; poco amortiguado para que rebote un par de veces
+      // ponytail: paso fijo por cuadro, a 120 Hz rebota el doble de rápido; integrar con dt si molesta
+      if (!off || off.length !== L.pieces.length) off = L.pieces.map(() => ({ x: 0, y: 0, vx: 0, vy: 0 }));
+      const offs = off;
+      offs.forEach((o, i) => {
+        if (drag && drag.id === i) return;
+        o.vx = (o.vx - o.x * .12) * .84; o.vy = (o.vy - o.y * .12) * .84;
+        o.x += o.vx; o.y += o.vy;
+      });
+      const ps = L.pieces.map((p, i) => {
+        const o = offs[i];
+        // parten donde las casillas ya se leen, no en la franja del horizonte
+        const back = rows * (.13 + .08 * ((i * .37) % 1)), gy = H + back;
+        const s0 = p.s * rows * back / (rows - H) * 1.4, s1 = p.s * rows, size = s0 + (s1 - s0) * e;
+        // al tirarla se inclina hacia donde va
+        const a = (p.a + Math.sin(t * .45 + i * 2.1) * .07) * e + Math.sin(t * 70 + i) * shake * .05 + o.x * .015, b = .35 + (p.b - .35) * e;
+        const x0 = (.5 + (p.x - .5) * .7) * cols, stand = gy - s0 * .5;
+        const px = (p.x + (smx - .5) * .04 * p.d) * cols, py = (p.y + (smy - .5) * .04 * p.d) * rows;
+        const bob = Math.sin(t * .8 + i * 1.7) * rows * .012 * e;
+        // sombra: viaja por el tablero bajo la pieza; las que flotan sobre el tablero conservan una suave
+        const sx0 = x0 - s0 * .25, sx1 = px - s1 * .25, sy1 = Math.max((p.y + p.s * .55) * rows, gy), so1 = p.y > L.horizon ? .3 : 0;
+        // base local: eje U (inclinado b hacia la cámara y girado a en pantalla), X y Z perpendiculares
+        const ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
+        const spin = i * 1.3 + t * .35 + spinE * Math.PI * 3 * (i & 1 ? -1 : 1);
+        const rot = (vx: number, vy: number, vz: number) => [vx * ca - vy * sa, vx * sa + vy * ca, vz];
+        return {
+          // al fondo: más oscuras, con niebla hacia la lana
+          fog, idx: i,
+          king: p.kind === "king", lut: LUTS[p.kind], pal: PALS[p.ramp], size, rr: size * size * .6,
+          U: rot(0, -cb, -sb), X: rot(1, 0, 0), Z: rot(0, -sb, cb), R: size * .75, st: size * 1.5 / STEPS,
+          // giro sobre su propio eje: vuelta y media mientras levitan, frenando con la curva, y después lento
+          spin, cs: Math.cos(spin), sn: Math.sin(spin), bishop: p.kind === "bishop",
+          cx: x0 + (px - x0) * e + Math.sin(t * 61 + i * 3) * shake * 1.8 + o.x,
+          cy: stand + (py - stand) * e + bob + Math.cos(t * 53 + i * 5) * shake * 1.2 + o.y,
+          sx: sx0 + (sx1 - sx0) * e + o.x, sy: gy + (sy1 - gy) * e,
+          rx: s0 * .4 + (s1 * .35 - s0 * .4) * e, ry: s0 * .07 + (s1 * .06 - s0 * .07) * e, so: .6 + (so1 - .6) * e,
+        };
+      });
+      // la más cercana (más abajo en pantalla) se dibuja encima
+      ps.sort((m, n) => m.cy - n.cy);
+      // franja ancha cerca del horizonte que se funde con la lana: ahí las casillas son más chicas que una puntada
+      const K = rows * 2.8, W = rows * .8, fadeD = rows * .16;
+      const rot = .5 + (smx - .5) * .12, cr = Math.cos(rot), sr = Math.sin(rot);
+      const hv = hover, nm = nameMask;
+      // parche bordado sobre el tablero, al lado de la pieza: ocupa casillas enteras y sigue las líneas del tablero.
+      // Siempre a la misma profundidad, cerca del borde de abajo, donde las casillas se ven grandes y poco aplastadas
+      let lab: (Parche & { u0: number; v0: number; ns: number; hs: number; th: number; tw: number; off: number }) | null = null;
+      const hp = parche && ps.find((q) => q.idx === hv);
+      if (parche && hp) {
+        // el parche se centra en el ancla: como sigue la diagonal del tablero, así entra completo en pantalla
+        const d = (rows - H) * .64, z = K / d, uw = W / z;
+        const hs = Math.min(4, Math.max(1, Math.ceil(L.label * rows / (d * d / K)))), th = hs * .8, tw = th * parche.bw / parche.bh;
+        const ns = Math.ceil(tw + .5), half = ns * uw * .58 + 3;
+        const ax = Math.max(half, Math.min(hp.cx + hp.size * .45 + half, cols - half));
+        const wx = (ax - cols * .5) * z / W;
+        const v = wx * sr + z * cr, u = wx * cr - z * sr + .25 * Math.sin(v * .5);
+        const l = lab = { ...parche, u0: Math.floor(u - ns / 2), v0: Math.floor(v) - Math.floor((hs - 1) / 2), ns, hs, th, tw, off: (ns - tw) / 2 };
+        // un nombre largo se estira en perspectiva más allá de lo estimado: correrlo por casillas hasta que entre
+        const sx = (uu: number, vv: number) => { const z2 = vv * cr - uu * sr; return (uu * cr + vv * sr) * W / z2 + cols * .5; };
+        for (let k = 0; k < 40 && Math.max(sx(l.u0 + ns, l.v0), sx(l.u0 + ns, l.v0 + hs)) > cols - 3; k++) l.u0--;
+        for (let k = 0; k < 40 && Math.min(sx(l.u0, l.v0), sx(l.u0, l.v0 + hs)) < 3; k++) l.u0++;
+      }
+      let o = 0;
+      for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++, o++) {
+        let r: number = WOOL[0], g: number = WOOL[1], b: number = WOOL[2], id = -1, patch = false;
+        if (y > H) {
+          const d = Math.max(.5, y - by - H), z = K / d, wx = (x - bx - cols * .5) * z / W;
+          const v = wx * sr + z * cr, u = wx * cr - z * sr + .25 * Math.sin(v * .5);
+          const c = ((Math.floor(u) + Math.floor(v)) & 1) ? BONE : INK;
+          const f = d < fadeD ? Math.pow(d / fadeD, 2) : 1;
+          r += (c[0] - r) * f; g += (c[1] - g) * f; b += (c[2] - b) * f;
+          for (let k = 0; k < ps.length; k++) {
+            const p = ps[k], ex = (x - bx - p.sx) / p.rx, ey = (y - by - p.sy) / p.ry;
+            if (ex * ex + ey * ey < 1) { r += (SHADOW[0] - r) * p.so; g += (SHADOW[1] - g) * p.so; b += (SHADOW[2] - b) * p.so; }
+          }
+          if (lab && u >= lab.u0 && u < lab.u0 + lab.ns && v >= lab.v0 && v < lab.v0 + lab.hs) {
+            const pu = u - lab.u0, pv = lab.v0 + lab.hs - v, de = Math.min(pu, lab.ns - pu, v - lab.v0, pv);
+            const tx = ((pu - lab.off) / lab.tw * lab.bw) | 0, ty = ((pv - (lab.hs - lab.th) / 2) / lab.th * lab.bh) | 0;
+            const txt = tx >= 0 && tx < lab.bw && ty >= 0 && ty < lab.bh && lab.mask[ty * lab.bw + tx] === 1;
+            const c = txt || (de > .1 && de < .18 && (x + y) & 1) ? SUN : PATCH;
+            r = c[0]; g = c[1]; b = c[2]; patch = true;
+          }
+        }
+        for (let k = 0; k < ps.length; k++) {
+          const p = ps[k], dx = x - p.cx, dy = y - p.cy;
+          if (dx * dx + dy * dy > p.rr) continue;
+          // rayo ortográfico hacia la pantalla, recorrido en pasos y afinado con bisección
+          const is = 1 / p.size, U = p.U, X = p.X, Z = p.Z;
+          const h0 = .5 + (dx * U[0] + dy * U[1]) * is, hz = U[2] * is;
+          const x0 = (dx * X[0] + dy * X[1]) * is, xz = X[2] * is;
+          const z0 = (dx * Z[0] + dy * Z[1]) * is, zz = Z[2] * is;
+          let lo = -p.R, hi = Infinity, kind = 0;
+          for (let s = 0, tt = -p.R; s <= STEPS; s++, tt += p.st) {
+            kind = inside(p, h0 + hz * tt, x0 + xz * tt, z0 + zz * tt);
+            if (kind) { hi = tt; break; }
+            lo = tt;
+          }
+          if (hi === Infinity) continue;
+          for (let s = 0; s < 5; s++) { const mid = (lo + hi) * .5; if (inside(p, h0 + hz * mid, x0 + xz * mid, z0 + zz * mid)) hi = mid; else lo = mid; }
+          const h = h0 + hz * hi, lx = x0 + xz * hi, lz = z0 + zz * hi;
+          // la bisección puede terminar en la cruz del rey aunque el paso grueso tocara el cuerpo
+          kind = inside(p, h, lx, lz) || kind;
+          let v;
+          if (kind === 2) v = .55;
+          else {
+            let nx, ny, nz;
+            if (h < .015) { nx = -U[0]; ny = -U[1]; nz = -U[2]; }
+            else if (h > .985 && p.lut[256] > .05) { nx = U[0]; ny = U[1]; nz = U[2]; }
+            else {
+              const rho = Math.hypot(lx, lz) || 1e-4, j = Math.min(256, (h * 256) | 0), j0 = Math.max(0, j - 3), j1 = Math.min(256, j + 3);
+              const dr = (p.lut[j1] - p.lut[j0]) * 256 / (j1 - j0 || 1);
+              const ax = lx / rho, az = lz / rho, nl = Math.hypot(1, dr);
+              nx = (ax * X[0] - dr * U[0] + az * Z[0]) / nl; ny = (ax * X[1] - dr * U[1] + az * Z[1]) / nl; nz = (ax * X[2] - dr * U[2] + az * Z[2]) / nl;
+            }
+            const diff = Math.max(0, nx * LIGHT[0] + ny * LIGHT[1] + nz * LIGHT[2]);
+            const spec = Math.pow(Math.max(0, nx * HALF[0] + ny * HALF[1] + nz * HALF[2]), 28);
+            const band = Math.floor(h * 9 + (Math.atan2(lz, lx) + p.spin) * .4775) & 1;
+            v = .1 + .72 * diff + .5 * spec + (band ? .09 : -.03);
+          }
+          // niebla limitada: al fondo se leen como siluetas oscuras, no desaparecen
+          v = .5 + (v - .5) * (1 - .4 * p.fog) + (BAYER[(y & 3) * 4 + (x & 3)] - 7.5) * .009;
+          const c = p.pal[Math.max(0, Math.min(4, Math.floor(v * 5)))], f = p.fog * .45;
+          r = c[0] + (WOOL[0] - c[0]) * f; g = c[1] + (WOOL[1] - c[1]) * f; b = c[2] + (WOOL[2] - c[2]) * f; id = p.idx;
+        }
+        ids[o] = id;
+        let m = jit[o];
+        if (hv >= 0 && !patch) m *= id === hv ? 1.15 : .5;
+        if (nm && nm[o]) { const c = nm[o] === 1 ? BONE : INK; r = c[0]; g = c[1]; b = c[2]; m = jit[o]; }
+        const q = o * 4;
+        data[q] = r * m; data[q + 1] = g * m; data[q + 2] = b * m; data[q + 3] = 255;
+      }
+      // contorno oscuro en la silueta de cada pieza: le da volumen contra el fondo
+      for (let y = 1; y < rows - 1; y++) for (let x = 1; x < cols - 1; x++) {
+        const i = y * cols + x, id = ids[i];
+        if (id < 0 || (nm && nm[i])) continue;
+        if (ids[i - 1] !== id || ids[i + 1] !== id || ids[i - cols] !== id || ids[i + cols] !== id) {
+          const q = i * 4; data[q] *= .62; data[q + 1] *= .62; data[q + 2] *= .62;
+        }
+      }
+      sctx.putImageData(img, 0, 0);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(small, 0, 0, cv.width, cv.height);
+      ctx.fillStyle = pattern;
+      ctx.fillRect(0, 0, cv.width, cv.height);
+      // primer cuadro completo (con la fuente del nombre): el splash ya se puede ir
+      if (fuenteLista && !listo) { listo = true; window.dispatchEvent(new Event("tejido:hero-listo")); }
+    }
+
+    new ResizeObserver(resize).observe(root);
+    resize();
+    // el nombre y los parches se bordan con Lora: se rehacen cuando llega (y a los 2 s se arranca igual, con la que haya)
+    const alCargar = () => { fuenteLista = true; buildName(); labelFor = null; };
+    Promise.all([document.fonts.load("600 20px " + FUENTE, "Damián Panes"), document.fonts.load("700 64px " + FUENTE)])
+      .then(() => document.fonts.ready)
+      .then(alCargar, alCargar);
+    setTimeout(() => { fuenteLista = true; }, 2000);
+    // el siguiente cuadro se pide antes de dibujar: un error en un cuadro no congela la animación
+    // fuera de pantalla no se dibuja: el hero es caro y si no, le roba cuadros al scroll del resto de la página
+    new IntersectionObserver((es) => { onScreen = es.some((en) => en.isIntersecting); }).observe(cv);
+    const loop = (ms: number) => { requestAnimationFrame(loop); if (onScreen) frame(reduce ? 0 : ms / 1000); };
+    requestAnimationFrame(loop);
+  }
+</script>
