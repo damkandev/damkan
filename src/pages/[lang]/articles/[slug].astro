@@ -165,7 +165,8 @@ const readingTime = c.tejido.readingTime.replace("{n}", String(Math.max(1, Math.
   @media (max-width: 899px) {
     .barra { padding: 20px 20px 0; }
     .lectura { padding: 0 20px 120px; }
-    .cabecera { margin: 210px 0 44px; }
+    /* deja sitio arriba del título para la micro y el paradero (puntada de 3 px, ver el script) */
+    .cabecera { margin: 150px 0 44px; }
   }
   @media (max-width: 600px) {
     .cuerpo { font-size: 18px; }
@@ -206,23 +207,25 @@ const readingTime = c.tejido.readingTime.replace("{n}", String(Math.max(1, Math.
     const narrow = angosto.matches, col = article.offsetLeft + parseFloat(getComputedStyle(article).paddingLeft);
     // el paradero: una línea vertical que baja desde arriba de la página por el margen de la columna y termina en el
     // paradero, a la altura de la primera línea del título; la micro baja por ella y se estaciona encima.
-    // En pantallas angostas no hay margen: sin línea, el paradero queda sobre el título, alineado con la columna.
-    const rx = narrow ? Math.round(col / S) + 5 : Math.round((col - 64) / S);
-    const ringY = narrow ? Math.floor(header.offsetTop / S) - 9 : Math.round((header.offsetTop + 30) / S);
+    // En pantallas angostas no hay margen: sin línea, el paradero queda sobre el título, alineado con la columna,
+    // y la micro y el paradero van con puntada más fina (P), como el recorrido del Home en teléfonos.
+    const P = narrow ? 3 : S;
+    const rx = narrow ? Math.round(col / P) + 5 : Math.round((col - 64) / P);
+    const ringY = narrow ? Math.floor(header.offsetTop / P) - 9 : Math.round((header.offsetTop + 30) / P);
     const cols = 11, rows = ringY + 6, grid: (RGB | null)[] = new Array(cols * rows).fill(null);
     const put = (x: number, y: number, c: RGB) => { if (x >= 0 && x < cols && y >= 0 && y < rows) grid[y * cols + x] = c; };
     if (!narrow) for (let y = 0; y <= ringY; y++) for (let k = -1; k <= 1; k++) put(5 + k, y, NARANJO);
     for (let y = -5; y <= 5; y++) for (let x = -5; x <= 5; x++) { const r = Math.hypot(x, y); if (r <= 5.4) put(5 + x, ringY + y, r <= 3.6 ? HUESO : NARANJO); }
-    tejer(stopCv, cols, rows, (x, y) => grid[y * cols + x], S);
-    stopCv.style.left = (rx - 5) * S + "px";
+    tejer(stopCv, cols, rows, (x, y) => grid[y * cols + x], P);
+    stopCv.style.left = (rx - 5) * P + "px";
     // la micro girada mirando hacia abajo (la misma de perfil, rotada): la trompa queda a una puntada del paradero
     const BH = MICRO.length, BW = MICRO[0].length;
-    tejer(busCv, BH, BW, (x, y) => celdaMicro(y, BH - 1 - x), S);
-    busCv.style.left = (rx - 5) * S + "px";
-    busCv.style.top = (ringY - 6 - BW) * S + "px";
+    tejer(busCv, BH, BW, (x, y) => celdaMicro(y, BH - 1 - x), P);
+    busCv.style.left = (rx - 5) * P + "px";
+    busCv.style.top = (ringY - 6 - BW) * P + "px";
     // llega bajando desde arriba de la pantalla (la misma micro que se fue por el ramal del Home)
     if (!arrived && busCv.animate) {
-      const from = -((ringY - 6) * S + 40);
+      const from = -((ringY - 6) * P + 40);
       busCv.animate(
         [{ transform: `translateY(${from}px)` }, { transform: "translateY(6px)", offset: .85 }, { transform: "translateY(0)" }],
         { duration: 1200, easing: "cubic-bezier(.2,.6,.3,1)", fill: "backwards" },
