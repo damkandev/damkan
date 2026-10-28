@@ -81,7 +81,7 @@ const trackW = LEAD + Math.max(0, articles.length - 1) * GAP + TAIL;
 
   @media (max-width: 767.98px) {
     .articulos { height: auto; }
-    .fijo { position: relative; height: auto; padding-bottom: 96px; }
+    .fijo { position: relative; height: auto; padding-bottom: 64px; }
     .cabeza { padding: 96px 16px 0; }
     .cabeza-in { padding-left: 0; }
     .ruta { margin: 48px 0 0; padding: 0 16px; }
@@ -89,8 +89,11 @@ const trackW = LEAD + Math.max(0, articles.length - 1) * GAP + TAIL;
     .pista { position: relative; width: auto; transform: none !important; }
     .pista canvas { display: none; }
     .movil { display: block !important; }
-    ol { padding-left: 40px; }
-    li { position: static; width: auto; margin-bottom: 32px; }
+    /* la línea mide 33 px (11 puntadas de 3): el texto parte justo después, con aire */
+    ol { padding-left: 50px; }
+    li { position: static; width: auto; margin-bottom: 36px; }
+    .parada { padding-left: 0; }
+    .parada-bajada { font-size: 16px; }
     li:last-child { margin-bottom: 0; }
   }
 </style>
@@ -135,18 +138,20 @@ const trackW = LEAD + Math.max(0, articles.length - 1) * GAP + TAIL;
 
     const mm = gsap.matchMedia();
 
-    // teléfonos: una línea vertical tejida con un paradero a la altura de cada título; se reteje si cambia el alto
+    // teléfonos: una línea vertical tejida con un paradero a la altura de cada título; se reteje si cambia el alto.
+    // Puntada más fina que en escritorio (SM): a 5 px la línea y los paraderos se comían la columna de texto
     mm.add("(max-width: 767.98px)", () => {
+      const SM = 3;
       let size = "";
       const draw = () => {
         const h = ol.offsetHeight;
         if (!h || size === String(h)) return;
         size = String(h);
-        const ys = paradas.map((li) => Math.round((li.offsetTop + 15) / S)), last = ys[ys.length - 1];
-        tejer(movilEl, RING * 2 + 1, Math.ceil(h / S), (x, y) => {
+        const ys = paradas.map((li) => Math.round((li.offsetTop + 15) / SM)), last = ys[ys.length - 1];
+        tejer(movilEl, RING * 2 + 1, Math.ceil(h / SM), (x, y) => {
           for (const sy of ys) { const c = anillo(x - RING, y - sy); if (c) return c; }
           return Math.abs(x - RING) <= 1 && y <= last ? NARANJO : null;
-        }, S);
+        }, SM);
       };
       const ro = new ResizeObserver(draw);
       ro.observe(ol);
