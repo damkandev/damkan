@@ -1,0 +1,141 @@
+---
+// Home y artículos: el tablero en dither (la escena está en src/lib/tablero.js). Las secciones van en el HTML en el idioma de la
+// página: de ahí las lee el tablero, y sin WebGL o sin JS se leen tal cual. En la página de un artículo, el artículo ya viene
+// abierto en el HTML (para Google y las vistas previas de links) y el tablero parte con la reina tumbada y él al lado.
+import { getCollection } from "astro:content";
+import { articlePath, copy, homePath, type Locale } from "../lib/site";
+
+interface Props {
+  locale: Locale;
+  /** el artículo abierto, con su texto en el slot */
+  article?: { title: string; href: string };
+}
+const { locale, article } = Astro.props;
+const c = copy[locale];
+// del más nuevo al más antiguo
+const articles = (await getCollection("articles"))
+  .filter((entry) => entry.data.locale === locale)
+  .sort((a, b) => b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf())
+  .map((entry) => ({ title: entry.data.title, href: articlePath(locale, entry.data.slug) }));
+// pieza → sección. Rodar, KeroKero y Seabell van solo con título hasta que Damián escriba su texto
+const sections: { pieza: string; title: string; text?: string; items?: typeof articles }[] = [
+  { pieza: "king", title: c.tejido.aboutTitle, text: c.bio },
+  { pieza: "queen", title: c.tejido.articlesTitle, text: c.articlesIntro, items: articles },
+  {
+    pieza: "bishop", title: c.tejido.socialsTitle, text: c.socials, items: [
+      { title: "Instagram", href: "https://www.instagram.com/damian.panes/" },
+      { title: "LinkedIn", href: "https://www.linkedin.com/in/damianpanes/" },
+      { title: "GitHub", href: "https://github.com/damkandev" },
+    ],
+  },
+  { pieza: "rook", title: "Rodar" },
+  { pieza: "knight", title: "KeroKero" },
+  { pieza: "pawn", title: "Seabell" },
+];
+---
+<!-- se marca antes de pintar; si la escena no puede armarse (sin WebGL), el script la quita y queda el texto plano -->
+<script is:inline>document.documentElement.classList.add("tablero-vivo");</script>
+<div class="tablero" data-inicio={homePath(locale)} data-titulo={c.title} data-pista={c.tejido.drag}>
+  <canvas id="c" aria-hidden="true"></canvas>
+  <canvas id="hud" aria-hidden="true"></canvas>
+  <div id="rotulo">
+    <canvas aria-hidden="true"></canvas><p class="cuerpo"><span></span><span></span></p><ul class="lista"></ul><p class="sr" aria-live="polite"></p>
+    <article id="articulo" data-ruta={article?.href}>
+      <div class="col">
+        <button class="volver" type="button" aria-label={c.tejido.close}><canvas></canvas></button>
+        <h1><span></span><span>{article?.title}</span></h1>
+        <div class="texto"><slot /></div>
+      </div>
+    </article>
+  </div>
+  <!-- teclado: las seis piezas, ocultas hasta que reciben foco -->
+  <nav id="piezas" class="piezas" aria-label={locale === "es" ? "Secciones" : "Sections"}>
+    {sections.map((s) => <button type="button" data-pieza={s.pieza}>{s.title}</button>)}
+  </nav>
+  <div class="secciones">
+    {!article && <h1 class="sr-only">Damián Panes</h1>}
+    {sections.map((s) => (
+      <section data-pieza={s.pieza}>
+        <h2>{s.title}</h2>
+        {s.text && <p>{s.text}</p>}
+        {s.items && <ul>{s.items.map((a) => a.href.startsWith("/")
+          ? <li><a href={a.href}>{a.title}</a></li>
+          : <li><a href={a.href} target="_blank" rel="noopener noreferrer">{a.title}</a></li>)}</ul>}
+      </section>
+    ))}
+  </div>
+</div>
+
+<script>
+  // si no hay WebGL o algo falla al armar la escena, queda el texto plano (los estilos sin .tablero-vivo)
+  import("../lib/tablero.js").catch((e) => {
+    document.documentElement.classList.remove("tablero-vivo");
+    console.error(e);
+  });
+</script>
+
+<style is:global>
+  /* 1 bit: negro y blanco puros. Sin .tablero-vivo (sin JS o sin WebGL) todo se lee como una columna de texto */
+  .tablero { --negro: #0c0c0e; --blanco: #f6f5f0; color: var(--blanco); }
+  html:not(.tablero-vivo) .tablero { box-sizing: content-box; max-width: 680px; margin: 0 auto; padding: 48px 20px 96px; }
+  html:not(.tablero-vivo) .tablero :is(#c, #hud, #piezas, #rotulo > :not(#articulo), #articulo:not([data-ruta]), .volver) { display: none; }
+  html:not(.tablero-vivo) .secciones h2 { margin: 48px 0 12px; font-size: 28px; }
+  html.tablero-vivo .secciones { display: none; }
+
+  html:has(.tablero), html body:has(.tablero) { background: #0c0c0e; }
+  html.tablero-vivo, html.tablero-vivo body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+  /* dvh: en móvil la barra del navegador no tapa el pie */
+  #c { display: block; width: 100vw; height: 100vh; height: 100dvh; image-rendering: pixelated; cursor: pointer; }
+  /* nombres de las piezas y pistas: otro canvas con la misma rejilla de celdas, encima y sin recibir el puntero */
+  #hud { position: fixed; left: 0; top: 0; pointer-events: none; image-rendering: pixelated; }
+
+  /* sección de la pieza caída: título en 1 bit sobre la rejilla de celdas y, debajo, su texto; ambos se escriben letra por letra */
+  .tablero-vivo #rotulo { position: fixed; left: 0; top: 0; line-height: 0; pointer-events: none; }
+  #rotulo > canvas { display: block; image-rendering: pixelated; clip-path: inset(0 100% 0 0); }
+  /* el párrafo va en Lora normal, texto de verdad; lo que falta por escribir ya ocupa su lugar (invisible) para que las líneas no salten */
+  #rotulo .cuerpo { margin: 14px 0 0; font: 400 20px/1.6 var(--serif); color: var(--blanco); }
+  #rotulo .cuerpo span + span, #rotulo .lista span + span { visibility: hidden; }
+  /* lista de la sección (los artículos): mismos tipos que el párrafo, cada título es un link */
+  #rotulo .lista { list-style: none; margin: 18px 0 0; padding: 0; font: 400 20px/1.5 var(--serif); }
+  #rotulo .lista li + li { margin-top: 6px; }
+  #rotulo .lista a { color: var(--blanco); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 5px; pointer-events: none; }
+  #rotulo .lista a.listo { pointer-events: auto; }
+  #rotulo .lista a:hover, #rotulo .lista a:focus-visible { text-decoration-thickness: 3px; outline: none; }
+  #rotulo .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); margin: 0; }
+  @media (max-width: 700px) { #rotulo .cuerpo, #rotulo .lista { font-size: 17px; } }
+  /* artículo: se abre en una columna angosta a la derecha de la lista, a la altura de su título, sin mover nada de lo demás;
+     el título elegido queda encendido y los demás se opacan */
+  #rotulo .lista a { transition: opacity .28s ease; }
+  #rotulo .lista.abierta a:not(.activo) { opacity: .32; }
+  /* al cerrar, el artículo se desvanece mientras la vista vuelve a centrarse */
+  #rotulo.saliendo #articulo { opacity: 0; transition: opacity .22s ease; }
+  @media (prefers-reduced-motion: reduce) { #rotulo .lista a, #rotulo.saliendo #articulo { transition: none; } }
+  .tablero-vivo #articulo { position: absolute; top: 0; display: none; box-sizing: border-box; pointer-events: auto; }
+  .tablero-vivo #rotulo.leyendo #articulo { display: block; }
+  #articulo { color: var(--blanco); font: 400 18px/1.65 var(--serif); }
+  #articulo .volver { display: none; }
+  /* en pantalla angosta no cabe al lado: el artículo ocupa el lugar del bloque y trae su "Volver" */
+  #rotulo.angosto.leyendo > canvas, #rotulo.angosto.leyendo > .cuerpo, #rotulo.angosto.leyendo > .lista { visibility: hidden; }
+  #rotulo.angosto #articulo .volver { display: inline-block; }
+  #articulo .col { padding-bottom: 96px; }
+  /* "Volver" en 1 bit: una placa blanca con el texto en la rejilla de celdas, como el nombre de la pieza bajo el puntero (lo dibuja el script) */
+  #articulo button.volver { margin: 0 0 14px; padding: 0; border: 0; background: none; line-height: 0; cursor: pointer; }
+  #articulo .volver canvas { display: block; image-rendering: pixelated; }
+  #articulo h1 { margin: 0 0 18px; font-weight: 600; font-size: 28px; line-height: 36px; }
+  .tablero-vivo #articulo h1 span + span, #articulo .texto .falta, #articulo .texto .espera { visibility: hidden; }
+  #articulo h2 { margin: 40px 0 12px; font-weight: 600; font-size: 22px; line-height: 1.3; }
+  #articulo h3, #articulo h4 { margin: 32px 0 10px; font-weight: 600; font-size: 19px; line-height: 1.35; }
+  #articulo p, #articulo ul, #articulo ol { margin: 0 0 18px; }
+  #articulo a, #articulo a:hover { color: inherit; text-decoration-color: currentColor; text-underline-offset: 4px; }
+  #articulo blockquote { margin: 28px 0; padding-left: 20px; border-left: 3px solid var(--blanco); }
+  #articulo img { display: block; max-width: 100%; height: auto; margin: 32px 0; filter: grayscale(1); }
+  #articulo code { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: .82em; }
+  #articulo pre { overflow-x: auto; }
+  @media (max-width: 700px) { #articulo { font-size: 17px; } }
+
+  /* menú de teclado: fuera de la vista hasta que una de sus piezas recibe foco; entonces aparece arriba a la izquierda */
+  #piezas { position: fixed; left: 16px; top: 16px; display: flex; flex-wrap: wrap; gap: 8px; }
+  #piezas:not(:focus-within) { width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  #piezas button { padding: 6px 12px; border: 1px solid var(--blanco); background: var(--negro); color: var(--blanco); font: 400 17px/1.4 var(--serif); cursor: pointer; }
+  #rotulo :focus-visible, #piezas :focus-visible { outline: 2px solid var(--blanco); outline-offset: 3px; }
+</style>

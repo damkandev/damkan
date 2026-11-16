@@ -4,13 +4,11 @@
 
 export type RGB = readonly [number, number, number];
 
-export const LANA: RGB = [27, 28, 34];
 export const HUESO: RGB = [239, 230, 210];
 export const TINTA: RGB = [20, 20, 24];
 export const NARANJO: RGB = [224, 112, 40];
 export const SOL: RGB = [242, 193, 74];
 export const VIDRIO: RGB = [52, 64, 143];
-export const AZUL: RGB = [91, 120, 201];
 export const GRIS: RGB = [120, 118, 124];
 
 /** Tamaño de puntada por defecto, en px CSS. */
@@ -112,6 +110,3 @@ export const celdaMicro = (x: number, y: number, girando = false): RGB | null =>
   if (!ch || ch === ".") return null;
   return PINTURA_MICRO[girando && ch === "g" ? "k" : ch];
 };
-
-/** Clave de sessionStorage: el Home la deja al llevar la micro a un artículo, y el artículo la usa para la llegada. */
-export const LLEGADA_KEY = "tejido:llegada";

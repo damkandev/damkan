@@ -31,7 +31,7 @@ const {
   title = copy[locale].title,
   description = copy[locale].description,
   alternatePath,
-  ogImage = "/og-default.jpg",
+  ogImage = `/og/${locale}.png`,
   pageType = "website",
   publishedAt,
   noindex = false,
@@ -53,46 +53,54 @@ const alternateUrls: Record<Locale, URL> = {
 const ogImageUrl = new URL(ogImage, siteUrl);
 const ogLocale = locale === "es" ? "es_CL" : "en_US";
 const alternateOgLocale = otherLocale === "es" ? "es_CL" : "en_US";
+// Una sola entidad Person con @id fijo: buscadores y LLMs juntan todo lo que dice el sitio sobre Damián en un nodo
+const person = {
+  "@type": "Person",
+  "@id": "https://dapan.es/#damian",
+  name: "Damián Panes",
+  url: new URL(homePath(locale), siteUrl).href,
+  image: new URL("/og-default.jpg", siteUrl).href,
+  jobTitle: locale === "es" ? "Programador y fundador" : "Programmer and founder",
+  nationality: { "@type": "Country", name: "Chile" },
+  knowsAbout: ["Software", "Startups", locale === "es" ? "Emprendimiento" : "Entrepreneurship"],
+  sameAs: [
+    "https://www.instagram.com/damian.panes/",
+    "https://www.linkedin.com/in/damianpanes/",
+    "https://github.com/damkandev",
+  ],
+};
+const website = { "@type": "WebSite", "@id": "https://dapan.es/#web", name: "dapan.es", url: siteUrl.href, author: { "@id": person["@id"] } };
 const structuredData = noindex
   ? null
-  : pageType === "article"
-  ? {
-      "@context": "https://schema.org",
-      "@type": "BlogPosting",
-      headline: title.replace(/ \| Damián Panes$/, ""),
-      description,
-      image: ogImageUrl.href,
-      datePublished: publishedAt?.toISOString(),
-      inLanguage: locale,
-      mainEntityOfPage: canonicalUrl.href,
-      author: {
-        "@type": "Person",
-        name: "Damián Panes",
-        url: new URL(homePath(locale), siteUrl).href,
-      },
-      publisher: {
-        "@type": "Person",
-        name: "Damián Panes",
-        url: new URL(homePath(locale), siteUrl).href,
-      },
-    }
   : {
       "@context": "https://schema.org",
-      "@type": "ProfilePage",
-      name: title,
-      description,
-      url: canonicalUrl.href,
-      inLanguage: locale,
-      mainEntity: {
-        "@type": "Person",
-        name: "Damián Panes",
-        url: canonicalUrl.href,
-        sameAs: [
-          "https://www.instagram.com/damian.panes/",
-          "https://www.linkedin.com/in/damianpanes/",
-          "https://github.com/damkandev",
-        ],
-      },
+      "@graph": [
+        person,
+        website,
+        pageType === "article"
+          ? {
+              "@type": "BlogPosting",
+              headline: title.replace(/ \| Damián Panes$/, ""),
+              description,
+              image: ogImageUrl.href,
+              datePublished: publishedAt?.toISOString(),
+              inLanguage: locale,
+              url: canonicalUrl.href,
+              mainEntityOfPage: canonicalUrl.href,
+              isPartOf: { "@id": website["@id"] },
+              author: { "@id": person["@id"] },
+              publisher: { "@id": person["@id"] },
+            }
+          : {
+              "@type": "ProfilePage",
+              name: title,
+              description,
+              url: canonicalUrl.href,
+              inLanguage: locale,
+              isPartOf: { "@id": website["@id"] },
+              mainEntity: { "@id": person["@id"] },
+            },
+      ],
     };
 ---
 <!doctype html>

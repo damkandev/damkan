@@ -1,13 +1,8 @@
 ---
-// Home del rediseño "tejido": hero de ajedrez bordado, sobre mí con dados, artículos como recorrido de micro y redes en un Mac viejo.
-import { getCollection } from "astro:content";
+// Home: el tablero en dither. Cada pieza es una sección del sitio (ver components/Tablero.astro).
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import Splash from "../../components/tejido/Splash.astro";
-import Hero from "../../components/tejido/Hero.astro";
-import Sobre from "../../components/tejido/Sobre.astro";
-import Articulos from "../../components/tejido/Articulos.astro";
-import Redes from "../../components/tejido/Redes.astro";
-import { articlePath, isLocale, locales, type Locale } from "../../lib/site";
+import Tablero from "../../components/Tablero.astro";
+import { isLocale, locales, type Locale } from "../../lib/site";
 
 export const prerender = true;
 
@@ -17,18 +12,7 @@ export function getStaticPaths() {
 
 if (!isLocale(Astro.params.lang)) return Astro.redirect("/es/", 302);
 const locale: Locale = Astro.params.lang;
-// del más antiguo al más nuevo: es el orden del recorrido de la micro
-const articles = (await getCollection("articles"))
-  .filter((entry) => entry.data.locale === locale)
-  .sort((a, b) => a.data.publishedAt.valueOf() - b.data.publishedAt.valueOf())
-  .map((entry) => ({ href: articlePath(locale, entry.data.slug), title: entry.data.title, excerpt: entry.data.excerpt }));
 ---
 <BaseLayout locale={locale} theme="tejido">
-  <Splash locale={locale} />
-  <Hero locale={locale} articles={articles} />
-  <main>
-    <Sobre locale={locale} />
-    <Articulos locale={locale} articles={articles} />
-    <Redes locale={locale} />
-  </main>
+  <Tablero locale={locale} />
 </BaseLayout>

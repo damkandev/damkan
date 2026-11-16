@@ -30,14 +30,19 @@ export default defineConfig({
       allowedHosts: ['elevator-duchess-verbally.ngrok-free.dev'],
     },
   },
+  redirects: { '/': { status: 301, destination: '/es/' } },
   integrations: [
     sitemap({
-      filter: (page) =>
-        page !== 'https://dapan.es/' &&
-        !page.endsWith('/404.html') &&
-        !['/toñi', '/carta'].includes(
-          decodeURIComponent(new URL(page).pathname).replace(/\/$/, ''),
-        ),
+      i18n: { defaultLocale: 'es', locales: { es: 'es-CL', en: 'en-US' } },
+      filter: (page) => {
+        const path = decodeURIComponent(new URL(page).pathname).replace(/\/$/, '');
+        return (
+          path !== '' &&
+          !page.endsWith('/404.html') &&
+          !['/toñi', '/carta'].includes(path) &&
+          !/\/(dashboard|components)$/.test(path)
+        );
+      },
     }),
   ],
   markdown: {
