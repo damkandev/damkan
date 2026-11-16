@@ -17,7 +17,7 @@ const articles = (await getCollection("articles"))
   .filter((entry) => entry.data.locale === locale)
   .sort((a, b) => b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf())
   .map((entry) => ({ title: entry.data.title, href: articlePath(locale, entry.data.slug) }));
-// pieza → sección. Rodar, KeroKero y Seabell van solo con título hasta que Damián escriba su texto
+// pieza → sección
 const sections: { pieza: string; title: string; text?: string; items?: typeof articles }[] = [
   { pieza: "king", title: c.tejido.aboutTitle, text: c.bio },
   { pieza: "queen", title: c.tejido.articlesTitle, text: c.articlesIntro, items: articles },
@@ -28,9 +28,9 @@ const sections: { pieza: string; title: string; text?: string; items?: typeof ar
       { title: "GitHub", href: "https://github.com/damkandev" },
     ],
   },
-  { pieza: "rook", title: "Rodar" },
-  { pieza: "knight", title: "KeroKero" },
-  { pieza: "pawn", title: "Seabell" },
+  { pieza: "rook", title: "Rodar", text: c.tejido.rodar, items: [{ title: "rodar.cl", href: "https://rodar.cl" }] },
+  { pieza: "knight", title: "KeroKero", text: c.tejido.kerokero, items: [{ title: "kerokero.cl", href: "https://kerokero.cl" }] },
+  { pieza: "pawn", title: "Seabell", text: c.tejido.seabell, items: [{ title: c.tejido.seabellLink, href: "/seabell" }] },
 ];
 ---
 <!-- se marca antes de pintar; si la escena no puede armarse (sin WebGL), el script la quita y queda el texto plano -->

@@ -429,9 +429,11 @@ function goalOf(s) {
 let body = "", parts = [];
 const TYPE_TITLE = .045, TYPE_BODY = .012; // segundos por letra
 const typeEnd = () => .3 + (stops.length - 1) * TYPE_TITLE + parts.reduce((n, q) => n + q.text.length, 0) * TYPE_BODY; // cuándo termina de escribirse todo
+// los links de la lista que se abren al lado, dentro del tablero: los artículos. Los demás (redes, proyectos, /seabell) son links normales
+const isArticle = (a) => a.host === location.host && a.pathname.includes("/articles/");
 // ancho del bloque: con artículos va más angosto, porque al lado tiene que caber el que se abra. Se recalcula al cambiar la ventana
 function fitBody() {
-  bodyEl.style.width = listEl.style.width = (isTall() ? cv.clientWidth - 48 : listEl.querySelector("a:not([target])") ? Math.min(440, cv.clientWidth * .3) : Math.min(600, cv.clientWidth * .42)) + "px";
+  bodyEl.style.width = listEl.style.width = (isTall() ? cv.clientWidth - 48 : Array.from(listEl.querySelectorAll("a")).some(isArticle) ? Math.min(440, cv.clientWidth * .3) : Math.min(600, cv.clientWidth * .42)) + "px";
 }
 function setBody(text, items = []) {
   body = text;
@@ -440,7 +442,7 @@ function setBody(text, items = []) {
   listEl.replaceChildren(...items.map(([title, href]) => {
     const li = document.createElement("li"), a = document.createElement("a");
     a.href = href; a.setAttribute("aria-label", title);
-    if (a.host !== location.host) { a.target = "_blank"; a.rel = "noopener noreferrer"; } // las redes: se abren aparte
+    if (a.host !== location.host) { a.target = "_blank"; a.rel = "noopener noreferrer"; } // redes y proyectos: se abren aparte
     a.append(document.createElement("span"), document.createElement("span"));
     li.append(a); return li;
   }));
@@ -541,13 +543,13 @@ function syncRoute() {
 }
 addEventListener("popstate", syncRoute);
 // un título de la lista abre su artículo al lado, sin salir de la página (con Cmd/Ctrl/Shift sigue siendo un link normal).
-// Los links a otros sitios (las redes) llevan target y se abren en otra pestaña
+// Los demás links se siguen normal (los de otros sitios llevan target y se abren en otra pestaña)
 listEl.addEventListener("click", (e) => {
   const a = e.target.closest("a");
-  if (!a || a.target || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button) return;
+  if (!a || !isArticle(a) || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button) return;
   e.preventDefault(); openArticle(a);
 });
-listEl.addEventListener("pointerover", (e) => { const a = e.target.closest("a:not([target])"); if (a) load(a.getAttribute("href")).catch(() => {}); });
+listEl.addEventListener("pointerover", (e) => { const a = e.target.closest("a"); if (a && isArticle(a)) load(a.getAttribute("href")).catch(() => {}); });
 // el artículo se escribe letra por letra como los demás textos, solo que mucho más rápido. Cada trozo de texto se parte en
 // lo escrito y lo que falta (invisible pero ocupando su lugar, así nada salta); imágenes y citas esperan a que les toque
 let artParts = [], artWait = [], artAt = 0;
