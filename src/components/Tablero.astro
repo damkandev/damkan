@@ -76,7 +76,7 @@ const sections: { pieza: string; title: string; text?: string; items?: typeof ar
 
 <style is:global>
   /* 1 bit: negro y blanco puros. Sin .tablero-vivo (sin JS o sin WebGL) todo se lee como una columna de texto */
-  .tablero { --negro: #0c0c0e; --blanco: #f6f5f0; color: var(--blanco); }
+  .tablero { --negro: #0c0c0e; --blanco: #c8ffe8; color: var(--blanco); }
   html:not(.tablero-vivo) .tablero { box-sizing: content-box; max-width: 680px; margin: 0 auto; padding: 48px 20px 96px; }
   html:not(.tablero-vivo) .tablero :is(#c, #hud, #piezas, #rotulo > :not(#articulo), #articulo:not([data-ruta]), .volver) { display: none; }
   html:not(.tablero-vivo) .secciones h2 { margin: 48px 0 12px; font-size: 28px; }

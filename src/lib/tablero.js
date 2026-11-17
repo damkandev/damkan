@@ -201,7 +201,9 @@ void main() {
   if (uDim > 0.0 && (shadow || (obj && uSel < 0.5)) && bn < uDim) discard;
   vec3 V = normalize(uEye - vW);
   if (uMode > 6.5) {
-    // reflejo de la pieza: se apaga con la profundidad y se corta en franjas, como en agua quieta
+    // reflejo de la pieza: se apaga con la profundidad y se corta en franjas, como en agua quieta.
+    // Al levantar la pieza se deshace punto a punto: con v en 0 pintaba negro opaco sobre el damero y se cortaba de golpe
+    if (bn >= uDim) discard;
     v = uDim * exp(vW.y * 0.8) * (0.3 + 0.7 * step(0.38, fract(-vW.y * 6.5 + uTime * 0.25)));
     // solo se refleja donde el piso está iluminado: se mide en el punto del suelo que queda detrás de este píxel
     float ra, rf;
@@ -249,7 +251,7 @@ void main() {
   }
   // umbral: ruido azul en las piezas (punteado orgánico), Bayer en el suelo y las sombras
   float th = uMode < 0.5 ? bn : bayer8(dc) + 1.0 / 128.0;
-  gl_FragColor = vec4(step(th, clamp(v, 0.0, 1.0)) > 0.5 ? vec3(246.0, 245.0, 240.0) / 255.0 : vec3(12.0, 12.0, 14.0) / 255.0, 1.0);
+  gl_FragColor = vec4(step(th, clamp(v, 0.0, 1.0)) > 0.5 ? vec3(200.0, 255.0, 232.0) / 255.0 : vec3(12.0, 12.0, 14.0) / 255.0, 1.0);
 }`;
 const prog = gl.createProgram();
 for (const [type, src] of [[gl.VERTEX_SHADER, VS], [gl.FRAGMENT_SHADER, FS]]) {
@@ -312,9 +314,56 @@ const HINT = scene.dataset.pista, HOME = scene.dataset.inicio, HOME_TITLE = scen
 
 const BASE = { pawn: .27, rook: .33, knight: .33, bishop: .32, queen: .36, king: .37 };
 const sstep = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
-// pieza tomada: th = cuánto está volcada (0 de pie, TH tumbada), w = su velocidad, side = hacia qué lado de la pantalla.
+// pieza tomada: th = cuánto está volcada (0 de pie, restOf(...).r tumbada), w = su velocidad, side = hacia qué lado de la pantalla.
 // modo: "drag" la lleva el puntero · "fall" cae sola · "rise" vuelve a pararse · "down" quedó en el suelo (downT = segundos ahí)
-const TH = 1.62;
+// cómo queda apoyada una pieza: se mira su perfil hacia el lado en que cae (u = distancia desde el canto del pie hacia ese lado, y = altura).
+// Rueda sobre el canto del pie; cuando otro punto toca el suelo pasa a rodar sobre él (el borde de arriba del pie, después la cabeza),
+// hasta que su centro queda entre los dos apoyos. Así la cabeza llega al suelo en vez de quedar en el aire. Devuelve el ángulo
+// y la envolvente del perfil, con la que fallen() levanta la pieza para que nada se hunda en el suelo
+function restAt(mesh, yaw, side) {
+  const m = MESH[mesh], R = rot([0, 1, 0], yaw), d = [ISO.r[0] * side, ISO.r[2] * side], b = BASE[mesh];
+  const pts = []; let cu = 0, cy = 0;
+  for (let i = 0; i < m.length; i += 6) {
+    const x = m[i], y = m[i + 1], z = m[i + 2], u = (R[0] * x + R[6] * z) * d[0] + (R[2] * x + R[8] * z) * d[1] - b;
+    pts.push([u, y]); cu += u; cy += y;
+  }
+  cu /= pts.length; cy /= pts.length; // centro: promedio de los vértices, alcanza para decidir si sigue rodando
+  // envolvente convexa (cadena monótona): pocos puntos para recorrer en cada cuadro
+  pts.sort((a, c) => a[0] - c[0] || a[1] - c[1]);
+  const cross = (o, a, c) => (a[0] - o[0]) * (c[1] - o[1]) - (a[1] - o[1]) * (c[0] - o[0]), hull = [];
+  for (const list of [pts, pts.slice().reverse()]) { const h = []; for (const q of list) { while (h.length > 1 && cross(h[h.length - 2], h[h.length - 1], q) <= 0) h.pop(); h.push(q); } h.pop(); hull.push(...h); }
+  let piv = [0, 0], th = 0;
+  for (let step = 0; step < 12; step++) {
+    let next = null, best = Math.PI * 1.5;
+    for (const q of hull) {
+      const du = q[0] - piv[0], dy = q[1] - piv[1];
+      if (Math.hypot(du, dy) < 1e-3) continue;
+      let a = Math.atan2(dy, du); if (a < th - 1e-4) a += 2 * Math.PI;
+      if (a > th + 1e-4 && a < best) { best = a; next = q; }
+    }
+    if (!next) break;
+    th = best;
+    // ¿el centro quedó antes del nuevo apoyo (visto en el suelo)? entonces se queda ahí
+    const along = (q) => q[0] * Math.cos(th) + q[1] * Math.sin(th);
+    if (along([cu, cy]) <= along(next) + 1e-4) break;
+    piv = next;
+  }
+  return { r: th, hull };
+}
+// cuánto hay que subir la pieza, inclinada th sobre el canto del pie, para que ningún punto quede bajo el suelo
+const liftAt = (hull, th) => { let l = 0; for (const [u, y] of hull) l = Math.max(l, u * Math.sin(th) - y * Math.cos(th)); return l; };
+// el caballo no es redondo: mientras cae gira sobre su eje hasta que la cabeza mira hacia el suelo (el giro que lo deja más tumbado
+// sobre ella), en vez de quedar de lado con la cabeza al aire. Las demás piezas no giran
+const REST = new Map();
+function restOf(p, side) {
+  const key = p.mesh + "|" + p.yaw + "|" + side;
+  if (!REST.has(key)) {
+    let yaw = p.yaw, best = restAt(p.mesh, yaw, side);
+    if (p.mesh === "knight") for (let k = 0; k < 36; k++) { const y = p.yaw + (k / 36) * 2 * Math.PI - Math.PI, ry = restAt(p.mesh, y, side); if (ry.r < best.r) { best = ry; yaw = y; } }
+    REST.set(key, { r: best.r, hull: best.hull, yaw });
+  }
+  return REST.get(key);
+}
 let sel = null, shown = [], view = { x: 0, z: 0, R: 0 };
 const rotulo = document.getElementById("rotulo"), pxLabel = rotulo.querySelector("canvas"), bodyEl = rotulo.querySelector(".cuerpo"), listEl = rotulo.querySelector(".lista"), srLabel = rotulo.querySelector(".sr");
 const labelFont = () => `700 ${cv.clientWidth < cv.clientHeight ? 17 : 19}px "Lora Variable", Lora, Georgia, serif`; // el tamaño va en celdas
@@ -335,7 +384,7 @@ function textBitmap(text, cells, dark) {
   if (bitmaps.has(key)) return bitmaps.get(key);
   const c = document.createElement("canvas"), g = c.getContext("2d", { willReadFrequently: true }), font = `${cells < 16 ? 600 : 700} ${cells}px "Lora Variable", Lora, Georgia, serif`; // chico va menos grueso: no se le tapan los ojos a las letras
   g.font = font;
-  const w = Math.ceil(g.measureText(text).width) + 2, h = Math.ceil(cells * 1.4), ink = dark ? [12, 12, 14] : [246, 245, 240];
+  const w = Math.ceil(g.measureText(text).width) + 2, h = Math.ceil(cells * 1.4), ink = dark ? [12, 12, 14] : [200, 255, 232];
   c.width = w; c.height = h;
   g.font = font; g.fillStyle = "#fff"; g.fillText(text, 1, Math.round(cells * 1.05));
   const im = g.getImageData(0, 0, w, h), d = im.data;
@@ -371,7 +420,7 @@ function drawHud(target, R) {
   // placa: texto sobre fondo liso (nunca directo sobre la trama); la de la pieza tocada va invertida
   const plate = (text, x, y, hot) => {
     const bm = textBitmap(text, small, hot), px = Math.max(3, Math.min(hudCv.width - bm.width - 3, Math.round(x - bm.width / 2))), py = Math.round(y - bm.height); // nunca cortada por el borde
-    hudG.fillStyle = hot ? "rgb(246,245,240)" : "rgb(12,12,14)"; hudG.fillRect(px - 3, py - 1, bm.width + 6, bm.height + 2);
+    hudG.fillStyle = hot ? "rgb(200,255,232)" : "rgb(12,12,14)"; hudG.fillRect(px - 3, py - 1, bm.width + 6, bm.height + 2);
     hudG.drawImage(bm, px, py);
   };
   // nombre de cada pieza que está bien dentro de la luz
@@ -515,7 +564,7 @@ artBack.addEventListener("click", closeArticle);
 function drawBack() {
   const bm = textBitmap(artBack.getAttribute("aria-label"), 11, true), c = artBack.firstElementChild;
   c.width = bm.width + 6; c.height = bm.height + 2;
-  const g = c.getContext("2d"); g.fillStyle = "rgb(246,245,240)"; g.fillRect(0, 0, c.width, c.height); g.drawImage(bm, 3, 1);
+  const g = c.getContext("2d"); g.fillStyle = "rgb(200,255,232)"; g.fillRect(0, 0, c.width, c.height); g.drawImage(bm, 3, 1);
   c.style.width = c.width * CELL + "px"; c.style.height = c.height * CELL + "px";
 }
 drawBack(); fontReady.then(drawBack);
@@ -536,7 +585,7 @@ function syncRoute() {
   if (!kind) { closeArticle(); return; }
   if (!sel || sel.p.mesh !== kind || sel.mode !== "down") {
     const p = sel && sel.p.mesh === kind ? sel.p : nearest(kind);
-    take(p); Object.assign(sel, { side: roomSide(p), th: TH, mode: "down", downT: 1e3, lit: 1 });
+    take(p); Object.assign(sel, { side: roomSide(p), th: restOf(p, roomSide(p)).r, mode: "down", downT: 1e3, lit: 1 });
   }
   const link = Array.from(listEl.querySelectorAll("a")).find((a) => flat(a.getAttribute("href")) === path);
   if (link && artLink !== link) { openArticle(link); [cam.x, cam.z] = goalOf(sel); }
@@ -598,7 +647,8 @@ const push = (p) => { take(p); Object.assign(sel, { side: roomSide(p), th: .05, 
 function fallen(s) {
   const p = s.p, d = dirOf(s), b = BASE[p.mesh];
   const Rf = rot([d[2], 0, -d[0]], s.th), v = [d[0] * b, 0, d[2] * b];
-  return model(mul3(Rf, rot([0, 1, 0], p.yaw)), [p.x + v[0] - (Rf[0] * v[0] + Rf[6] * v[2]), -(Rf[1] * v[0] + Rf[7] * v[2]), p.z + v[2] - (Rf[2] * v[0] + Rf[8] * v[2])]);
+  const rs = restOf(p, s.side), yaw = p.yaw + (rs.yaw - p.yaw) * sstep(0, rs.r, s.th); // el caballo se va girando mientras cae
+  return model(mul3(Rf, rot([0, 1, 0], yaw)), [p.x + v[0] - (Rf[0] * v[0] + Rf[6] * v[2]), -(Rf[1] * v[0] + Rf[7] * v[2]) + liftAt(rs.hull, s.th), p.z + v[2] - (Rf[2] * v[0] + Rf[8] * v[2])]);
 }
 // física de la pieza suelta. Devuelve false cuando ya volvió a quedar de pie
 function stepPiece(s, dt) {
@@ -607,7 +657,7 @@ function stepPiece(s, dt) {
   if (s.mode === "fall" || s.mode === "rise") {
     s.th += s.w * dt;
     if (s.th < 0) { s.th = -s.th; s.w = -s.w; s.side = -s.side; }         // pasó por la vertical: se mece sobre el otro canto
-    if (s.th >= TH) { s.th = TH; if (s.w > 1.5) s.w *= -.28; else { s.w = 0; s.mode = "down"; } } // rebota al tocar el suelo y se queda
+    const rest = restOf(s.p, s.side).r; if (s.th >= rest) { s.th = rest; if (s.w > 1.5) s.w *= -.28; else { s.w = 0; s.mode = "down"; } } // rebota al tocar el suelo y se queda
     if (s.mode === "rise" && s.th < .01 && Math.abs(s.w) < .15) return false;
   }
   // downT es el reloj que escribe el texto: corre con la pieza en el suelo y, al levantarla, retrocede rápido (el texto se borra
@@ -641,7 +691,7 @@ function overFallen(cx, cy) {
 }
 // el grupo: tipo, posición (en casillas desde su centro), si es blanca y hacia dónde mira. Puestas sueltas, sin orden de partida,
 // y separadas para que en pantalla ninguna tape el nombre de otra
-const SET = [["king", .68, .68, 1, .4], ["queen", .9, -2.04, 0, 2.1], ["bishop", -2.38, .34, 1, 4], ["rook", -1.02, 3.06, 0, 1], ["knight", 2.54, 1.07, 1, 5.2], ["pawn", 3.34, -1.07, 0, 0]];
+const SET = [["king", .68, .68, 1, .4], ["queen", .9, -2.04, 0, 2.1], ["bishop", -2.38, .34, 1, 4], ["rook", -1.02, 3.06, 0, 1], ["knight", 2.54, 1.07, 1, 5.2], ["pawn", 3.34, -1.07, 0, 0]].map(([k, x, z, w, y]) => [k, Math.floor(x) + .5, Math.floor(z) + .5, w, y]); // cada pieza al centro de su casilla (los bordes caen en los enteros)
 // cada cuánto se repite el grupo, en casillas: más que el ancho de la luz, así nunca se ven dos copias de una pieza a la vez
 const PERIOD = 12;
 const cache = new Map();
@@ -783,7 +833,7 @@ document.querySelector(".tablero .piezas").addEventListener("click", (e) => {
 if (FIXED != null) {
   fontReady.finally(() => {
     frame(FIXED);
-    if (Q.has("q")) { const p = shown.slice().sort((m, n) => Math.hypot(m.x - view.x, m.z - view.z) - Math.hypot(n.x - view.x, n.z - view.z))[+(Q.get("n") || 0)]; take(p); Object.assign(sel, { side: roomSide(p), th: TH, mode: "down", downT: 1e3, lit: 1 }); }
+    if (Q.has("q")) { const p = shown.slice().sort((m, n) => Math.hypot(m.x - view.x, m.z - view.z) - Math.hypot(n.x - view.x, n.z - view.z))[+(Q.get("n") || 0)]; take(p); Object.assign(sel, { side: roomSide(p), th: restOf(p, roomSide(p)).r, mode: "down", downT: 1e3, lit: 1 }); }
     syncRoute(); stepArticle(99);
     if (sel) [cam.x, cam.z] = goalOf(sel);
     frame(FIXED); frame(FIXED);
@@ -822,7 +872,7 @@ if (FIXED != null) {
   cv.addEventListener("pointermove", (e) => {
     if (hold) {
       const dx = (e.clientX - hold.x) / ppu(), dy = -(e.clientY - hold.y) / ppu(), now = performance.now(), dt = Math.max(1, now - hold.t) / 1000;
-      const tau = sel.side * sel.th, nt = Math.max(-TH, Math.min(TH, tau + (dx * Math.cos(tau) - dy / cosP * Math.sin(tau)) / hold.L)), th0 = sel.th;
+      const tau = sel.side * sel.th, nt = Math.max(-restOf(sel.p, -1).r, Math.min(restOf(sel.p, 1).r, tau + (dx * Math.cos(tau) - dy / cosP * Math.sin(tau)) / hold.L)), th0 = sel.th;
       sel.th = Math.abs(nt); if (nt) sel.side = Math.sign(nt);
       sel.w = mix(sel.w, (sel.th - th0) / dt, .5);
       hold = { ...hold, x: e.clientX, y: e.clientY, t: now, moved: hold.moved + Math.abs(e.clientX - hold.x) + Math.abs(e.clientY - hold.y) };
@@ -892,8 +942,15 @@ if (FIXED != null) {
   addEventListener("keydown", (e) => { if (KEY[e.key] && !e.metaKey && !e.ctrlKey && !e.altKey && !e.target.closest("a, button")) { keys.add(e.key); e.preventDefault(); } });
   addEventListener("keyup", (e) => keys.delete(e.key));
   addEventListener("blur", () => keys.clear()); // cambió de ventana con una tecla apretada
-  const loop = (now) => {
+  // ?frames (solo en dev): reloj propio. P pausa/sigue, . avanza un cuadro (1/60 s)
+  const FR = Q.has("frames"); let fPaused = false, fSteps = 0, fReal = t0, fNow = t0;
+  const fTag = FR && document.body.appendChild(Object.assign(document.createElement("div"), { style: "position:fixed;top:8px;left:8px;z-index:99;padding:4px 8px;background:#000;color:#c8ffe8;font:12px monospace" }));
+  let fCount = 0; const fShow = () => { if (fTag) fTag.textContent = (fPaused ? "pausa" : "▶") + " · cuadro " + fCount + " · P pausa · . avanza"; }; fShow();
+  if (FR) addEventListener("keydown", (e) => { const k = e.key.toLowerCase(); if (k === "p") fPaused = !fPaused; else if (k === "." && fPaused) fSteps++; else return; e.stopPropagation(); e.preventDefault(); wake(); fShow(); }, { capture: true });
+  const loop = (real) => {
     requestAnimationFrame(loop);
+    let now = real;
+    if (FR) { const d = real - fReal; fReal = real; if (!fPaused) fNow += d; else if (fSteps) { fNow += 1000 / 60; fSteps--; } else return; now = fNow; fCount++; if (fCount % 10 === 0 || fPaused) fShow(); }
     const dt = Math.min(.05, (now - prev) / 1000), T = (now - t0) / 1000; prev = now;
     if (sel) {
       cam.vx = cam.vz = 0;

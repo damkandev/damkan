@@ -26,7 +26,7 @@ export async function getStaticPaths() {
   ];
 }
 
-const W = 1200, H = 632, CELL = 4, INK = "#f6f5f0", NIGHT = "#0c0c0e"; // 632 = 158 celdas; la imagen final se corta en 630
+const W = 1200, H = 632, CELL = 4, INK = "#c8ffe8", NIGHT = "#0c0c0e"; // 632 = 158 celdas; la imagen final se corta en 630
 const file = (p: string) => readFile(`${process.cwd()}/${p}`);
 const assets = Promise.all([
   ...[400, 600, 700].map((w) => file(`node_modules/@fontsource/lora/files/lora-latin-${w}-normal.woff`)),
