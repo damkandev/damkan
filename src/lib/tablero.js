@@ -734,7 +734,7 @@ const DEST = {};
 for (const s of scene.querySelectorAll(".secciones [data-pieza]")) {
   DEST[s.dataset.pieza] = [s.querySelector("h2").textContent, s.querySelector("p")?.textContent ?? "", Array.from(s.querySelectorAll("li a"), (a) => [a.textContent, a.getAttribute("href")])];
 }
-const HINT = scene.dataset.pista, HOME = scene.dataset.inicio, HOME_TITLE = scene.dataset.titulo;
+const HINT = scene.dataset.pista, HINT_BACK = scene.dataset.pistaVolver, HOME = scene.dataset.inicio, HOME_TITLE = scene.dataset.titulo;
 
 const BASE = { pawn: .27, rook: .33, knight: .33, bishop: .32, queen: .36, king: .37 };
 const sstep = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
@@ -829,6 +829,10 @@ function drawLabel(text) {
 // ---------- respuesta al puntero: qué pieza toca, dónde está sobre el suelo, y la capa de nombres y pistas
 const hover = { p: null, np: null, t0: 0, on: false, sx: 0, sy: 0 }; // sx, sy: puntero en px desde el centro (y hacia arriba); np: la última pieza tocada, que termina su cabeceo aunque el puntero ya se haya ido
 let light = { x: 0, z: 0, ox: 0, oz: 0, k: 1 }, panned = false, nowT = 0;
+// cuántas veces ha tumbado una pieza (entre visitas): la pista para volver sale solo en las dos primeras
+const FALLS_KEY = "tablero-caidas";
+let falls = 0;
+try { falls = +localStorage.getItem(FALLS_KEY) || 0; } catch {}
 // distancia al centro del foco, en casillas, con el mismo estiramiento que usa el shader
 const fromLight = (p) => { const dx = p.x - light.x, dz = p.z - light.z; return Math.hypot(dx * ISO.r[0] + dz * ISO.r[2], (dx * ISO.f[0] + dz * ISO.f[2]) / light.k); };
 const fizz = document.createElement("canvas"), fizzG = fizz.getContext("2d"), fizzIm = fizzG.createImageData(64, 64); fizz.width = fizz.height = 64;
@@ -840,7 +844,6 @@ function drawHud(target, R) {
   if (dive) return; // entrando al hueco no hay nombres ni pistas
   // con una pieza en juego los nombres se van deshaciendo al mismo ritmo que las demás piezas
   const dim = sel ? sstep(.3, 1.5, sel.th) : 0;
-  if (dim >= 1) return;
   const ppc = cv.height / viewH(), sinP = Math.sin(ISO.pitch), cosP = Math.cos(ISO.pitch), cx = cv.width / 2, cy = cv.height / 2, small = cv.width < cv.height ? 11 : 13;
   // placa: texto sobre fondo liso (nunca directo sobre la trama); la de la pieza tocada va invertida
   const plate = (text, x, y, hot) => {
@@ -848,6 +851,23 @@ function drawHud(target, R) {
     hudG.fillStyle = hot ? "rgb(200,255,232)" : "rgb(12,12,14)"; hudG.fillRect(px - 3, py - 1, bm.width + 6, bm.height + 2);
     hudG.drawImage(bm, px, py);
   };
+  if (dim < 1) drawNames(target, R, dim, plate, ppc, sinP, cosP, cx, cy, small);
+  // pista para volver: con la pieza en el suelo y el texto ya escrito, si se queda quieta un rato, una placa sobre ella dice que
+  // se levanta. Solo las dos primeras veces que tumba una
+  if (sel && sel.hint && sel.mode === "down" && sel.downT > typeEnd() + 2) {
+    const p = sel.p, b = BASE[p.mesh], H = TALL[p.mesh], ex = p.x - target[0], ez = p.z - target[2];
+    let x = cx + (ex * ISO.r[0] + ez * ISO.r[2] + sel.side * (b + H / 2)) * ppc;
+    const y = cy - ((ex * ISO.f[0] + ez * ISO.f[2]) * sinP + 2 * b * cosP + b * sinP) * ppc - 3;
+    // en horizontal el texto va a un lado de la pieza: la placa no se le mete encima
+    if (!isTall()) {
+      const w = textBitmap(HINT_BACK, small, false).width, hr = hudCv.getBoundingClientRect(), rr = rotulo.getBoundingClientRect();
+      const l = (rr.left - hr.left) / CELL - 4, r = (rr.right - hr.left) / CELL + 4; // el texto, en celdas del hud, con un margen
+      if ((l + r) / 2 > x) x = Math.min(x, l - w / 2); else x = Math.max(x, r + w / 2);
+    }
+    plate(HINT_BACK, x, y, false);
+  }
+}
+function drawNames(target, R, dim, plate, ppc, sinP, cosP, cx, cy, small) {
   // nombre de cada pieza que está bien dentro de la luz
   for (const p of shown) {
     if ((sel && p === sel.p) || (fromLight(p) > R * .8 && p !== hover.p)) continue;
@@ -1076,6 +1096,11 @@ function fallen(s) {
   const rs = restOf(p, s.side), yaw = p.yaw + (rs.yaw - p.yaw) * sstep(0, rs.r, s.th); // el caballo se va girando mientras cae
   return model(mul3(Rf, rot([0, 1, 0], yaw)), [p.x + v[0] - (Rf[0] * v[0] + Rf[6] * v[2]), -(Rf[1] * v[0] + Rf[7] * v[2]) + liftAt(rs.hull, s.th), p.z + v[2] - (Rf[2] * v[0] + Rf[8] * v[2])]);
 }
+// la pieza quedó en el suelo por primera vez desde que la tomó: cuenta como una caída
+function land(s) {
+  s.landed = true; s.hint = falls < 2; falls++;
+  try { localStorage.setItem(FALLS_KEY, String(falls)); } catch {}
+}
 // física de la pieza suelta. Devuelve false cuando ya volvió a quedar de pie
 function stepPiece(s, dt) {
   if (s.mode === "fall") s.w += 24 * Math.sin(Math.max(s.th, .06)) * dt;  // la gravedad la acelera más mientras más inclinada va
@@ -1083,7 +1108,7 @@ function stepPiece(s, dt) {
   if (s.mode === "fall" || s.mode === "rise") {
     s.th += s.w * dt;
     if (s.th < 0) { s.th = -s.th; s.w = -s.w; s.side = -s.side; }         // pasó por la vertical: se mece sobre el otro canto
-    const rest = restOf(s.p, s.side).r; if (s.th >= rest) { s.th = rest; if (s.w > 1.5) s.w *= -.28; else { s.w = 0; s.mode = "down"; } } // rebota al tocar el suelo y se queda
+    const rest = restOf(s.p, s.side).r; if (s.th >= rest) { s.th = rest; if (s.w > 1.5) s.w *= -.28; else { s.w = 0; s.mode = "down"; if (!s.landed) land(s); } } // rebota al tocar el suelo y se queda
     if (s.mode === "rise" && s.th < .01 && Math.abs(s.w) < .15) return false;
   }
   // downT es el reloj que escribe el texto: corre con la pieza en el suelo y, al levantarla, retrocede rápido (el texto se borra

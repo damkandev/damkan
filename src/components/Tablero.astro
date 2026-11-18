@@ -35,7 +35,7 @@ const sections: { pieza: string; title: string; text?: string; items?: typeof ar
 ---
 <!-- se marca antes de pintar; si la escena no puede armarse (sin WebGL), el script la quita y queda el texto plano -->
 <script is:inline>document.documentElement.classList.add("tablero-vivo");</script>
-<div class="tablero" data-inicio={homePath(locale)} data-titulo={c.title} data-pista={c.tejido.drag}>
+<div class="tablero" data-inicio={homePath(locale)} data-titulo={c.title} data-pista={c.tejido.drag} data-pista-volver={c.tejido.lift}>
   <canvas id="c" aria-hidden="true"></canvas>
   <canvas id="hud" aria-hidden="true"></canvas>
   <div id="rotulo">
