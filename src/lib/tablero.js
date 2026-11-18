@@ -847,8 +847,7 @@ function drawLabel(text) {
 const hover = { p: null, np: null, t0: 0, on: false, sx: 0, sy: 0 }; // sx, sy: puntero en px desde el centro (y hacia arriba); np: la última pieza tocada, que termina su cabeceo aunque el puntero ya se haya ido
 let light = { x: 0, z: 0, ox: 0, oz: 0, k: 1 }, panned = false, nowT = 0;
 // cuántas veces ha visto la pista para volver en esta visita: sale solo las dos primeras (al recargar parte de cero; guardada entre
-// visitas, un navegador que ya la había gastado no la mostraba más y no había cómo saberlo). Cuenta cuando aparece, no cuando la
-// pieza cae: si la levanta antes de que salga, no gastó ninguna
+// visitas, un navegador que ya la había gastado no la mostraba más y no había cómo saberlo)
 let falls = 0;
 // distancia al centro del foco, en casillas, con el mismo estiramiento que usa el shader
 const fromLight = (p) => { const dx = p.x - light.x, dz = p.z - light.z; return Math.hypot(dx * ISO.r[0] + dz * ISO.r[2], (dx * ISO.f[0] + dz * ISO.f[2]) / light.k); };
@@ -869,10 +868,9 @@ function drawHud(target, R) {
     hudG.drawImage(bm, px, py);
   };
   if (dim < 1) drawNames(target, R, dim, plate, ppc, sinP, cosP, cx, cy, small);
-  // pista para volver: con la pieza en el suelo y el texto ya escrito, si se queda quieta un rato, una placa sobre ella dice que
-  // se levanta. Solo las dos primeras veces que la ve
+  // pista para volver: apenas la pieza queda en el suelo, una placa sobre ella dice que se levanta. Solo las dos primeras veces que la ve
   // con un artículo abierto no sale (ni cuenta): la pieza queda arriba, fuera de la vista
-  if (sel && !art && sel.mode === "down" && sel.downT > typeEnd() + 2 && (sel.hint || falls < 2)) {
+  if (sel && !art && sel.mode === "down" && (sel.hint || falls < 2)) {
     if (!sel.hint) { sel.hint = true; falls++; }
     const p = sel.p, b = BASE[p.mesh], H = TALL[p.mesh], ex = p.x - target[0], ez = p.z - target[2];
     let x = cx + (ex * ISO.r[0] + ez * ISO.r[2] + sel.side * (b + H / 2)) * ppc;
