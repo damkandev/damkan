@@ -3,7 +3,7 @@
 // sección; en Artículos cada título abre el artículo en una columna a la derecha, con su dirección de siempre en la barra.
 // Viene del prototipo aprobado el 2026-11-16 (prototipo/tablero/, fuera de git). Las secciones y el artículo abierto los deja
 // el servidor en el HTML (components/Tablero.astro); de ahí se leen.
-// Cuadros fijos para revisar, solo en dev: ?t=1 (reposo) · &trap=1 (compuerta abierta) · &dive=3 (el túnel a los 3 s) · &room=3 (el coloso a los 3 s de su video; con &raw=1, sin trama; con &sim=20, la mente a los 20 s de su ciclo; con &at=0,4,1.5, parado en x = 0, z = 4 y con rumbo 1,5 rad) · &q=1&n=0 (la n-ésima pieza más cercana, tumbada) · &size=390x844
+// Cuadros fijos para revisar, solo en dev: ?t=1 (reposo) · &trap=1 (compuerta abierta) · &bun=2 (el conejo a los 2 s de su llegada) · &dive=3 (el túnel a los 3 s) · &room=3 (el coloso a los 3 s de su video; con &raw=1, sin trama; con &sim=20, la mente a los 20 s de su ciclo; con &at=0,4,1.5, parado en x = 0, z = 4 y con rumbo 1,5 rad) · &q=1&n=0 (la n-ésima pieza más cercana, tumbada) · &size=390x844
 import { track } from "./analytics";
 
 const Q = new URLSearchParams(import.meta.env.DEV ? location.search : "");
@@ -134,6 +134,12 @@ const MESH = {
     ...place(lathe([[.042, 0], [.042, 0], [0, .14]], 12), mul3(rot([0, 0, 1], -.2), rot([1, 0, 0], .22)), [.05, 1.05, .05]),
     ...place(lathe([[.042, 0], [.042, 0], [0, .14]], 12), mul3(rot([0, 0, 1], -.2), rot([1, 0, 0], -.22)), [.05, 1.05, -.05]),
   ]),
+  // conejo sentado, mirando hacia +X: lomo y frente por altura como el caballo, orejas planas echadas atrás y la cola
+  bunny: wind([
+    ...loft(smooth([[0, -.2, .12, .09], [.04, -.26, .16, .13], [.1, -.28, .17, .15], [.18, -.27, .15, .145], [.25, -.22, .12, .125], [.31, -.15, .11, .1], [.35, -.08, .17, .09], [.4, -.06, .22, .088], [.45, -.05, .21, .08], [.49, -.03, .15, .06], [.515, 0, .07, .025]], 3)),
+    ...[1, -1].flatMap((s) => place(loft(smooth([[0, -.02, .02, .03], [.08, -.025, .025, .055], [.18, -.02, .02, .05], [.26, -.01, .01, .025], [.29, -.002, .002, .003]], 3), 12), mul3(rot([0, 0, 1], .35), rot([1, 0, 0], s * .25)), [.0, .45, s * .035])),
+    ...place(lathe(arc(0, 0, .055, -90, 90, 6), 12), [1, 0, 0, 0, 1, 0, 0, 0, 1], [-.28, .15, 0]),
+  ]),
   // compuerta: la tapa, con la bisagra sobre el eje Z (x = 0, y = 0) y los tablones hacia +X; dos bisagras y la manilla.
   // ponytail: bisagras de caja y no de cilindro; a 3 px por celda no se distinguen
   lid: wind([...box(.38, .03, 0, .76, .06, .76), ...box(0, .045, -.2, .09, .09, .16), ...box(0, .045, .2, .09, .09, .16), ...box(.62, .075, 0, .05, .03, .18)]),
@@ -196,7 +202,7 @@ float wet(vec2 xz, out float a, out float f) {
 // en las filas altas de un canvas grande y encendía puntos sueltos sobre negro
 float bayer2(vec2 a) { a = mod(floor(a), 2.0); return a.x * 0.5 + a.y * 0.75 - a.x * a.y; }
 float bayer8(vec2 a) { return bayer2(0.25 * a) * 0.0625 + bayer2(0.5 * a) * 0.25 + bayer2(a); }
-// uKind: 0 a 5 las piezas · 6 la tapa de la compuerta · 7 las paredes de su pozo
+// uKind: 0 a 5 las piezas · 6 la tapa de la compuerta · 7 las paredes de su pozo · 8 el conejo
 // uMode: 0 pieza · 5 suelo (y las sombras sobre él) · 6 contorno · 7 reflejo de la pieza elegida
 void main() {
   float v;
@@ -236,6 +242,7 @@ void main() {
     if (uKind == 6.0 && abs(fract(vLoc.z * 4.0) - 0.5) < 0.09) v *= 0.15; // juntas entre los tablones de la tapa
     if (uKind == 7.0) v *= smoothstep(0.3, 0.6, vLoc.y);                       // el pozo se pierde en negro hacia abajo
     if (uKind == 2.0 && length(vec3(vLoc.x - 0.2, vLoc.y - 0.94, abs(vLoc.z) - 0.095)) < 0.022) v *= 0.15;
+    if (uKind == 8.0 && length(vec3(vLoc.x - 0.13, vLoc.y - 0.43, abs(vLoc.z) - 0.078)) < 0.025) v *= 0.15;
     // 1 bit: se estira el contraste para que luz y sombra queden planas y la trama viva solo en el medio tono;
     // las piezas oscuras llevan una línea clara en el borde para no perderse sobre las casillas negras
     v = clamp((v - 0.08) / 0.52, 0.0, 1.0);
@@ -244,6 +251,7 @@ void main() {
     if (back > 0.5) v *= 0.3;
     // al elegir una pieza todo se apaga y ella queda en blanco pleno, con una línea de tinta donde la forma se da vuelta
     v = uSel > 0.5 ? mix(v * spot(vW.xz), 1.0 - step(0.8, 1.0 - max(dot(N, V), 0.0)), uDim) : v * spot(vW.xz) * (1.0 - uDim);
+    if (uKind == 8.0) v *= smoothstep(-0.4, 0.0, vW.y); // el conejo se pierde en lo negro del pozo
   } else {
     // suelo: el damero sigue sin bordes; un degradé dentro de cada casilla hace aparecer la trama
     // compuerta: el suelo (y las sombras sobre él) se abre en un hueco; lo cubre la tapa o deja ver el pozo
@@ -1130,6 +1138,40 @@ function stepTrap(dt) {
   if (trap.a >= OPEN) { trap.a = OPEN; trap.w = trap.w > 1.5 ? -trap.w * .35 : 0; }
 }
 // un toque sin arrastre: el envión justo para que pase la vertical y caiga al otro lado
+// ---------- el conejo: al cargar y cada tanto llega a saltos a la compuerta más cercana, la abre con el hocico (si está cerrada),
+// se tira de cabeza al hueco y la tapa se cierra tras él. No sale con movimiento reducido ni en los cuadros fijos
+// D: de dónde viene, visto desde el hueco: desde el fondo, saliendo de lo oscuro por detrás de la reina y pasando tras el rey, con la luz de frente
+const BUN = { SCALE: .9, HOP: .3, H: .16, PAUSE: .7, STOP: 4, N: 10, FROM: 5.4, EDGE: .56, D: [0, 0, -1], EVERY: [40, 70] };
+const BUNNY = { uKind: 8, uAlb: .93, uGround: 0, uSel: 0, uHot: 0 };
+let bun = null, bunNext = INTRO ? 1.6 : Infinity;
+const hopStart = (i) => i * BUN.HOP + (i >= BUN.STOP ? BUN.PAUSE : 0); // salta unas veces, se queda mirando y sigue
+function stepBun(T, dt, busy) {
+  if (!bun) {
+    if (T < bunNext || busy) return;
+    const hx = TRAP[0] + Math.round((view.x - TRAP[0]) / PERIOD) * PERIOD, hz = TRAP[1] + Math.round((view.z - TRAP[1]) / PERIOD) * PERIOD;
+    bun = { t: 0, h: [hx, hz], kicked: false, opened: false, pose: null };
+  }
+  const { D, HOP, N, EDGE } = BUN, at = (k) => [bun.h[0] + D[0] * k, bun.h[1] + D[2] * k], tE = hopStart(N - 1) + HOP, L = (BUN.FROM - EDGE) / N;
+  const gate = bun.t >= tE + .6 && !bun.jumped; // no se tira hasta que la tapa esté abierta; si se la cierran, la vuelve a abrir
+  if (gate && trap.a < 1.5) { if (!trap.hold && !trapMoving()) { trap.w = 1.25 * Math.sqrt(2 * TRAP_G); bun.opened = true; } }
+  else { bun.jumped ||= gate; bun.t += dt; }
+  const t = bun.t;
+  let k, y = 0, tilt = 0;
+  if (t < tE) {
+    let i = N - 1; while (hopStart(i) > t) i--;
+    const u = Math.min(1, (t - hopStart(i)) / HOP);
+    k = BUN.FROM - L * (i + u); y = 4 * BUN.H * u * (1 - u); tilt = .35 * Math.sin(2 * Math.PI * u);
+  } else if (t < tE + .6) {
+    k = EDGE; tilt = .04 * Math.sin(t * 40) * (t < tE + .3); // olfatea
+    if (t >= tE + .1 && !bun.kicked) { bun.kicked = true; if (trap.a < 1 && !trap.hold) { trap.w = 1.25 * Math.sqrt(2 * TRAP_G); bun.opened = true; } }
+  } else {
+    const j = t - tE - .6;
+    k = EDGE * (1 - Math.min(1, j / .47)); y = 2.12 * j - 4.5 * j * j; tilt = j < .2 ? .3 : Math.max(-1.4, -.3 - (j - .2) * 3);
+    if (j > 1.2) { if (bun.opened && !trap.hold && trap.a > 1) trap.w = -4; bun = null; bunNext = T + mix(...BUN.EVERY, Math.random()); return; }
+  }
+  const [x, z] = at(k);
+  bun.pose = y < -.85 ? null : { x, y, z, tilt };
+}
 const kickTrap = () => { if (RM) trap.a = trap.a > 1 ? 0 : OPEN; else trap.w = trap.a > 1 ? -4 : 1.25 * Math.sqrt(2 * TRAP_G); };
 const wrap = (v) => v - Math.round(v / PERIOD) * PERIOD; // a la copia más cercana
 // el hueco que hay en un punto de la pantalla (px desde el centro, y hacia arriba): su centro, o null
@@ -1484,12 +1526,14 @@ function frame(T) {
     const x = TRAP[0] + (Math.floor((target[0] - TRAP[0]) / PERIOD) + m) * PERIOD, z = TRAP[1] + (Math.floor((target[2] - TRAP[1]) / PERIOD) + n) * PERIOD;
     items.push({ mesh: "lid", M: model(rot([0, 0, 1], trap.a), [x - .38, 0, z]), set: LID }); pits.push([x, z]);
   }
+  const bp = bun?.pose;
+  if (bp) items.push({ mesh: "bunny", M: model(mul3(rot([0, 1, 0], Math.atan2(BUN.D[2], -BUN.D[0])), rot([0, 0, 1], bp.tilt)).map((v) => v * BUN.SCALE), [bp.x, bp.y, bp.z]), set: BUNNY, noShadow: bp.y < -.02 });
 
   gl.enable(gl.DEPTH_TEST);
   draw("top", scaleM(900, 1, 900, [target[0], 0, target[2]]), { uMode: 5, uSh: 1, uProj: 0 });
   // sombras: sin profundidad, cada una escribe el suelo ya oscurecido (no se suman donde se pisan)
   gl.disable(gl.DEPTH_TEST);
-  for (const it of items) draw(it.mesh, it.M, { uMode: 5, uSh: .4, uProj: 1, uPlaneY: 0, uSel: 0 });
+  for (const it of items) if (!it.noShadow) draw(it.mesh, it.M, { uMode: 5, uSh: .4, uProj: 1, uPlaneY: 0, uSel: 0 });
   // reflejo de la elegida: la misma malla espejada (y estirada) bajo el suelo, dibujada sobre el piso
   for (const it of items) if (it.sel) {
     const M = it.M.slice(); for (const k of [1, 5, 9, 13]) M[k] *= -1.4;
@@ -1531,6 +1575,7 @@ if (FIXED != null) {
     if (Q.has("q")) { const p = shown.slice().sort((m, n) => Math.hypot(m.x - view.x, m.z - view.z) - Math.hypot(n.x - view.x, n.z - view.z))[+(Q.get("n") || 0)]; take(p); Object.assign(sel, { side: roomSide(p), th: restOf(p, roomSide(p)).r, mode: "down", downT: 1e3, lit: 1 }); }
     syncRoute(); stepArticle(99);
     if (sel) [cam.x, cam.z] = goalOf(sel);
+    if (Q.has("bun")) { bunNext = 0; for (let i = 0, n = +Q.get("bun") * 60; i < n; i++) { stepBun(i / 60, 1 / 60, false); if (trapMoving()) stepTrap(1 / 60); } }
     frame(FIXED); frame(FIXED);
     if (Q.has("dive")) { hudG.clearRect(0, 0, hudCv.width, hudCv.height); drawScreen(TUN, +Q.get("dive")); }
     if (Q.has("room")) loadColoso().then(() => new Promise((r) => (coloso.ready() ? r() : coloso.video.addEventListener("loadeddata", r, { once: true })))).then(() => coloso.still(+Q.get("room"))).then(() => { hudG.clearRect(0, 0, hudCv.width, hudCv.height); if (Q.has("sim")) for (let i = 0, n = +Q.get("sim") * 60; i < n; i++) stepFallers(i / 60, 1 / 60); drawRoom(Q.has("sim") ? +Q.get("sim") : 99, 0, [+(Q.get("yaw") || 0), +(Q.get("pitch") || 0)]); if (Q.has("raw")) document.body.append(Object.assign(roomCv, { style: "position:fixed;inset:0;width:100vw;height:100vh;z-index:9" })); }); // &raw=1: la imagen sin trama; &sim=9: el mundo avanzado esos segundos (temblores y piezas)
@@ -1709,6 +1754,7 @@ if (FIXED != null) {
       const fr = Math.exp(-dt * (kx || ky ? 0 : 3.5)); cam.vx *= fr; cam.vz *= fr;
       if (Math.hypot(cam.vx, cam.vz) < .01) cam.vx = cam.vz = 0;
     }
+    stepBun(T, dt, !!(sel || drag || trap.hold));
     const a0 = trap.a, tm = trapMoving(); if (tm) stepTrap(dt);
     if (a0 < 1.571 && trap.a >= 1.571) sfx("abre"); // la tapa pasa la vertical (sola o llevada por el puntero): chirría y cae abierta
     // con el mouse sobre el hueco abierto la cámara se acerca, y al salir vuelve. Se acerca en torno al hueco: en pantalla él no se
@@ -1723,7 +1769,7 @@ if (FIXED != null) {
     const air = (zoom - 1) / (ZOOM - 1);
     if (air > .01 && !airVoice) airVoice = sfx("aire", 0, 1, true);
     if (airVoice) { airVoice.gain.gain.value = SFX.aire[1] * SFX_VOL * air; if (air <= .01) { airVoice.src.stop(); airVoice = null; } }
-    if (sel || drag || cam.vx || cam.vz || T - lightT0 < 1.2 || T < wakeUntil || tm || zooming) frame(T);
+    if (sel || drag || cam.vx || cam.vz || T - lightT0 < 1.2 || T < wakeUntil || tm || zooming || bun) frame(T);
   };
   requestAnimationFrame(loop);
   requestAnimationFrame(syncRoute); // después del primer cuadro, que es el que sabe qué piezas hay a la vista
