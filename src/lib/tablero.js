@@ -1194,6 +1194,7 @@ function stepBun(T, dt, busy) {
   const [x, z] = at(k);
   bun.pose = y < -.85 ? null : { x, y, z, tilt };
 }
+let trapPrev = 0;
 const kickTrap = () => { if (RM) trap.a = trap.a > 1 ? 0 : OPEN; else trap.w = trap.a > 1 ? -4 : 1.25 * Math.sqrt(2 * TRAP_G); };
 const wrap = (v) => v - Math.round(v / PERIOD) * PERIOD; // a la copia más cercana
 // el hueco que hay en un punto de la pantalla (px desde el centro, y hacia arriba): su centro, o null
@@ -1219,7 +1220,15 @@ let actx = null, bufs = null, voices = [], lapTimer = 0, songT0 = null; // songT
 // gesto el navegador ya deja sonar audio
 const SFX = { abre: ["trampilla-abre", .6], cierra: ["trampilla-cierra", .7], aire: ["hueco-aire", .5], bajada: ["bajada", .3], tunel: ["tunel", 2], llegada: ["llegada", .85], temblor: ["temblor", .75], cae1: ["pieza-cae-1", .6], cae2: ["pieza-cae-2", 1.6], cae3: ["pieza-cae-3", .75], rebota: ["pieza-rebota", .5], cabezazo: ["cabezazo", .9], luz: ["trampilla-luz", .9], salida: ["salida", .9], teclado: ["teclado", 1.1] };
 const SFX_VOL = .55, sfxBuf = {};
-let sfxAsked = false, sfxLate = null, airVoice = null; // airVoice: el viento del hueco, que suena mientras la cámara se acerca a él
+let sfxLate = null, airVoice = null; // airVoice: el viento del hueco, que suena mientras la cámara se acerca a él
+const sfxAsked = new Set();
+function loadSfx(keys) {
+  for (const k of keys) {
+    if (sfxAsked.has(k)) continue;
+    sfxAsked.add(k);
+    fetch(`/tablero/sfx/${SFX[k][0]}.mp3`).then((r) => r.arrayBuffer()).then((b) => actx.decodeAudioData(b)).then((b) => { sfxBuf[k] = b; }).catch(() => { sfxAsked.delete(k); });
+  }
+}
 function wakeAudio(load = true) {
   // iOS: el audio de la página respeta el modo silencio del teléfono (suena solo con él apagado). Al tocar la compuerta o entrar al
   // hueco se pide sonar como un video, aunque esté en silencio; con un toque cualquiera no, para no cortarle la música a nadie de entrada
@@ -1231,13 +1240,14 @@ function wakeAudio(load = true) {
     // iOS: el contexto recién se destraba si dentro del mismo gesto suena algo; un cuadro de silencio alcanza
     const src = actx.createBufferSource(); src.buffer = actx.createBuffer(1, 1, 22050); src.connect(actx.destination); src.start(0);
   }
-  if (load && !sfxAsked) { sfxAsked = true; for (const [k, [f]] of Object.entries(SFX)) fetch(`/tablero/sfx/${f}.mp3`).then((r) => r.arrayBuffer()).then((b) => actx.decodeAudioData(b)).then((b) => { sfxBuf[k] = b; }).catch(() => {}); }
+  // los dos de la tapa llegan con el primer toque (son livianos): así ya están cuando se abre por primera vez. El resto, al tocarla
+  loadSfx(load ? Object.keys(SFX) : ["abre", "cierra"]);
   return true;
 }
 // iOS no cuenta el pointerdown del dedo como gesto que deje sonar audio (sí el touchend y el click): si se espera a tocar la
 // compuerta, la tapa ya se abrió en silencio cuando el contexto se destraba. Se destraba con el primer toque en cualquier parte
 // (sin bajar los efectos todavía), y cada toque lo vuelve a despertar si iOS lo interrumpió (una llamada, la app en segundo plano)
-for (const type of ["touchend", "click", "keydown"]) addEventListener(type, () => { if (!actx || actx.state !== "running") wakeAudio(false); }, { capture: true, passive: true });
+for (const type of ["touchstart", "touchend", "pointerup", "click", "keydown"]) addEventListener(type, () => { if (!actx || actx.state !== "running") wakeAudio(false); }, { capture: true, passive: true });
 // un efecto, una vez. vol: 0 a 1 sobre su volumen; rate: velocidad (y tono); from: desde qué segundo del archivo; pan: -1 izquierda a
 // 1 derecha. Si todavía no llega o no hay audio, no suena
 function sfx(k, vol = 1, rate = 1, loop = false, from = 0, pan = 0) {
@@ -1790,8 +1800,12 @@ if (FIXED != null) {
       if (Math.hypot(cam.vx, cam.vz) < .01) cam.vx = cam.vz = 0;
     }
     stepBun(T, dt, !!(sel || drag || trap.hold));
-    const a0 = trap.a, tm = trapMoving(); if (tm) stepTrap(dt);
+    // a0: el ángulo de la tapa al terminar el cuadro anterior. Llevada por el puntero cambia entre cuadros (en pointermove), no aquí:
+    // comparando contra el de este mismo cuadro, arrastrarla nunca sonaba
+    const a0 = trapPrev, tm = trapMoving(); if (tm) stepTrap(dt);
     if (a0 < 1.571 && trap.a >= 1.571) sfx("abre"); // la tapa pasa la vertical (sola o llevada por el puntero): chirría y cae abierta
+    if (trap.hold && a0 > 0 && trap.a <= 0 && trap.w < -1.5) { sfx("cierra", Math.min(1, -trap.w / 9)); trap.w = 0; } // cerrada de golpe con el puntero: suena igual que cuando cae sola
+    trapPrev = trap.a;
     // con el mouse sobre el hueco abierto la cámara se acerca, y al salir vuelve. Se acerca en torno al hueco: en pantalla él no se
     // mueve de su lugar, así el puntero sigue encima mientras crece
     const hole = drag ? null : overHole(), zt = hole ? ZOOM : 1, zooming = zoom !== zt;
