@@ -1221,6 +1221,9 @@ const SFX = { abre: ["trampilla-abre", .6], cierra: ["trampilla-cierra", .7], ai
 const SFX_VOL = .55, sfxBuf = {};
 let sfxAsked = false, sfxLate = null, airVoice = null; // airVoice: el viento del hueco, que suena mientras la cámara se acerca a él
 function wakeAudio(load = true) {
+  // iOS: el audio de la página respeta el modo silencio del teléfono (suena solo con él apagado). Al tocar la compuerta o entrar al
+  // hueco se pide sonar como un video, aunque esté en silencio; con un toque cualquiera no, para no cortarle la música a nadie de entrada
+  if (load) try { if (navigator.audioSession && navigator.audioSession.type !== "playback") navigator.audioSession.type = "playback"; } catch {}
   try { actx ??= new (window.AudioContext || window.webkitAudioContext)(); } catch { return false; } // sin Web Audio: sin sonido
   if (actx.state !== "running") {
     // lo que se pidió mientras estaba trabado (la tapa abierta arrastrándola, antes de soltar el dedo) suena apenas se destraba
