@@ -846,11 +846,10 @@ function drawLabel(text) {
 // ---------- respuesta al puntero: qué pieza toca, dónde está sobre el suelo, y la capa de nombres y pistas
 const hover = { p: null, np: null, t0: 0, on: false, sx: 0, sy: 0 }; // sx, sy: puntero en px desde el centro (y hacia arriba); np: la última pieza tocada, que termina su cabeceo aunque el puntero ya se haya ido
 let light = { x: 0, z: 0, ox: 0, oz: 0, k: 1 }, panned = false, nowT = 0;
-// cuántas veces ha visto la pista para volver (entre visitas): sale solo las dos primeras. Cuenta cuando aparece, no cuando la
+// cuántas veces ha visto la pista para volver en esta visita: sale solo las dos primeras (al recargar parte de cero; guardada entre
+// visitas, un navegador que ya la había gastado no la mostraba más y no había cómo saberlo). Cuenta cuando aparece, no cuando la
 // pieza cae: si la levanta antes de que salga, no gastó ninguna
-const FALLS_KEY = "tablero-pista-volver";
 let falls = 0;
-try { falls = +localStorage.getItem(FALLS_KEY) || 0; } catch {}
 // distancia al centro del foco, en casillas, con el mismo estiramiento que usa el shader
 const fromLight = (p) => { const dx = p.x - light.x, dz = p.z - light.z; return Math.hypot(dx * ISO.r[0] + dz * ISO.r[2], (dx * ISO.f[0] + dz * ISO.f[2]) / light.k); };
 const fizz = document.createElement("canvas"), fizzG = fizz.getContext("2d"), fizzIm = fizzG.createImageData(64, 64); fizz.width = fizz.height = 64;
@@ -872,8 +871,9 @@ function drawHud(target, R) {
   if (dim < 1) drawNames(target, R, dim, plate, ppc, sinP, cosP, cx, cy, small);
   // pista para volver: con la pieza en el suelo y el texto ya escrito, si se queda quieta un rato, una placa sobre ella dice que
   // se levanta. Solo las dos primeras veces que la ve
-  if (sel && sel.mode === "down" && sel.downT > typeEnd() + 2 && (sel.hint || falls < 2)) {
-    if (!sel.hint) { sel.hint = true; falls++; try { localStorage.setItem(FALLS_KEY, String(falls)); } catch {} }
+  // con un artículo abierto no sale (ni cuenta): la pieza queda arriba, fuera de la vista
+  if (sel && !art && sel.mode === "down" && sel.downT > typeEnd() + 2 && (sel.hint || falls < 2)) {
+    if (!sel.hint) { sel.hint = true; falls++; }
     const p = sel.p, b = BASE[p.mesh], H = TALL[p.mesh], ex = p.x - target[0], ez = p.z - target[2];
     let x = cx + (ex * ISO.r[0] + ez * ISO.r[2] + sel.side * (b + H / 2)) * ppc;
     const y = cy - ((ex * ISO.f[0] + ez * ISO.f[2]) * sinP + 2 * b * cosP + b * sinP) * ppc - 3;
