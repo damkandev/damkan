@@ -30,7 +30,6 @@ export default defineConfig({
       allowedHosts: ['elevator-duchess-verbally.ngrok-free.dev'],
     },
   },
-  redirects: { '/': { status: 301, destination: '/es/' } },
   integrations: [
     sitemap({
       i18n: { defaultLocale: 'es', locales: { es: 'es-CL', en: 'en-US' } },
