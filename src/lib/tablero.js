@@ -589,7 +589,24 @@ let coloso = null;
 const roomCv = Object.assign(document.createElement("canvas"), { width: 1024, height: 1024 }), roomG = roomCv.getContext("2d"), roomTex = gl.createTexture();
 gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, roomTex);
 for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
-const loadColoso = () => import("./coloso.js").then((m) => { coloso = m; });
+const loadColoso = () => import("./coloso.js").then((m) => { m.use(colosoVideo); coloso = m; });
+// el video del coloso se crea y se echa a andar aquí, dentro del toque que entra al hueco. iOS no baja un video hasta que se le pide
+// tocar (preload no le basta), y uno que no está en la página solo lo deja tocar si se pide dentro de un toque: esperando a que
+// estuviera listo para recién tocarlo, en el teléfono no llegaba nunca (y con él tampoco la música, que parte al llegar).
+// Apenas tiene un cuadro se detiene; al llegar al vacío sigue (coloso.start)
+let colosoVideo = null;
+function primeColoso() {
+  if (!colosoVideo) {
+    colosoVideo = Object.assign(document.createElement("video"), { src: "/tablero/coloso.mp4", muted: true, loop: true, playsInline: true, preload: "auto" });
+    colosoVideo.setAttribute("muted", ""); colosoVideo.setAttribute("playsinline", "");
+    colosoVideo.addEventListener("loadeddata", () => { if (!dive || dive.room0 == null || RM) colosoVideo.pause(); });
+  }
+  if (colosoVideo.readyState < 2 && colosoVideo.paused) colosoVideo.play().catch(() => {});
+}
+// respaldo: si el video no partió con el toque de entrada (o iOS lo detuvo después), cualquier toque dentro del hueco lo vuelve a pedir
+for (const type of ["touchend", "click"]) addEventListener(type, () => {
+  if (dive && colosoVideo && colosoVideo.paused && (colosoVideo.readyState < 2 || (dive.room0 != null && !RM))) colosoVideo.play().catch(() => {});
+}, { capture: true, passive: true });
 // ---------- el temblor y las piezas que caen al vacío. Cada 10 a 20 s (el primero a los 7 s de aparecer el coloso) tiembla: la
 // cámara se sacude, el coloso se corre y la luz del piso corre en ondas. Y del tablero, que está arriba, caen unas piezas de ajedrez:
 // dan vueltas en el aire, golpean el piso, rebotan y quedan tiradas (algunas de pie). Con el temblor siguiente las que están en el piso
@@ -702,7 +719,7 @@ function overHatch(cx, cy) {
   return Math.max(Math.abs(ex + x * t - VOID.HX), Math.abs(ez + z * t - VOID.HZ)) < VOID.HW + .25;
 }
 function drawRoom(t, dt, cam = [0, 0]) {
-  if (!coloso || !coloso.ready()) return false; // todavía no llega: sigue el negro del final del túnel
+  if (!coloso || (!coloso.ready() && !dive?.blind)) return false; // todavía no llega: sigue el negro del final del túnel
   coloso.frame(roomG, 1024, 1024, dt);
   gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, roomTex);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, roomCv);
@@ -1404,13 +1421,14 @@ document.addEventListener("visibilitychange", () => { if (actx && voices.length)
 function startDive(hole) {
   dive = { t: RM ? 1e3 : 0, hole, cam0: [cam.x, cam.z], zoom0: zoom, there: false, px: 0, py: 0, sx: 0, sy: 0, vx: 0, vy: 0 }; // px, py = hacia dónde se mira (-1 a 1); sx, sy = lo mismo, suavizado; vx, vy = impulso del dedo. Sin animaciones: directo al vacío
   hover.p = null; cam.vx = cam.vz = 0; cv.style.cursor = "default";
+  primeColoso();
   if (!coloso) loadColoso().catch(console.error); // el coloso (módulo y video) se pide ahora: hay todo el túnel para que llegue
   wakeSound(); sfx("bajada");
   if (airVoice) { airVoice.src.stop(); airVoice = null; }
 }
 function exitDive() {
   const { hole, cam0, zoom0 } = dive;
-  coloso?.stop(); stopSound(); stopTyping(); typing = { next: 4, until: 0, voice: null }; sfx("salida"); fallers = []; quake = { next: 7, t: -99, hit: -99 }; ouch = null;
+  coloso?.stop(); colosoVideo?.pause(); stopSound(); stopTyping(); typing = { next: 4, until: 0, voice: null }; sfx("salida"); fallers = []; quake = { next: 7, t: -99, hit: -99 }; ouch = null;
   dive.tunnel?.src.stop();
   dive = null; ISO.pitch = PITCH; zoom = 1; lightT0 = (performance.now() - t0) / 1000;
   hover.on = false; // el puntero no se siguió durante el viaje: hasta que se mueva no se sabe dónde está
@@ -1435,6 +1453,8 @@ function stepDive(dt, T) {
     // el vacío: el video parte cuando ya hay un cuadro que mostrar (room0 = ese momento). La cámara sigue al puntero con retardo:
     // hacia los lados gira hasta unos 30°, hacia abajo unos 12° y hacia arriba unos 45° (hasta ver la trampilla). Sin animaciones, todo quieto
     dive.there = true;
+    // si el video no llega (4 s esperando), se entra igual sin el coloso: la música y lo demás no se quedan esperándolo
+    if (dive.room0 == null && coloso && !coloso.ready() && dive.t > DIVE + TUNNEL + 4) dive.blind = true;
     if (dive.room0 == null) { if (!drawRoom(0, 0)) return; dive.room0 = dive.t; if (!RM) coloso.start(); playSound(); sfx("llegada"); return; }
     if (!dive.drag && (dive.vx || dive.vy)) {
       dive.px = Math.max(-1, Math.min(1, dive.px + dive.vx * dt)); dive.py = Math.max(-1, Math.min(1, dive.py + dive.vy * dt));

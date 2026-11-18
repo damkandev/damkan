@@ -5,7 +5,11 @@
 // Tiempos del video: el puro está en la boca hasta los 2,25 s; la mano lo aparta y lo sube (3 a 3,6 s arriba, junto a la cabeza) y
 // lo devuelve a la boca a los 4,5 s. Mientras está afuera, el coloso suelta el humo.
 
-export const video = Object.assign(document.createElement("video"), { src: "/tablero/coloso.mp4", muted: true, loop: true, playsInline: true, preload: "auto" });
+// el video lo puede traer tablero.js ya creado y andando (use): en iOS tiene que partir dentro del toque que entra al hueco, y este
+// módulo llega después. Sin eso (cuadros fijos, en dev) se crea aquí
+export const makeVideo = () => { const v = Object.assign(document.createElement("video"), { src: "/tablero/coloso.mp4", muted: true, loop: true, playsInline: true, preload: "auto" }); v.setAttribute("muted", ""); v.setAttribute("playsinline", ""); return v; };
+export let video = null;
+export const use = (v) => { video = v ?? video ?? makeVideo(); };
 export const ready = () => video.readyState >= 2;
 export const start = () => video.play().catch(() => {}); // sin sonido y después de un toque: los navegadores lo dejan
 export function stop() { video.pause(); video.currentTime = 0; parts.length = 0; owed = [0, 0]; }
