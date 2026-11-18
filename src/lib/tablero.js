@@ -1222,16 +1222,26 @@ let actx = null, bufs = null, voices = [], lapTimer = 0, songT0 = null; // songT
 // gesto el navegador ya deja sonar audio
 const SFX = { abre: ["trampilla-abre", .6], cierra: ["trampilla-cierra", .7], aire: ["hueco-aire", .5], bajada: ["bajada", .3], tunel: ["tunel", 2], llegada: ["llegada", .85], temblor: ["temblor", .75], cae1: ["pieza-cae-1", .6], cae2: ["pieza-cae-2", 1.6], cae3: ["pieza-cae-3", .75], rebota: ["pieza-rebota", .5], cabezazo: ["cabezazo", .9], luz: ["trampilla-luz", .9], salida: ["salida", .9], teclado: ["teclado", 1.1] };
 const SFX_VOL = .55, sfxBuf = {};
-let sfxAsked = false, airVoice = null; // airVoice: el viento del hueco, que suena mientras la cámara se acerca a él
-function wakeAudio() {
+let sfxAsked = false, sfxLate = null, airVoice = null; // airVoice: el viento del hueco, que suena mientras la cámara se acerca a él
+function wakeAudio(load = true) {
   try { actx ??= new (window.AudioContext || window.webkitAudioContext)(); } catch { return false; } // sin Web Audio: sin sonido
-  if (actx.state !== "running") actx.resume();
-  if (!sfxAsked) { sfxAsked = true; for (const [k, [f]] of Object.entries(SFX)) fetch(`/tablero/sfx/${f}.mp3`).then((r) => r.arrayBuffer()).then((b) => actx.decodeAudioData(b)).then((b) => { sfxBuf[k] = b; }).catch(() => {}); }
+  if (actx.state !== "running") {
+    // lo que se pidió mientras estaba trabado (la tapa abierta arrastrándola, antes de soltar el dedo) suena apenas se destraba
+    actx.resume().then(() => { const q = sfxLate; sfxLate = null; if (q && performance.now() - q.t < 1500) sfx(...q.args); }).catch(() => {});
+    // iOS: el contexto recién se destraba si dentro del mismo gesto suena algo; un cuadro de silencio alcanza
+    const src = actx.createBufferSource(); src.buffer = actx.createBuffer(1, 1, 22050); src.connect(actx.destination); src.start(0);
+  }
+  if (load && !sfxAsked) { sfxAsked = true; for (const [k, [f]] of Object.entries(SFX)) fetch(`/tablero/sfx/${f}.mp3`).then((r) => r.arrayBuffer()).then((b) => actx.decodeAudioData(b)).then((b) => { sfxBuf[k] = b; }).catch(() => {}); }
   return true;
 }
+// iOS no cuenta el pointerdown del dedo como gesto que deje sonar audio (sí el touchend y el click): si se espera a tocar la
+// compuerta, la tapa ya se abrió en silencio cuando el contexto se destraba. Se destraba con el primer toque en cualquier parte
+// (sin bajar los efectos todavía), y cada toque lo vuelve a despertar si iOS lo interrumpió (una llamada, la app en segundo plano)
+for (const type of ["touchend", "click", "keydown"]) addEventListener(type, () => { if (!actx || actx.state !== "running") wakeAudio(false); }, { capture: true, passive: true });
 // un efecto, una vez. vol: 0 a 1 sobre su volumen; rate: velocidad (y tono); from: desde qué segundo del archivo; pan: -1 izquierda a
 // 1 derecha. Si todavía no llega o no hay audio, no suena
 function sfx(k, vol = 1, rate = 1, loop = false, from = 0, pan = 0) {
+  if (actx && actx.state !== "running" && !loop) sfxLate = { args: [k, vol, rate, loop, from, pan], t: performance.now() };
   if (!actx || actx.state !== "running" || !sfxBuf[k]) return null;
   const src = actx.createBufferSource(), gain = actx.createGain(), panner = actx.createStereoPanner ? actx.createStereoPanner() : null;
   src.buffer = sfxBuf[k]; src.playbackRate.value = rate; src.loop = loop;
